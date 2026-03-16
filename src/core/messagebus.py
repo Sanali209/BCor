@@ -44,6 +44,8 @@ class MessageBus:
                 except Exception as e:
                     span.record_exception(e)
                     logger.error(f"Command execution failed: {e}")
+                    # bubus swallows exceptions, so we re-raise them specifically for fail-fast if needed,
+                    # but since dispatch returns EventResults we can just let bubus log it and check results.
                     raise
 
         command_wrapper.__name__ = wrapper_name
