@@ -4,10 +4,13 @@ import asyncio
 
 import bubus
 
+from loguru import logger
+from opentelemetry import trace
+
 from src.core.messages import Message, Command, Event
 from src.core.unit_of_work import AbstractUnitOfWork
 
-logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 class MessageBus:
     """Central dispatcher for Commands and Events, powered by bubus.EventBus.
@@ -25,14 +28,23 @@ class MessageBus:
         wrapper_name = f"command_wrapper_for_{handler.__name__}"
 
         async def command_wrapper(command: cmd_type):
-            logger.debug(f"Handling command {command}")
-            if asyncio.iscoroutinefunction(handler):
-                result = await handler(command, uow=self.uow)
-            else:
-                result = await asyncio.to_thread(handler, command, uow=self.uow)
+            # Observability: Start a trace span and log
+            with tracer.start_as_current_span(f"Handle Command: {cmd_type.__name__}") as span:
+                logger.info(f"Handling command {cmd_type.__name__}: {command}")
+                span.set_attribute("command.type", cmd_type.__name__)
 
-            await self._publish_collected_events()
-            return result
+                try:
+                    if asyncio.iscoroutinefunction(handler):
+                        result = await handler(command, uow=self.uow)
+                    else:
+                        result = await asyncio.to_thread(handler, command, uow=self.uow)
+
+                    await self._publish_collected_events()
+                    return result
+                except Exception as e:
+                    span.record_exception(e)
+                    logger.error(f"Command execution failed: {e}")
+                    raise
 
         command_wrapper.__name__ = wrapper_name
         self.bus.on(cmd_type, command_wrapper)
@@ -42,16 +54,22 @@ class MessageBus:
         wrapper_name = f"event_wrapper_for_{handler.__name__}"
 
         async def event_wrapper(event: evt_type):
-            try:
-                logger.debug(f"Handling event {event} with {handler.__name__}")
-                if asyncio.iscoroutinefunction(handler):
-                    await handler(event, uow=self.uow)
-                else:
-                    await asyncio.to_thread(handler, event, uow=self.uow)
+            # Observability: Start a trace span and log
+            with tracer.start_as_current_span(f"Handle Event: {evt_type.__name__}") as span:
+                logger.info(f"Handling event {evt_type.__name__} with {handler.__name__}")
+                span.set_attribute("event.type", evt_type.__name__)
+                span.set_attribute("handler.name", handler.__name__)
 
-                await self._publish_collected_events()
-            except Exception as e:
-                logger.exception(f"Isolated failure in event handler {handler.__name__}: {e}")
+                try:
+                    if asyncio.iscoroutinefunction(handler):
+                        await handler(event, uow=self.uow)
+                    else:
+                        await asyncio.to_thread(handler, event, uow=self.uow)
+
+                    await self._publish_collected_events()
+                except Exception as e:
+                    span.record_exception(e)
+                    logger.exception(f"Isolated failure in event handler {handler.__name__}: {e}")
 
         event_wrapper.__name__ = wrapper_name
         self.bus.on(evt_type, event_wrapper)
