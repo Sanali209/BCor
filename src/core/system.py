@@ -19,11 +19,18 @@ class CoreProvider(Provider):
 
     @provide(scope=Scope.REQUEST)
     def provide_message_bus(self, uow: AbstractUnitOfWork) -> MessageBus:
-        return MessageBus(
-            uow=uow,
-            event_handlers=self.event_handlers,
-            command_handlers=self.command_handlers
-        )
+        # Create the MessageBus instance injected with the current UoW
+        bus = MessageBus(uow=uow)
+
+        # Register declarative routing maps from modules dynamically onto the new bus instance
+        for cmd_type, handler in self.command_handlers.items():
+            bus.register_command(cmd_type, handler)
+
+        for evt_type, handlers in self.event_handlers.items():
+            for handler in handlers:
+                bus.register_event(evt_type, handler)
+
+        return bus
 
 class System:
     """System Base Class (Composition Root).

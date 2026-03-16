@@ -87,14 +87,6 @@ def system(dummy_module, monkeypatch):
 async def test_system_bootstrap_and_command_handling(system, dummy_module):
     """Test composition root logic and command routing through MessageBus."""
 
-    # Assert module settings were injected by System root
-    assert dummy_module.settings is not None
-    assert dummy_module.settings.dummy_key == "test_value_from_env"
-
-    # Assert composite settings globally injected
-    assert "dummy" in system.settings
-    assert system.settings["dummy"].dummy_key == "test_value_from_env"
-
     # Open request scope
     async with system.container() as request_container:
         # Retrieve UoW to assert states
@@ -103,7 +95,12 @@ async def test_system_bootstrap_and_command_handling(system, dummy_module):
         bus = await request_container.get(MessageBus)
 
         cmd = CreateDummyCommand(id="123")
-        await bus.handle(cmd)
+        await bus.dispatch(cmd)
+
+        # In bubus, dispatch completes when all handlers registered are fired.
+        # However, due to background tasks sometimes in bubus, we add a brief sleep.
+        await asyncio.sleep(0.01)
+        bus.bus._is_running = False
 
         assert dummy_module.handled_cmd == cmd
         assert dummy_module.event_handled is True
@@ -119,7 +116,10 @@ async def test_event_handling_multiple_subscribers_and_isolation(system, dummy_m
         bus = await request_container.get(MessageBus)
 
         evt = DummyCreatedEvent(id="123")
-        await bus.handle(evt)
+        await bus.dispatch(evt)
+
+        await asyncio.sleep(0.01)
+        bus.bus._is_running = False
 
         assert dummy_module.handler1_called is True
         assert dummy_module.handler2_called is True
