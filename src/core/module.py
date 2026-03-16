@@ -1,4 +1,4 @@
-from typing import Dict, List, Type, Callable, Optional
+from typing import Dict, List, Type, Callable, Optional, Any
 from dishka import Provider
 from pydantic_settings import BaseSettings
 
@@ -6,7 +6,7 @@ class BaseModule:
     """Base class for every domain module.
 
     Encapsulates:
-    1. Settings
+    1. Settings (Pydantic schemas)
     2. Dependency Injection Provider (Dishka)
     3. Routing maps for the Event Bus
     """
@@ -21,3 +21,5 @@ class BaseModule:
         # We ensure they are copied to avoid shared class-level mutation issues
         self.command_handlers = self.__class__.command_handlers.copy()
         self.event_handlers = {k: list(v) for k, v in self.__class__.event_handlers.items()}
+        # The core system will inject the validated Pydantic settings here during bootstrap
+        self.settings: Optional[BaseSettings] = None

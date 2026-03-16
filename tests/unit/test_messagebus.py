@@ -1,12 +1,14 @@
 import pytest
 import asyncio
-from typing import Any
+from typing import Any, Optional
+import os
 
 from src.core.messages import Command, Event
 from src.core.messagebus import MessageBus
 from tests.conftest import FakeUnitOfWork, FakeAggregate
 from src.core.monads import success, BusinessResult
 from pydantic import ValidationError
+from pydantic_settings import BaseSettings
 
 from dishka import Provider, Scope, provide
 from src.core.module import BaseModule
@@ -19,8 +21,13 @@ class CreateDummyCommand(Command):
 class DummyCreatedEvent(Event):
     id: str
 
+class DummySettings(BaseSettings):
+    dummy_key: str = "default_value"
+
 # Let's create a Mock Module for testing Dishka & Composition Root
 class DummyModule(BaseModule):
+    settings_class = DummySettings
+
     def __init__(self):
         super().__init__()
         self.handled_cmd = None
@@ -66,7 +73,10 @@ class MockUoWProvider(Provider):
         return FakeUnitOfWork()
 
 @pytest.fixture
-def system(dummy_module):
+def system(dummy_module, monkeypatch):
+    # Set environment variable to test pydantic settings validation
+    monkeypatch.setenv("DUMMY_KEY", "test_value_from_env")
+
     system = System(modules=[dummy_module])
     # Add our test provider
     system.providers.append(MockUoWProvider())
@@ -76,6 +86,14 @@ def system(dummy_module):
 @pytest.mark.asyncio
 async def test_system_bootstrap_and_command_handling(system, dummy_module):
     """Test composition root logic and command routing through MessageBus."""
+
+    # Assert module settings were injected by System root
+    assert dummy_module.settings is not None
+    assert dummy_module.settings.dummy_key == "test_value_from_env"
+
+    # Assert composite settings globally injected
+    assert "dummy" in system.settings
+    assert system.settings["dummy"].dummy_key == "test_value_from_env"
 
     # Open request scope
     async with system.container() as request_container:

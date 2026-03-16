@@ -49,12 +49,17 @@ class System:
             for event_type, handlers in module.event_handlers.items():
                 self.event_handlers.setdefault(event_type, []).extend(handlers)
 
-            # Collect declarative settings
+            # Collect and Validate declarative settings (Fail-Fast Boundary)
             if module.settings_class:
                 # Instantiate settings class (reads from env vars via pydantic-settings)
-                # Key is the module's class name or a custom identifier
+                validated_settings = module.settings_class()
+
+                # Inject validated settings back into the module
+                module.settings = validated_settings
+
+                # Register globally under a module-specific key
                 module_name = module.__class__.__name__.lower().replace("module", "")
-                self.settings[module_name] = module.settings_class()
+                self.settings[module_name] = validated_settings
 
             # Collect dependency providers
             if module.provider:
