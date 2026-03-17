@@ -12,14 +12,7 @@ NATS_URL = os.getenv("NATS_URL", "nats://localhost:4222")
 # Initialize the TaskIQ NATS Broker
 # This broker can be imported and injected into the System composition root
 # and used by module handlers to dispatch tasks.
-broker = NatsBroker(
-    servers=[NATS_URL],
-    queue="my_monolith_tasks"
-)
+broker = NatsBroker(servers=[NATS_URL], queue="my_monolith_tasks")
 
 # Attach Observability Middlewares
-broker.add_middlewares(
-    PrometheusMiddleware(
-        server_port=9000
-    )
-)
+broker.add_middlewares(PrometheusMiddleware(server_port=9000))

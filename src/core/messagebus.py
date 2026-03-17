@@ -1,8 +1,13 @@
-from typing import Any, Callable, Dict, Type, List
-import logging
+from typing import Callable, Type
 import asyncio
 
 import bubus
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+)
 
 from loguru import logger
 from opentelemetry import trace
@@ -11,6 +16,7 @@ from src.core.messages import Message, Command, Event
 from src.core.unit_of_work import AbstractUnitOfWork
 
 tracer = trace.get_tracer(__name__)
+
 
 class MessageBus:
     """Central dispatcher for Commands and Events, powered by bubus.EventBus.
@@ -27,9 +33,17 @@ class MessageBus:
         # Create a uniquely named wrapper for the handler to avoid bubus warnings
         wrapper_name = f"command_wrapper_for_{handler.__name__}"
 
+        @retry(
+            wait=wait_exponential(multiplier=0.1, min=0.1, max=1.0),
+            stop=stop_after_attempt(3),
+            reraise=True,
+            retry=retry_if_exception_type(Exception),
+        )
         async def command_wrapper(command: cmd_type):
             # Observability: Start a trace span and log
-            with tracer.start_as_current_span(f"Handle Command: {cmd_type.__name__}") as span:
+            with tracer.start_as_current_span(
+                f"Handle Command: {cmd_type.__name__}"
+            ) as span:
                 logger.info(f"Handling command {cmd_type.__name__}: {command}")
                 span.set_attribute("command.type", cmd_type.__name__)
 
@@ -57,8 +71,12 @@ class MessageBus:
 
         async def event_wrapper(event: evt_type):
             # Observability: Start a trace span and log
-            with tracer.start_as_current_span(f"Handle Event: {evt_type.__name__}") as span:
-                logger.info(f"Handling event {evt_type.__name__} with {handler.__name__}")
+            with tracer.start_as_current_span(
+                f"Handle Event: {evt_type.__name__}"
+            ) as span:
+                logger.info(
+                    f"Handling event {evt_type.__name__} with {handler.__name__}"
+                )
                 span.set_attribute("event.type", evt_type.__name__)
                 span.set_attribute("handler.name", handler.__name__)
 
@@ -71,7 +89,9 @@ class MessageBus:
                     await self._publish_collected_events()
                 except Exception as e:
                     span.record_exception(e)
-                    logger.exception(f"Isolated failure in event handler {handler.__name__}: {e}")
+                    logger.exception(
+                        f"Isolated failure in event handler {handler.__name__}: {e}"
+                    )
 
         event_wrapper.__name__ = wrapper_name
         self.bus.on(evt_type, event_wrapper)

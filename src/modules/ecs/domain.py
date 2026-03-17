@@ -5,16 +5,19 @@ from dataclasses import dataclass
 from src.core.domain import Aggregate
 from src.modules.ecs.messages import ComponentAddedEvent, CollisionDetectedEvent
 
+
 # --- Basic ECS Components (Data-only structs) ---
 @dataclass
 class PositionComponent:
     x: float
     y: float
 
+
 @dataclass
 class VelocityComponent:
     dx: float
     dy: float
+
 
 # --- ECS World Aggregate ---
 class EcsWorld(Aggregate):
@@ -31,10 +34,9 @@ class EcsWorld(Aggregate):
         """Add a component to an entity."""
         comp_type = type(component)
         self._components[comp_type][entity_id] = component
-        self.add_event(ComponentAddedEvent(
-            entity_id=entity_id,
-            component_type=comp_type.__name__
-        ))
+        self.add_event(
+            ComponentAddedEvent(entity_id=entity_id, component_type=comp_type.__name__)
+        )
 
     def get_component(self, entity_id: str, comp_type: Type) -> Any:
         """Retrieve a specific component for an entity."""
@@ -54,7 +56,13 @@ class EcsWorld(Aggregate):
 
         # Yield entity_id and the requested components
         for entity_id in base_entities:
-            yield entity_id, [self._components[comp_type][entity_id] for comp_type in component_types]
+            yield (
+                entity_id,
+                [
+                    self._components[comp_type][entity_id]
+                    for comp_type in component_types
+                ],
+            )
 
     def check_collisions(self, entity_id: str, pos: PositionComponent) -> None:
         """Domain logic to check collisions internally within the aggregate boundary."""
@@ -65,4 +73,6 @@ class EcsWorld(Aggregate):
                 continue
             other_pos: PositionComponent = comps[0]
             if abs(other_pos.x - pos.x) < 0.1 and abs(other_pos.y - pos.y) < 0.1:
-                self.add_event(CollisionDetectedEvent(entity_a=entity_id, entity_b=other_id))
+                self.add_event(
+                    CollisionDetectedEvent(entity_a=entity_id, entity_b=other_id)
+                )

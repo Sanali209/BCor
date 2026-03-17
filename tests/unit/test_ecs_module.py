@@ -1,7 +1,6 @@
 import pytest
 import asyncio
 
-from tests.conftest import FakeUnitOfWork
 from dishka import Provider, Scope, provide
 
 from src.core.system import System
@@ -9,9 +8,14 @@ from src.core.messagebus import MessageBus
 from src.core.unit_of_work import AbstractUnitOfWork
 
 from src.modules.ecs.module import EcsModule
-from src.modules.ecs.messages import TickEvent, MoveEntityCommand, CollisionDetectedEvent
+from src.modules.ecs.messages import (
+    TickEvent,
+    MoveEntityCommand,
+    CollisionDetectedEvent,
+)
 from src.modules.ecs.domain import EcsWorld, PositionComponent, VelocityComponent
 from src.modules.ecs.ports import AbstractEcsRepository, EcsUnitOfWork
+
 
 class FakeEcsRepository(AbstractEcsRepository):
     def __init__(self):
@@ -31,6 +35,7 @@ class FakeEcsRepository(AbstractEcsRepository):
             self.add(world)
         return world
 
+
 class FakeEcsUnitOfWork(EcsUnitOfWork):
     def __init__(self):
         self.worlds = FakeEcsRepository()
@@ -48,11 +53,13 @@ class FakeEcsUnitOfWork(EcsUnitOfWork):
     def rollback(self):
         self.rolled_back = True
 
+
 class MockUoWProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def provide_uow(self) -> AbstractUnitOfWork:
         # Dishka will automatically type-match AbstractUnitOfWork / EcsUnitOfWork
         return FakeEcsUnitOfWork()
+
 
 @pytest.fixture
 def system():
@@ -62,12 +69,15 @@ def system():
     sys._bootstrap()
     return sys
 
+
 @pytest.fixture(autouse=True)
 def cleanup_bubus():
     yield
     import bubus
+
     for bus in bubus.EventBus.all_instances:
         bus._is_running = False
+
 
 @pytest.mark.asyncio
 async def test_game_loop_tick_updates_positions_and_checks_collisions(system):
@@ -106,6 +116,7 @@ async def test_game_loop_tick_updates_positions_and_checks_collisions(system):
             assert p1_pos.x == 10.0
             assert collision_handled is True
 
+
 @pytest.mark.asyncio
 async def test_move_entity_command_fail_fast(system):
     async with system.container() as request_container:
@@ -120,7 +131,9 @@ async def test_move_entity_command_fail_fast(system):
         list(uow.collect_new_events())
 
         try:
-            results = await bus.dispatch(MoveEntityCommand(entity_id="ghost", target_x=100.0, target_y=100.0))
+            results = await bus.dispatch(
+                MoveEntityCommand(entity_id="ghost", target_x=100.0, target_y=100.0)
+            )
             # bubus dispatch returns the Event itself which has `.event_results`
             has_error = False
             for r in results.event_results.values():

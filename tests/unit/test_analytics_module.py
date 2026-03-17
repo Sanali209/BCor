@@ -8,12 +8,18 @@ from src.core.system import System
 from src.core.messagebus import MessageBus
 from src.core.unit_of_work import AbstractUnitOfWork
 
-from src.modules.analytics.domain import AnalyticsModule, GenerateReportCommand, build_heavy_report_task
+from src.modules.analytics.domain import (
+    AnalyticsModule,
+    GenerateReportCommand,
+    build_heavy_report_task,
+)
+
 
 class MockUoWProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def provide_uow(self) -> AbstractUnitOfWork:
         return FakeUnitOfWork()
+
 
 @pytest.fixture
 def system(monkeypatch):
@@ -24,6 +30,7 @@ def system(monkeypatch):
     sys.providers.append(MockUoWProvider())
     sys._bootstrap()
     return sys
+
 
 @pytest.mark.asyncio
 async def test_analytics_background_task_dispatch(system, monkeypatch):

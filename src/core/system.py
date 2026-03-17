@@ -1,10 +1,11 @@
-from typing import List, Dict, Type, Callable, Any
+from typing import List, Dict, Type, Callable
 from dishka import Provider, make_async_container, Scope, provide
 from pydantic_settings import BaseSettings
 
 from src.core.module import BaseModule
 from src.core.messagebus import MessageBus
 from src.core.unit_of_work import AbstractUnitOfWork
+
 
 class CoreProvider(Provider):
     def __init__(self, event_handlers, command_handlers, settings, *args, **kwargs):
@@ -31,6 +32,7 @@ class CoreProvider(Provider):
                 bus.register_event(evt_type, handler)
 
         return bus
+
 
 class System:
     """System Base Class (Composition Root).
@@ -77,7 +79,7 @@ class System:
             event_handlers=self.event_handlers,
             command_handlers=self.command_handlers,
             settings=self.settings,
-            scope=Scope.APP
+            scope=Scope.APP,
         )
 
         self.providers.append(core_provider)

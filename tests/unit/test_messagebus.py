@@ -1,7 +1,5 @@
 import pytest
 import asyncio
-from typing import Any, Optional
-import os
 
 from src.core.messages import Command, Event
 from src.core.messagebus import MessageBus
@@ -15,14 +13,26 @@ from src.core.module import BaseModule
 from src.core.system import System
 from src.core.unit_of_work import AbstractUnitOfWork
 
+
 class CreateDummyCommand(Command):
     id: str
+
+
+class FlakyCommand(Command):
+    id: str
+
+
+class FailingCommand(Command):
+    id: str
+
 
 class DummyCreatedEvent(Event):
     id: str
 
+
 class DummySettings(BaseSettings):
     dummy_key: str = "default_value"
+
 
 # Let's create a Mock Module for testing Dishka & Composition Root
 class DummyModule(BaseModule):
@@ -33,18 +43,24 @@ class DummyModule(BaseModule):
         self.handled_cmd = None
         self.event_handled = False
         self.attempts = 0
+        self.flaky_attempts = 0
+        self.fail_attempts = 0
         self.handler1_called = False
         self.handler2_called = False
 
         # Maps
         self.command_handlers = {
-            CreateDummyCommand: self.handle_create
+            CreateDummyCommand: self.handle_create,
+            FlakyCommand: self.handle_flaky,
+            FailingCommand: self.handle_failing,
         }
         self.event_handlers = {
             DummyCreatedEvent: [self.handle_event, self.handler1, self.handler2]
         }
 
-    async def handle_create(self, cmd: CreateDummyCommand, uow: FakeUnitOfWork) -> BusinessResult:
+    async def handle_create(
+        self, cmd: CreateDummyCommand, uow: FakeUnitOfWork
+    ) -> BusinessResult:
         self.handled_cmd = cmd
         with uow:
             agg = FakeAggregate(cmd.id)
@@ -52,6 +68,20 @@ class DummyModule(BaseModule):
             uow.repo.add(agg)
             uow.commit()
         return success(cmd.id)
+
+    async def handle_flaky(
+        self, cmd: FlakyCommand, uow: FakeUnitOfWork
+    ) -> BusinessResult:
+        self.flaky_attempts += 1
+        if self.flaky_attempts < 3:
+            raise Exception("Temporary Failure")
+        return success(cmd.id)
+
+    async def handle_failing(
+        self, cmd: FailingCommand, uow: FakeUnitOfWork
+    ) -> BusinessResult:
+        self.fail_attempts += 1
+        raise Exception("Permanent Failure")
 
     async def handle_event(self, evt: DummyCreatedEvent, uow: FakeUnitOfWork):
         self.event_handled = True
@@ -63,14 +93,17 @@ class DummyModule(BaseModule):
     async def handler2(self, evt: DummyCreatedEvent, uow: FakeUnitOfWork):
         self.handler2_called = True
 
+
 @pytest.fixture
 def dummy_module():
     return DummyModule()
+
 
 class MockUoWProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def provide_uow(self) -> AbstractUnitOfWork:
         return FakeUnitOfWork()
+
 
 @pytest.fixture
 def system(dummy_module, monkeypatch):
@@ -82,6 +115,7 @@ def system(dummy_module, monkeypatch):
     system.providers.append(MockUoWProvider())
     system._bootstrap()
     return system
+
 
 @pytest.mark.asyncio
 async def test_system_bootstrap_and_command_handling(system, dummy_module):
@@ -108,6 +142,7 @@ async def test_system_bootstrap_and_command_handling(system, dummy_module):
         assert uow.repo.get("123") is not None
         assert uow.committed is True
 
+
 @pytest.mark.asyncio
 async def test_event_handling_multiple_subscribers_and_isolation(system, dummy_module):
     """Test event broadcasting and that exceptions in one handler don't break others."""
@@ -124,7 +159,42 @@ async def test_event_handling_multiple_subscribers_and_isolation(system, dummy_m
         assert dummy_module.handler1_called is True
         assert dummy_module.handler2_called is True
 
+
 def test_pydantic_validation():
     """Test strict DTO validation (BaseEvent wraps BaseModel)."""
     with pytest.raises(ValidationError):
         CreateDummyCommand()
+
+
+@pytest.mark.asyncio
+async def test_flaky_command_retries(system, dummy_module):
+    """Test that a command handler that fails is retried."""
+    async with system.container() as request_container:
+        bus = await request_container.get(MessageBus)
+
+        cmd = FlakyCommand(id="flaky_123")
+        await bus.dispatch(cmd)
+
+        await asyncio.sleep(0.01)
+        bus.bus._is_running = False
+
+        # Handler should have been called exactly 3 times (fails twice, succeeds on third)
+        assert dummy_module.flaky_attempts == 3
+
+
+@pytest.mark.asyncio
+async def test_failing_command_exhausts_retries(system, dummy_module):
+    """Test that a command handler that fails permanently throws after max retries."""
+    async with system.container() as request_container:
+        bus = await request_container.get(MessageBus)
+
+        cmd = FailingCommand(id="fail_123")
+
+        # bubus swallows the exception and returns it in results, so it won't raise
+        results = await bus.dispatch(cmd)
+
+        await asyncio.sleep(0.01)
+        bus.bus._is_running = False
+
+        # Handler should have been called 3 times and then given up
+        assert dummy_module.fail_attempts == 3

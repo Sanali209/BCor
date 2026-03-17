@@ -1,41 +1,83 @@
-**1. Базовые сообщения (DTO)**
-Эти классы представляют собой чистые структуры данных (часто реализуются через `@dataclass` в Python), которые используются для обмена информацией внутри системы [1], [2].
-*   `Command` (Команда): Базовый класс для описания намерений (задач), которые система должна выполнить [2], [3]. Маршрутизируется строго к одному обработчику [4].
-*   `Event` (Событие): Базовый класс для описания свершившихся в прошлом фактов, на которые система должна отреагировать [1], [3]. Может рассылаться множеству обработчиков [5].
+# Class Map
 
-**2. Доменная модель (Domain Model)**
-*   `Aggregate` (Агрегат): Главная корневая сущность, задающая границу согласованности для изменения данных [6]. Содержит внутренний список `self.events`, куда бизнес-методы добавляют новые события предметной области при изменении состояния (например, `self.events.append(OutOfStock(...))`) [7].
+> The source of truth is the codebase (`src/`). This file strictly maps the currently implemented architecture and classes.
 
-**3. Инфраструктурные абстракции ядра (Порты)**
-Определяются через абстрактные базовые классы `abc.ABC`. Это интерфейсы, от которых зависит бизнес-логика [8], [9].
-*   `AbstractRepository`: Абстракция над хранилищем данных [10].
-    *   **Атрибуты:** `seen: set` — множество для отслеживания всех агрегатов, загруженных во время сессии [11].
-    *   **Методы:** `add(aggregate)`, `get(id)` [8], [12]. Возвращает и сохраняет строго Агрегаты [13].
-*   `AbstractUnitOfWork`: Абстракция над целостностью данных и атомарными транзакциями [14], [3].
-    *   **Атрибуты:** содержит экземпляры репозиториев (например, `self.products: AbstractProductRepository`) [12].
-    *   **Методы:** 
-        *   `__enter__()` и `__exit__()`: методы контекстного менеджера; `__exit__` по умолчанию вызывает безопасный откат `self.rollback()` [9].
-        *   `commit()`, `rollback()`: явное управление фиксацией или отменой бизнес-транзакции [9].
-        *   `collect_new_events()`: метод-генератор, который обходит все агрегаты в `repository.seen`, извлекает из них накопившиеся события (`pop(0)`) и передает их в шину [15], [16].
+## Core (`src/core/`)
 
-**4. Шина сообщений (Message Bus)**
-Центральный координатор системы, который связывает сообщения с их обработчиками [17], [3].
-*   `MessageBus`:
-    *   **Атрибуты:** 
-        *   `uow`: Экземпляр `AbstractUnitOfWork` [17].
-        *   `event_handlers: dict`, `command_handlers: dict` — словари, сопоставляющие типы событий и команд с соответствующими функциями-обработчиками [18], [17].
-        *   `queue: list` — внутренняя очередь сообщений [19].
-    *   **Методы:** 
-        *   `handle(message)`: Принимает сообщение, помещает его в `queue` и в цикле извлекает сообщения, определяя их тип (команда или событие) [19].
-        *   `handle_command(command)`: Находит единственного обработчика для команды, выполняет его, перехватывает и пробрасывает ошибки (`raise`) наверх, затем пополняет очередь новыми событиями из `uow.collect_new_events()` [4], [20].
-        *   `handle_event(event)`: Находит всех подписчиков события, выполняет их, логирует возможные исключения (ошибки изолируются с помощью `continue` и не прерывают основной поток), пополняет очередь новыми событиями [5], [21].
+### Messages (`messages.py`)
+*   `Message(bubus.BaseEvent)`: Base message data structure.
+*   `Command(Message)`: Intentions routed to a single handler.
+*   `Event(Message)`: Facts routed to multiple subscribers.
 
-**5. Сервисный слой (Handlers)**
-*   `Handler` (Функция-обработчик или класс): Принимает на вход DTO (`Command` или `Event`) и экземпляр `AbstractUnitOfWork` (или шина может быть проброшена напрямую) [22], [23], [3].
-    *   *Алгоритм работы:* Открывает транзакцию `with uow:`, использует репозиторий для получения Агрегата (`uow.products.get()`), вызывает доменный метод Агрегата и фиксирует транзакцию (`uow.commit()`) [24], [25].
+### Domain (`domain.py`)
+*   `Aggregate`: Base class for entities boundary. Includes `events` list and `add_event()`.
 
-**6. Адаптеры (Детали реализации)**
-Классы инфраструктуры, которые реализуют абстрактные порты ядра для связи с реальным миром [10].
-*   `SqlAlchemyRepository`: Наследуется от `AbstractRepository`, использует ORM SQLAlchemy для извлечения и сохранения агрегатов из реальной БД [26].
-*   `SqlAlchemyUnitOfWork`: Наследуется от `AbstractUnitOfWork`, инициализирует реальные репозитории и сессии SQLAlchemy (`sessionmaker`), выполняет реальные `session.commit()` и `session.rollback()` [27].
-*   `FakeRepository` и `FakeUnitOfWork`: Поддельные адаптеры в оперативной памяти (хранят данные в `set` или `dict`), необходимые для сверхбыстрых юнит-тестов сервисного слоя без обращения к БД [28], [29], [30].
+### Message Bus (`messagebus.py`)
+*   `MessageBus`: Dispatcher wrapping `bubus.EventBus`.
+    *   Methods: `register_command()`, `register_event()`, `dispatch()`, `_publish_collected_events()`
+
+### Ports (`repository.py`, `unit_of_work.py`)
+*   `AbstractRepository[T](abc.ABC)`: Data storage abstraction.
+    *   State: `seen: set`
+    *   Methods: `add()`, `get()`, `_add()`, `_get()`
+*   `AbstractUnitOfWork(abc.ABC)`: Transaction boundary.
+    *   Methods: `__enter__()`, `__exit__()`, `commit()`, `rollback()`, `collect_new_events()`, `_commit()`, `_get_all_seen_aggregates()`
+
+### System Composition (`module.py`, `system.py`)
+*   `BaseModule`: Declarative configuration logic.
+    *   State: `settings_class`, `provider`, `command_handlers`, `event_handlers`
+*   `System`: Application composition root.
+    *   Methods: `_bootstrap()` (Initializes Dishka DI container, modules, and settings).
+*   `CoreProvider(dishka.Provider)`: Provides global `MessageBus` instances.
+
+---
+
+## Modules (`src/modules/`)
+
+### Entity Component System (`ecs/`)
+*   **Domain**:
+    *   `PositionComponent`, `VelocityComponent` (@dataclass)
+    *   `EcsWorld(Aggregate)`: Game world aggregate (methods: `add_component`, `query`, `check_collisions`)
+*   **Messages**:
+    *   Events: `TickEvent`, `ComponentAddedEvent`, `CollisionDetectedEvent`
+    *   Commands: `MoveEntityCommand`
+*   **Ports**:
+    *   `AbstractEcsRepository(AbstractRepository[EcsWorld])`
+    *   `EcsUnitOfWork(AbstractUnitOfWork)`: Holds `worlds: AbstractEcsRepository`
+*   **Handlers**: `physics_system_handler`, `handle_move_entity_command`
+*   **Registration**: `EcsModule(BaseModule)`
+
+### Orders (`orders/`)
+*   **Domain**:
+    *   `OrderState(Enum)`
+    *   `Order(Aggregate)`: E-commerce order (methods: `create`, `ship`)
+*   **Messages**:
+    *   Events: `OrderCreated`, `OrderShipped`
+    *   Commands: `CreateOrderCommand`, `ShipOrderCommand`
+*   **Handlers**: `handle_create_order`, `handle_ship_order`
+*   **Registration**: `OrdersModule(BaseModule)`
+
+### Analytics (`analytics/`)
+*   **Domain**:
+    *   `AnalyticsSettings(BaseSettings)`
+    *   `GenerateReportCommand(Command)`
+    *   `ReportGenerationStartedEvent(Event)`
+*   **Handlers / Tasks**:
+    *   Background task: `build_heavy_report_task` (Taskiq)
+*   **Registration**: `AnalyticsModule(BaseModule)`
+
+### Aetheris Graph Mapper (`agm/`)
+*   **Metadata (`metadata.py`)**: `Stored`, `Live`, `Rel`
+*   **Messages**: `StoredFieldRecalculationRequested(Event)`
+*   **Mapper (`mapper.py`)**:
+    *   `AGMMapper`: Handles `load()` (live resolution, Retort mapping) and `save()` (generates Cypher `MERGE`, dispatches events).
+*   **Fluent Queries (`fluent.py`)**:
+    *   `QueryBuilder[T]`: Generates smart Cypher projections and executes vector searches.
+*   **Models**: `AetherisBaseNode`, `TargetNode`
+*   **Handlers / Tasks**: `handle_stored_field_recalc` -> `compute_stored_field` (Taskiq)
+*   **Registration**: `AGMModule(BaseModule)` with `AGMProvider`
+
+---
+
+## Adapters (`src/adapters/`)
+*   `taskiq_broker.py`: Configures `NatsBroker` (Taskiq) with Prometheus metrics middleware. Used for async task delegation.

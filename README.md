@@ -66,6 +66,14 @@
 └── README.md             # Этот файл
 ```
 
+## Документация (Ddocks)
+Подробное описание компонентов и руководства доступны в директории `Ddocks/`:
+*   [Roadmap](Ddocks/Roadmap.md) — Текущий статус и план разработки.
+*   [Concept Doc](Ddocks/Conceptdock.md) — Общее архитектурное видение.
+*   [Orders Module](Ddocks/orders_dock.md) [NEW] — Описание эталонного бизнес-модуля.
+*   [AGM Module](Ddocks/agm_dock.md) — Детали графового маппера.
+*   [How-to: Add New Module](Ddocks/How-tos/Add_New_Module.md) [NEW] — Гид для разработчиков.
+
 ## Разработка
 Все новые фичи разрабатываются через **TDD (Test-Driven Development)** с использованием `pytest`.
 Поддельные адаптеры (`FakeRepository`, `FakeUnitOfWork` в `conftest.py`) позволяют мгновенно тестировать сервисный слой без необходимости поднимать Docker-контейнеры с базами данных.

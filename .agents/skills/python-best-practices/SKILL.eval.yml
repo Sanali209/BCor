@@ -1,0 +1,129 @@
+skill: python-best-practices
+
+tests:
+  # --- Core SKILL.md: quick principles ---
+
+  - name: Follows PEP 8 naming conventions
+    prompt: |
+      I'm naming things in my Python project. What conventions should I
+      use for functions, classes, and constants?
+    expected: Should recommend PEP 8 naming — lowercase_underscore for functions and variables, CapitalizedWord for classes, ALL_CAPS for constants. Should mention using black and ruff for automation.
+    required_keywords:
+      - "lowercase"
+      - "constant"
+
+  - name: Recommends right data structure for the task
+    prompt: |
+      I need to check if a user ID exists in a collection of 100,000 IDs.
+      I'm currently iterating through a list. Is there a better approach?
+    expected: Should recommend using a set for membership testing (O(1) average) instead of a list (O(n)). Should reference the principle of using the right data structure for the task.
+    required_keywords:
+      - "set"
+    forbidden_keywords:
+      - "list is fine for"
+      - "list is fine here"
+      - "a list is fine"
+
+  - name: Prefers composition over inheritance
+    prompt: |
+      I have a base class Animal with subclasses Dog, Cat, and Bird. Now
+      I need FlyingDog and SwimmingCat. My inheritance tree is getting
+      complicated. What should I do?
+    expected: Should recommend composition over inheritance. Inherit only for true is-a relationships. Use composition or mix-ins for capabilities like flying and swimming to avoid deep class hierarchies.
+    required_keywords:
+      - "composition"
+
+  # --- References: error-handling ---
+
+  - name: Raises exceptions instead of returning None
+    prompt: |
+      My function searches a database for a user by email. If not found,
+      it returns None. The caller checks `if user is None`. Is this
+      idiomatic Python?
+    expected: Should explain that returning None to signal errors is ambiguous and a common anti-pattern. Should recommend raising a specific exception (like LookupError or a custom NotFoundError) instead, following the principle that errors should never pass silently.
+    required_keywords:
+      - "raise"
+    forbidden_keywords:
+      - "returning None is fine"
+      - "this is correct in some"
+      - "this is idiomatic in some"
+      - "this is acceptable in some"
+
+  - name: Warns against bare except clauses
+    prompt: |
+      I have this error handling pattern throughout my codebase:
+      ```python
+      try:
+          process_data()
+      except:
+          print("Something went wrong")
+      ```
+      Is this acceptable?
+    expected: Should warn against bare except clauses — they catch everything including SystemExit and KeyboardInterrupt. Should recommend catching specific exceptions and keeping try blocks short.
+    required_keywords:
+      - "specific"
+
+  - name: Recommends context managers for resource cleanup
+    prompt: |
+      I open files like this:
+      ```python
+      f = open("data.csv")
+      data = f.read()
+      f.close()
+      ```
+      Sometimes the program crashes between open and close. How do I fix this?
+    expected: Should recommend using a context manager (with statement) to ensure the file is properly closed even if an exception occurs. This is the standard Python pattern for resource management.
+    required_keywords:
+      - "with"
+
+  # --- References: pythonic-idioms ---
+
+  - name: Warns about mutable default arguments
+    prompt: |
+      I wrote this function:
+      ```python
+      def add_item(item, items=[]):
+          items.append(item)
+          return items
+      ```
+      It works the first time but gives weird results on subsequent calls.
+      What's wrong?
+    expected: Should identify the mutable default argument bug — the default list is shared across all calls. Should recommend using None as default and creating a new list inside the function.
+    required_keywords:
+      - "mutable"
+      - "None"
+
+  - name: Uses unpacking over indexing
+    prompt: |
+      I'm accessing tuple elements like this:
+      ```python
+      name = record[0]
+      age = record[1]
+      city = record[2]
+      ```
+      Is there a more Pythonic way?
+    expected: Should recommend tuple unpacking (name, age, city = record) as more Pythonic and readable. Should mention that unpacking works with any iterable and supports starred expressions for catch-all.
+    required_keywords:
+      - "unpack"
+
+  # --- References: concurrency ---
+
+  - name: Selects correct concurrency model based on workload
+    prompt: |
+      I need to process 10,000 images by resizing them. Each image takes
+      about 2 seconds of CPU time. I tried threading but it's no faster
+      than sequential. Why?
+    expected: Should explain the GIL — CPython's Global Interpreter Lock prevents threads from executing Python bytecode in parallel for CPU-bound work. Should recommend multiprocessing (ProcessPoolExecutor) for CPU-bound tasks to bypass the GIL.
+    required_keywords:
+      - "GIL"
+      - "multiprocessing"
+
+  # --- References: testing-and-quality ---
+
+  - name: Encourages type hints for safety
+    prompt: |
+      Python is dynamically typed so I don't bother with type annotations.
+      My code works fine. Am I missing anything?
+    expected: Should explain that Python defers nearly all checks to runtime, so type hints serve as documentation, catch bugs early with tools like mypy, and improve IDE support. Should encourage adding type hints as a best practice.
+    required_keywords:
+      - "type"

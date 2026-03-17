@@ -6,6 +6,7 @@ from src.modules.ecs.ports import EcsUnitOfWork
 
 logger = logging.getLogger(__name__)
 
+
 async def physics_system_handler(event: TickEvent, uow: EcsUnitOfWork):
     """The 'System' in ECS: Updates Positions based on Velocities."""
     with uow:
@@ -22,9 +23,12 @@ async def physics_system_handler(event: TickEvent, uow: EcsUnitOfWork):
             # Check collisions within the aggregate boundary
             world.check_collisions(entity_id, pos)
 
-        uow.commit() # Flushes changes and collects new domain events (CollisionDetected)
+        uow.commit()  # Flushes changes and collects new domain events (CollisionDetected)
 
-async def handle_move_entity_command(cmd: MoveEntityCommand, uow: EcsUnitOfWork) -> BusinessResult:
+
+async def handle_move_entity_command(
+    cmd: MoveEntityCommand, uow: EcsUnitOfWork
+) -> BusinessResult:
     """A direct command to forcibly move an entity."""
     with uow:
         world = await uow.worlds.get_world("main_scene")

@@ -5,6 +5,7 @@ from src.core.domain import Aggregate
 
 T = TypeVar("T", bound=Aggregate)
 
+
 class AbstractRepository(Generic[T], abc.ABC):
     """Abstract base class for repositories.
 

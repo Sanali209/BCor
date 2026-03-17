@@ -1,8 +1,9 @@
 import abc
-from typing import Generator, List
+from typing import Generator
 
 from src.core.messages import Event
 from src.core.repository import AbstractRepository
+
 
 class AbstractUnitOfWork(abc.ABC):
     """Abstract base class for Unit of Work.
@@ -14,7 +15,7 @@ class AbstractUnitOfWork(abc.ABC):
     # for instance:
     # my_repo: AbstractRepository[MyAggregate]
 
-    def __enter__(self) -> 'AbstractUnitOfWork':
+    def __enter__(self) -> "AbstractUnitOfWork":
         """Enter the context manager, starting a transaction."""
         return self
 
