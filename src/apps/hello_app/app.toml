@@ -1,0 +1,11 @@
+[app]
+app_name = "Hello BCor"
+log_level = "DEBUG"
+
+[modules]
+paths = ["src.apps.hello_app.modules", "src.modules"]
+enabled = ["greeting"]
+
+[greeting]
+default_name = "World"
+greeting_style = "enthusiastic"

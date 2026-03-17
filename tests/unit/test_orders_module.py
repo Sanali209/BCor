@@ -59,7 +59,7 @@ async def test_order_creation_handler():
     # Assert events were collected
     events = list(order.events)
     assert len(events) == 1
-    assert type(events[0]) == OrderCreated
+    assert isinstance(events[0], OrderCreated)
 
 
 @pytest.mark.asyncio
@@ -84,7 +84,7 @@ async def test_order_shipping_handler():
 
     events = list(order.events)
     assert len(events) == 1
-    assert type(events[0]) == OrderShipped
+    assert isinstance(events[0], OrderShipped)
 
 
 @pytest.mark.asyncio
@@ -129,7 +129,7 @@ async def test_orders_module_integration(system):
         cmd = CreateOrderCommand(
             order_id="sys-ord-1", customer_name="Eve", total_amount=99.99
         )
-        results = await bus.dispatch(cmd)
+        await bus.dispatch(cmd)
 
         await asyncio.sleep(0.01)
         bus.bus._is_running = False

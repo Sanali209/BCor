@@ -14,6 +14,7 @@ from src.core.system import System
 from src.core.unit_of_work import AbstractUnitOfWork
 
 
+
 class CreateDummyCommand(Command):
     id: str
 
@@ -41,6 +42,7 @@ class DummyModule(BaseModule):
     def __init__(self):
         super().__init__()
         self.handled_cmd = None
+        self.received_event = None
         self.event_handled = False
         self.attempts = 0
         self.flaky_attempts = 0
@@ -84,6 +86,7 @@ class DummyModule(BaseModule):
         raise Exception("Permanent Failure")
 
     async def handle_event(self, evt: DummyCreatedEvent, uow: FakeUnitOfWork):
+        self.received_event = evt
         self.event_handled = True
 
     async def handler1(self, evt: DummyCreatedEvent, uow: FakeUnitOfWork):
@@ -131,16 +134,13 @@ async def test_system_bootstrap_and_command_handling(system, dummy_module):
         cmd = CreateDummyCommand(id="123")
         await bus.dispatch(cmd)
 
-        # In bubus, dispatch completes when all handlers registered are fired.
-        # However, due to background tasks sometimes in bubus, we add a brief sleep.
-        await asyncio.sleep(0.01)
-        bus.bus._is_running = False
-
         assert dummy_module.handled_cmd == cmd
         assert dummy_module.event_handled is True
 
         assert uow.repo.get("123") is not None
         assert uow.committed is True
+        
+        await bus.bus.stop(clear=True)
 
 
 @pytest.mark.asyncio
@@ -153,11 +153,10 @@ async def test_event_handling_multiple_subscribers_and_isolation(system, dummy_m
         evt = DummyCreatedEvent(id="123")
         await bus.dispatch(evt)
 
-        await asyncio.sleep(0.01)
-        bus.bus._is_running = False
-
         assert dummy_module.handler1_called is True
         assert dummy_module.handler2_called is True
+        
+        await bus.bus.stop(clear=True)
 
 
 def test_pydantic_validation():
@@ -175,11 +174,10 @@ async def test_flaky_command_retries(system, dummy_module):
         cmd = FlakyCommand(id="flaky_123")
         await bus.dispatch(cmd)
 
-        await asyncio.sleep(0.01)
-        bus.bus._is_running = False
-
         # Handler should have been called exactly 3 times (fails twice, succeeds on third)
         assert dummy_module.flaky_attempts == 3
+        
+        await bus.bus.stop(clear=True)
 
 
 @pytest.mark.asyncio
@@ -190,11 +188,74 @@ async def test_failing_command_exhausts_retries(system, dummy_module):
 
         cmd = FailingCommand(id="fail_123")
 
-        # bubus swallows the exception and returns it in results, so it won't raise
-        results = await bus.dispatch(cmd)
-
-        await asyncio.sleep(0.01)
-        bus.bus._is_running = False
+        # Now it should raise after retries are exhausted
+        with pytest.raises(Exception, match="Permanent Failure"):
+            await bus.dispatch(cmd)
 
         # Handler should have been called 3 times and then given up
         assert dummy_module.fail_attempts == 3
+        
+        await bus.bus.stop(clear=True)
+
+class LoopAEvent(Event):
+    id: str
+
+class LoopBEvent(Event):
+    id: str
+
+@pytest.mark.asyncio
+async def test_messagebus_infinite_loop_prevention(system):
+    """Test that the message bus stops execution when trace stack goes too deep."""
+    class LoopModule(BaseModule):
+        settings_class = DummySettings
+        def __init__(self):
+            super().__init__()
+            self.event_handlers = {
+                LoopAEvent: [self.handle_a],
+                LoopBEvent: [self.handle_b]
+            }
+        async def handle_a(self, evt: LoopAEvent, uow: FakeUnitOfWork):
+            with uow:
+                agg = FakeAggregate(evt.id)
+                agg.add_event(LoopBEvent(id=evt.id))
+                uow.repo.add(agg)
+                uow.commit() # This will trigger collect_new_events in event_wrapper
+        async def handle_b(self, evt: LoopBEvent, uow: FakeUnitOfWork):
+            with uow:
+                agg = FakeAggregate(evt.id)
+                agg.add_event(LoopAEvent(id=evt.id))
+                uow.repo.add(agg)
+                uow.commit()
+
+    sys2 = System(modules=[LoopModule()])
+    sys2.providers.append(MockUoWProvider())
+    sys2._bootstrap()
+    
+    async with sys2.container() as request_container:
+        bus = await request_container.get(MessageBus)
+        bus.max_trace_depth = 5  # Small depth for quick test
+        
+        # Root event triggers the loop
+        evt = LoopAEvent(id="loop_123")
+        
+        # It should trigger RuntimeError infinite loop
+        with pytest.raises(RuntimeError, match="Infinite loop detected"):
+            await bus.dispatch(evt)
+        
+        await bus.bus.stop(clear=True)
+
+@pytest.mark.asyncio
+async def test_messagebus_trace_stack_propagation(system, dummy_module):
+    """Test that parents propagate trace_stack and correlation_id to children."""
+    async with system.container() as request_container:
+        bus = await request_container.get(MessageBus)
+        
+        cmd = CreateDummyCommand(id="prop_456")
+        await bus.dispatch(cmd)
+        
+        # Check that the event received in handle_event has the propagated context
+        assert dummy_module.received_event is not None
+        assert dummy_module.received_event.correlation_id == cmd.correlation_id
+        assert "CreateDummyCommand" in dummy_module.received_event.trace_stack[-1]
+        
+        await bus.bus.stop(clear=True)

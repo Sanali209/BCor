@@ -67,8 +67,6 @@ class AGMMapper:
         if previous_state is None:
             previous_state = {}
 
-        model_dict = self.retort.dump(model)
-
         # 1. Cypher MERGE Generation
         hints = get_type_hints(type(model), include_extras=True)
         label = type(model).__name__

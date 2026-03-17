@@ -1,0 +1,6 @@
+[app]
+name = "default-app"
+description = "Default application for testing module discovery"
+
+[modules]
+enabled = ["orders", "agm"]

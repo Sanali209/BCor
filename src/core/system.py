@@ -44,8 +44,23 @@ class System:
     4. Initializing the IoC container
     """
 
-    def __init__(self, modules: List[BaseModule]):
+    @classmethod
+    def from_manifest(cls, manifest_path: str):
+        """Create a System instance by discovering modules from a TOML manifest."""
+        from src.core.discovery import ModuleDiscovery
+        import tomllib
+        from pathlib import Path
+
+        path = Path(manifest_path)
+        with path.open("rb") as f:
+            config_data = tomllib.load(f)
+
+        modules = ModuleDiscovery.load_from_manifest(manifest_path)
+        return cls(modules=modules, config=config_data)
+
+    def __init__(self, modules: List[BaseModule], config: dict = None):
         self.modules = modules
+        self.config = config or {}
         self.command_handlers: Dict[Type, Callable] = {}
         self.event_handlers: Dict[Type, List[Callable]] = {}
         self.providers: List[Provider] = []
@@ -60,8 +75,13 @@ class System:
 
             # Collect and Validate declarative settings (Fail-Fast Boundary)
             if module.settings_class:
-                # Instantiate settings class (reads from env vars via pydantic-settings)
-                validated_settings = module.settings_class()
+                module_name = module.__class__.__name__.lower().replace("module", "")
+                
+                # Extract settings from TOML config if available
+                module_config_kwargs = self.config.get(module_name, {})
+
+                # Instantiate settings class (reads from kwargs, then env vars via pydantic-settings)
+                validated_settings = module.settings_class(**module_config_kwargs)
 
                 # Inject validated settings back into the module
                 module.settings = validated_settings
