@@ -5,15 +5,31 @@ from src.modules.ecs.domain import EcsWorld
 
 
 class AbstractEcsRepository(AbstractRepository[EcsWorld], abc.ABC):
-    """Abstract Port hiding details of storing the ECS World."""
+    """Abstract Port for persisting and retrieving ECS worlds.
+    
+    Hides the storage implementation (In-Memory, SQLAlchemy, Neo4j) 
+    from the domain logic.
+    """
 
     @abc.abstractmethod
-    def get_world(self, world_id: str) -> EcsWorld:
-        """Fetch the ECS World Aggregate."""
+    async def get_world(self, world_id: str) -> EcsWorld:
+        """Fetches an ECS World Aggregate from the storage.
+
+        Args:
+            world_id: Unique identifier for the world.
+
+        Returns:
+            The loaded EcsWorld instance.
+        """
         raise NotImplementedError
 
 
 class EcsUnitOfWork(AbstractUnitOfWork, abc.ABC):
-    """Unit of Work specifically typed for ECS Module operations."""
+    """Specialized Unit of Work for ECS Module operations.
+    
+    Provides strongly-typed access to the ECS world repository.
 
+    Attributes:
+        worlds: The EcsWorld repository instance.
+    """
     worlds: AbstractEcsRepository

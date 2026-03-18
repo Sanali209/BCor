@@ -1,0 +1,10 @@
+[app]
+app_name = "VFSSample"
+log_level = "DEBUG"
+
+[modules]
+paths = ["src.apps", "src.modules"]
+enabled = ["VFSSample", "vfs"]
+
+[vfs]
+url = "osfs://./vfs_data"

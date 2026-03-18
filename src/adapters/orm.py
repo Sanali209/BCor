@@ -6,8 +6,10 @@ mapper_registry = registry(metadata=metadata)
 
 
 def start_mappers() -> None:
-    """
-    Registers imperative mappings between Domain Models and SQLAlchemy Tables.
-    Currently empty until concrete domain modules (e.g., Orders) are implemented.
+    """Registers imperative mappings between Domain Models and SQL Tables.
+
+    This function should be called during application startup to link
+    plain Python domain classes with SQLAlchemy table definitions without
+    using the declarative base (Imperative Mapping).
     """
     pass

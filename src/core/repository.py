@@ -8,20 +8,38 @@ T = TypeVar("T", bound=Aggregate)
 
 class AbstractRepository(Generic[T], abc.ABC):
     """Abstract base class for repositories.
+    
+    The Repository pattern abstracts the data storage layer, allowing the
+    domain layer to remain independent of infrastructure concerns. 
+    Repositories should exclusively handle the persistence and retrieval 
+    of Aggregates.
 
-    Repositories should only save and load Aggregates.
+    Attributes:
+        seen: A set of aggregates loaded or added during the current session.
     """
 
     def __init__(self):
+        """Initializes the repository with an empty 'seen' set."""
         self.seen: Set[T] = set()
 
     def add(self, aggregate: T) -> None:
-        """Add a new aggregate to the repository."""
+        """Adds a new aggregate to the repository and marks it as 'seen'.
+
+        Args:
+            aggregate: The aggregate instance to save.
+        """
         self._add(aggregate)
         self.seen.add(aggregate)
 
     def get(self, reference: str) -> Optional[T]:
-        """Get an aggregate from the repository by reference."""
+        """Retrieves an aggregate by its unique reference and marks it as 'seen'.
+
+        Args:
+            reference: The unique identifier for the aggregate.
+
+        Returns:
+            The aggregate instance if found, otherwise None.
+        """
         aggregate = self._get(reference)
         if aggregate:
             self.seen.add(aggregate)
@@ -29,8 +47,10 @@ class AbstractRepository(Generic[T], abc.ABC):
 
     @abc.abstractmethod
     def _add(self, aggregate: T) -> None:
+        """Concrete implementation for adding an aggregate."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def _get(self, reference: str) -> Optional[T]:
+        """Concrete implementation for retrieving an aggregate."""
         raise NotImplementedError

@@ -12,15 +12,23 @@ import loguru
 
 
 class OrdersSettings(BaseSettings):
-    """Configuration for the Orders module if needed."""
-
+    """Configuration settings for the Orders module.
+    
+    Can be populated from environment variables or TOML config.
+    """
     pass
 
 
 class OrdersModule(BaseModule):
+    """Domain module for handling customer orders.
+    
+    Registers command and event handlers related to order lifecycle 
+    management, including creation and shipping.
+    """
     settings_class = OrdersSettings
 
     def __init__(self):
+        """Initializes the Orders module and registers routing maps."""
         super().__init__()
 
         # Register command handlers
@@ -30,18 +38,25 @@ class OrdersModule(BaseModule):
         }
 
         # Register event handlers
-        # Currently we just log them to show they are published correctly
         self.event_handlers = {
             OrderCreated: [self.on_order_created],
             OrderShipped: [self.on_order_shipped],
         }
 
     async def on_order_created(self, event: OrderCreated, uow=None):
+        """Subscriber for OrderCreated events.
+        
+        Currently logs the event for audit/demonstration purposes.
+        """
         loguru.logger.info(
             f"Integration Event Received: OrderCreated for {event.order_id} ({event.total_amount}$)"
         )
 
     async def on_order_shipped(self, event: OrderShipped, uow=None):
+        """Subscriber for OrderShipped events.
+        
+        Currently logs the event for audit/demonstration purposes.
+        """
         loguru.logger.info(
             f"Integration Event Received: OrderShipped for {event.order_id}"
         )

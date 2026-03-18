@@ -7,7 +7,19 @@ from src.modules.orders.domain import Order, DomainError
 async def handle_create_order(
     cmd: CreateOrderCommand, uow: AbstractUnitOfWork
 ) -> BusinessResult:
-    """Creates a new Order aggregate and saves it."""
+    """Handles the creation of a new order.
+
+    This handler manages the atomicity of order creation, ensuring that
+    duplicate IDs are rejected and the initial state is persisted.
+
+    Args:
+        cmd: The command containing order details.
+        uow: The active Unit of Work for database interaction.
+
+    Returns:
+        A BusinessResult containing the order reference on success, 
+        or a failure message if a conflict occurs.
+    """
     with uow:
         # Check if already exists? (Simulated constraint)
         existing = uow.repo.get(cmd.order_id)
@@ -28,7 +40,19 @@ async def handle_create_order(
 async def handle_ship_order(
     cmd: ShipOrderCommand, uow: AbstractUnitOfWork
 ) -> BusinessResult:
-    """Updates an order's status to SHIPPED."""
+    """Handles order shipping transitions.
+
+    Retrieves the order, transitions its state via domain methods, 
+    and commits the changes.
+
+    Args:
+        cmd: The command containing the order ID to ship.
+        uow: The active Unit of Work for database interaction.
+
+    Returns:
+        A BusinessResult containing the order reference on success,
+        or a failure message if the order is not found or invalid.
+    """
     with uow:
         order = uow.repo.get(cmd.order_id)
         if not order:

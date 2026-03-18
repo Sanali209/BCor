@@ -8,6 +8,7 @@ dependencies = [
     "adaptix>=3.0.0b11",
     "bubus>=1.5.6",
     "dishka>=1.9.1",
+    "fs>=2.4.16",
     "loguru>=0.7.3",
     "neo4j>=6.1.0",
     "opentelemetry-api>=1.40.0",

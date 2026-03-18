@@ -1,0 +1,50 @@
+{
+  "max 2000": [
+    {
+      "cond_type": "AreaCondition",
+      "cond_vars": {
+        "min_area": 4000000,
+        "max_area": 10000000000
+      },
+      "act_type": "ScaleAction",
+      "act_vars": {
+        "max_width": 2000,
+        "max_height": 2000,
+        "preserve_ratio": true
+      }
+    }
+  ],
+  "to webp": [
+    {
+      "cond_type": "FormatCondition",
+      "cond_vars": {
+        "target_formats": [
+          ".webp"
+        ],
+        "invert": true
+      },
+      "act_type": "ConvertAction",
+      "act_vars": {
+        "target_format": ".webp",
+        "quality": 90,
+        "conflict_strategy": 3,
+        "delete_original": true
+      }
+    }
+  ],
+  "1980 1600": [
+    {
+      "cond_type": "AreaCondition",
+      "cond_vars": {
+        "min_area": 3169600,
+        "max_area": 100000000
+      },
+      "act_type": "ScaleAction",
+      "act_vars": {
+        "max_width": 1980,
+        "max_height": 1600,
+        "preserve_ratio": true
+      }
+    }
+  ]
+}

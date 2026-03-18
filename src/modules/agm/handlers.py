@@ -6,9 +6,14 @@ from src.modules.agm.messages import StoredFieldRecalculationRequested
 async def handle_stored_field_recalc(
     event: StoredFieldRecalculationRequested, uow=None
 ):
-    """
-    Subscribes to StoredFieldRecalculationRequested events from the MessageBus
-    and delegates the actual calculation to the TaskIQ background worker.
+    """Handles requests for stored field recalculation.
+
+    Subscribes to `StoredFieldRecalculationRequested` events and 
+    dispatches a background task to TaskIQ for processing.
+
+    Args:
+        event: The event containing node and field information.
+        uow: Optional Unit of Work (not used in this handler).
     """
     try:
         await tasks.compute_stored_field.kiq(

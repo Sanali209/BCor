@@ -130,15 +130,10 @@ async def test_move_entity_command_fail_fast(system):
 
         list(uow.collect_new_events())
 
-        try:
-            results = await bus.dispatch(
+        # Now that MessageBus.dispatch raises error immediately
+        with pytest.raises(ValueError, match="Entity ghost missing PositionComponent"):
+            await bus.dispatch(
                 MoveEntityCommand(entity_id="ghost", target_x=100.0, target_y=100.0)
             )
-            # bubus dispatch returns the Event itself which has `.event_results`
-            has_error = False
-            for r in results.event_results.values():
-                if "missing PositionComponent" in str(r.error):
-                    has_error = True
-            assert has_error is True
-        finally:
-            bus.bus._is_running = False
+        
+        bus.bus._is_running = False

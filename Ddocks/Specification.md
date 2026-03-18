@@ -8,7 +8,9 @@
 
 *   **Инверсия зависимостей (Dependency Inversion Principle, DIP):** Модули верхнего уровня не зависят от деталей инфраструктуры. Абстракции реализуются через абстрактные базовые классы (`abc.ABC`). *(В коде реализовано через `src/core/repository.py` и `src/core/unit_of_work.py`)*.
 *   **Слабая связанность через события (Event-Driven Architecture):** Сервисы взаимодействуют асинхронно через обмен событиями. *(В коде реализовано: шина `bubus` и брокер `TaskIQ/NATS`)*.
-*   **CQRS (Command Query Responsibility Segregation):** Жесткое разделение записи и чтения. *(Примечание: Модель Чтения / Запросы пока не реализованы в коде, реализованы только Команды)*.
+*   **CQRS (Command Query Responsibility Segregation):** Separation of write (Commands) and read (Queries) models.
+    *   *Implementation:* Commands are handled via `MessageBus`. Read models utilize direct SQL/Cypher projections (e.g., in `src/modules/*/queries.py` or via `AGM` fluent builder).
+*   **Railway Oriented Programming (ROP):** Business flows use the `Result` monad for graceful error handling. *(Implemented via `src/core/monads.py`)*.
 
 ---
 
@@ -19,8 +21,9 @@
 *   **События предметной области (Domain Events):** Описывают факты внутри агрегата. *(В коде реализовано наследованием от `Event`)*.
 
 #### 2.2. Инфраструктурные абстракции доступа к данным
-*   **Репозиторий (Repository Pattern):** *(В коде реализована абстракция `AbstractRepository` со словарем загруженных сущностей `self.seen`. Конкретных реализаций вроде `SqlAlchemyRepository` пока нет)*.
-*   **Единица работы (Unit of Work, UoW):** *(В коде реализовано базовым классом `AbstractUnitOfWork` с `__enter__`, `__exit__`, `commit`, `rollback`, и сбором событий `collect_new_events()`)*.
+*   **Репозиторий (Repository Pattern):** *(В коде реализована абстракция `AbstractRepository` и конкретный `SqlAlchemyRepository` в `src/adapters/repository.py`)*.
+*   **Единица работы (Unit of Work, UoW):** *(Реализовано в `src/core/unit_of_work.py` и `src/adapters/unit_of_work.py`)*.
+*   **Маппинг (ORM):** Imperative mapping implemented in `src/adapters/orm.py`.
 
 #### 2.3. Сервисный слой (Service Layer / Handlers)
 *   **Обработчики (Handlers):** Асинхронные функции, принимающие Команды или События. *(В коде реализовано, например, `handle_move_entity_command` в модуле ECS)*.
@@ -36,7 +39,7 @@
 ---
 
 ### 3. Композитный корень (Bootstrap & Dependency Injection)
-*   **Сценарий начальной загрузки:** *(В коде реализовано: вместо старого подхода с ручным инжектом в `bootstrap.py`, используется фреймворк **Dishka** в `src/core/system.py`)*. Класс `System` инициализирует настройки (BaseSettings) и провайдеры каждого модуля.
+*   **Сценарий начальной загрузки:** Используется фреймворк **Dishka** и класс `System`. Поддерживается динамическое обнаружение модулей через манифесты `app.toml` (`src/core/discovery.py`). Провайдеры и обработчики регистрируются автоматически в композитном корне.
 
 ---
 

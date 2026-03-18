@@ -8,36 +8,48 @@ from src.modules.agm.handlers import handle_stored_field_recalc
 
 
 class AGMSettings(BaseSettings):
-    """Configuration for the AGM module."""
-
+    """Configuration settings for the Agentic Grid Management (AGM) module."""
     pass
 
 
 class AGMProvider(Provider):
+    """Dishka Provider for AGM-specific dependencies.
+    
+    Provides the AGMMapper, ensuring it has access to the application 
+    container for live field resolution.
+    """
     scope = Scope.REQUEST
 
     @provide
     def provide_agm_mapper(
         self, container: AsyncContainer, message_bus: MessageBus
     ) -> AGMMapper:
+        """Provides a request-scoped AGMMapper instance.
+
+        Args:
+            container: The active AsyncContainer for dependency resolution.
+            message_bus: The system MessageBus for dispatching side effects.
+
+        Returns:
+            A configured AGMMapper instance.
         """
-        Provides the AGMMapper, injecting the current
-        AsyncContainer and MessageBus.
-        """
-        # Note: the AGMMapper needs the AsyncContainer to resolve Live fields.
         return AGMMapper(container=container, message_bus=message_bus)
 
 
 class AGMModule(BaseModule):
+    """Module for Agentic Grid Management (AGM).
+    
+    AGM provides a Graph-Object Mapping (GOM) layer for Neo4j, 
+    supporting polymorphic loading, live hydration of fields via DI, 
+    and background recalculation of stored fields via TaskIQ.
+    """
     settings_class = AGMSettings
 
     def __init__(self):
+        """Initializes the AGM module and registers its provider and handlers."""
         super().__init__()
 
         self.provider = AGMProvider()
-
-        # Register command handlers (none for AGM)
-        self.command_handlers = {}
 
         # Register event handlers for TaskIQ triggers
         self.event_handlers = {

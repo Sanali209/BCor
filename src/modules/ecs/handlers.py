@@ -8,28 +8,50 @@ logger = logging.getLogger(__name__)
 
 
 async def physics_system_handler(event: TickEvent, uow: EcsUnitOfWork):
-    """The 'System' in ECS: Updates Positions based on Velocities."""
+    """Processes physics updates across all entities in the world.
+
+    This 'System' implementation iterates over entities with both 
+    `PositionComponent` and `VelocityComponent`, updates their 
+    coordinates based on `delta_time`, and triggers collision checks.
+
+    Args:
+        event: The tick event containing timing information.
+        uow: The ECS-specific Unit of Work.
+    """
     with uow:
         # Load the default 'main' world.
-        # In a real engine, the world ID might come from the event context or settings.
         world = await uow.worlds.get_world("main_scene")
 
         # Iterate over all entities with both Position and Velocity components
         for entity_id, (pos, vel) in world.query(PositionComponent, VelocityComponent):
-            # Mutate the value object for speed (or replace it functionally)
+            # Update position based on velocity and time delta
             pos.x += vel.dx * event.delta_time
             pos.y += vel.dy * event.delta_time
 
             # Check collisions within the aggregate boundary
             world.check_collisions(entity_id, pos)
 
-        uow.commit()  # Flushes changes and collects new domain events (CollisionDetected)
+        uow.commit()
 
 
 async def handle_move_entity_command(
     cmd: MoveEntityCommand, uow: EcsUnitOfWork
 ) -> BusinessResult:
-    """A direct command to forcibly move an entity."""
+    """Directly updates an entity's position.
+
+    Used for manual overrides or teleportation logic, bypassing the 
+    normal physics system.
+
+    Args:
+        cmd: The command specifying the target coordinates.
+        uow: The ECS-specific Unit of Work.
+
+    Returns:
+        A BusinessResult indicating success or failure.
+    
+    Raises:
+        ValueError: If the entity does not have a PositionComponent.
+    """
     with uow:
         world = await uow.worlds.get_world("main_scene")
         pos = world.get_component(cmd.entity_id, PositionComponent)

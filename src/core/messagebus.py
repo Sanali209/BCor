@@ -1,6 +1,8 @@
-from typing import Callable, Type
+from typing import Callable, Type, Optional, Any
 import asyncio
+import inspect
 
+from dishka import AsyncContainer
 import bubus
 from tenacity import (
     retry,
@@ -35,16 +37,40 @@ _patch_bubus()
 class MessageBus:
     """Central dispatcher for Commands and Events, powered by bubus.EventBus.
     
-    Implements context-aware tracing to detect and prevent infinite loops.
+    The MessageBus acts as the mediator between the application layer and 
+    domain handlers. It supports strict 1-to-1 command routing and 
+    1-to-N event broadcasting. It also facilitates domain event collection 
+    from the Unit of Work.
+
+    Attributes:
+        uow: The active Unit of Work instance.
+        max_trace_depth: Maximum recursion depth for message tracing.
+        bus: The underlying bubus.EventBus instance.
     """
 
-    def __init__(self, uow: AbstractUnitOfWork, max_trace_depth: int = 20):
+    def __init__(self, uow: AbstractUnitOfWork, container: Optional[AsyncContainer] = None, max_trace_depth: int = 20):
+        """Initializes the MessageBus with a Unit of Work and optional DI container.
+
+        Args:
+            uow: The Unit of Work to associate with the bus.
+            container: Optional Dishka container for dependency resolution.
+            max_trace_depth: Max depth to prevent infinite loops in handlers.
+        """
         self.uow = uow
+        self.container = container
         self.max_trace_depth = max_trace_depth
         self.bus = bubus.EventBus()
 
     def register_command(self, cmd_type: Type[Command], handler: Callable):
-        """Register a strict 1-to-1 command handler."""
+        """Registers a strict 1-to-1 command handler.
+
+        Command handlers are wrapped with observability (tracing/logging) 
+        and a retry policy (exponential backoff).
+
+        Args:
+            cmd_type: The class of the command to handle.
+            handler: The handler function (sync or async).
+        """
         # Create a uniquely named wrapper for the handler to avoid bubus warnings
         wrapper_name = f"command_wrapper_for_{handler.__name__}"
 
@@ -55,7 +81,6 @@ class MessageBus:
             retry=retry_if_exception_type(Exception),
         )
         async def command_wrapper(command: cmd_type):
-            # Observability: Start a trace span and log
             with tracer.start_as_current_span(
                 f"Handle Command: {cmd_type.__name__}"
             ) as span:
@@ -63,29 +88,54 @@ class MessageBus:
                 span.set_attribute("command.type", cmd_type.__name__)
 
                 try:
+                    # Resolve dependencies from container for parameters other than 'command'
+                    sig = inspect.signature(handler)
+                    kwargs = {}
+                    for i, (param_name, param) in enumerate(sig.parameters.items()):
+                        # Skip the first parameter (the command itself)
+                        if i == 0:
+                            continue
+                        
+                        if param_name == "uow":
+                            kwargs[param_name] = self.uow
+                            continue
+                        
+                        # Try to resolve from container if available
+                        if self.container and param.annotation != inspect.Parameter.empty:
+                            try:
+                                # We use the annotation as the key for DI
+                                kwargs[param_name] = await self.container.get(param.annotation)
+                            except Exception as e:
+                                logger.debug(f"DI: Could not resolve {param_name} ({param.annotation}) from container: {e}")
+
                     if asyncio.iscoroutinefunction(handler):
-                        result = await handler(command, uow=self.uow)
+                        result = await handler(command, **kwargs)
                     else:
-                        result = await asyncio.to_thread(handler, command, uow=self.uow)
+                        result = await asyncio.to_thread(handler, command, **kwargs)
 
                     await self._publish_collected_events(command)
                     return result
                 except Exception as e:
                     span.record_exception(e)
                     logger.error(f"Command execution failed: {e}")
-                    # bubus swallows exceptions, so we re-raise them specifically for fail-fast if needed,
-                    # but since dispatch returns EventResults we can just let bubus log it and check results.
                     raise
 
         command_wrapper.__name__ = wrapper_name
         self.bus.on(cmd_type, command_wrapper)
 
     def register_event(self, evt_type: Type[Event], handler: Callable):
-        """Register a 1-to-N event subscriber."""
+        """Registers a 1-to-N event subscriber.
+
+        Event handlers are wrapped with observability (tracing/logging).
+        Failures in event handlers are isolated and do not crash the bus.
+
+        Args:
+            evt_type: The class of the event to subscribe to.
+            handler: The subscriber function (sync or async).
+        """
         wrapper_name = f"event_wrapper_for_{handler.__name__}"
 
         async def event_wrapper(event: evt_type):
-            # Observability: Start a trace span and log
             with tracer.start_as_current_span(
                 f"Handle Event: {evt_type.__name__}"
             ) as span:
@@ -113,19 +163,34 @@ class MessageBus:
         event_wrapper.__name__ = wrapper_name
         self.bus.on(evt_type, event_wrapper)
 
-    async def dispatch(self, message: Message):
-        """Entrypoint for processing messages via bubus."""
+    async def dispatch(self, message: Message) -> Message:
+        """Dispatches a message to its registered handlers.
+
+        This is the main entrypoint for processing commands and events.
+        It awaits handler completion and bubbles up critical errors.
+
+        Args:
+            message: The Command or Event instance to dispatch.
+
+        Returns:
+            The original message after processing.
+        """
         await self.bus.dispatch(message)
-        
-        # We MUST await the message completion to catch any critical errors 
-        # (like infinite loops) that happened in the background handlers.
-        # raise_if_none=False because some events might not have any handlers.
         await message.event_result(raise_if_any=True, raise_if_none=False)
-                
         return message
 
     async def _publish_collected_events(self, parent_message: Message):
-        """Publish all accumulated events from the UoW into bubus."""
+        """Publishes accumulated events from the UoW back into the bus.
+
+        This method supports causality tracing and infinite loop detection
+        by maintaining a trace stack for messages.
+
+        Args:
+            parent_message: The message that triggered the event collection.
+
+        Raises:
+            RuntimeError: If the trace depth exceedes max_trace_depth.
+        """
         events = list(self.uow.collect_new_events())
         if events:
             new_trace = parent_message.trace_stack.copy()
@@ -138,6 +203,4 @@ class MessageBus:
                 new_event.correlation_id = parent_message.correlation_id
                 new_event.trace_stack = new_trace
                 await self.bus.dispatch(new_event)
-                
-                # Await completion to detect critical errors (infinite loops) early and bubble them up
                 await new_event.event_result(raise_if_any=True, raise_if_none=False)

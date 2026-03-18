@@ -9,21 +9,46 @@ from src.modules.ecs.messages import ComponentAddedEvent, CollisionDetectedEvent
 # --- Basic ECS Components (Data-only structs) ---
 @dataclass
 class PositionComponent:
+    """ECS Component storing 2D spatial coordinates.
+    
+    Attributes:
+        x: Horizontal position in world units.
+        y: Vertical position in world units.
+    """
     x: float
     y: float
 
 
 @dataclass
 class VelocityComponent:
+    """ECS Component storing 2D movement vectors.
+    
+    Attributes:
+        dx: Horizontal velocity (units per second).
+        dy: Vertical velocity (units per second).
+    """
     dx: float
     dy: float
 
 
 # --- ECS World Aggregate ---
 class EcsWorld(Aggregate):
-    """The Root Aggregate acting as the ECS consistency boundary."""
+    """The Root Aggregate acting as the ECS consistency boundary.
+    
+    The EcsWorld manages entities and their associated components, 
+    providing efficient query mechanisms for systems and ensuring 
+    domain invariants (like collision rules) are maintained.
+
+    Attributes:
+        world_id: Unique identifier for the game world/scene.
+    """
 
     def __init__(self, world_id: str):
+        """Initializes a new ECS World.
+
+        Args:
+            world_id: Unique identifier for this scene.
+        """
         super().__init__()
         self.world_id = world_id
 
@@ -31,7 +56,12 @@ class EcsWorld(Aggregate):
         self._components: Dict[Type, Dict[str, Any]] = defaultdict(dict)
 
     def add_component(self, entity_id: str, component: Any) -> None:
-        """Add a component to an entity."""
+        """Adds a component to a specific entity and emits an event.
+
+        Args:
+            entity_id: The ID of the target entity.
+            component: The component instance to attach.
+        """
         comp_type = type(component)
         self._components[comp_type][entity_id] = component
         self.add_event(
@@ -39,11 +69,29 @@ class EcsWorld(Aggregate):
         )
 
     def get_component(self, entity_id: str, comp_type: Type) -> Any:
-        """Retrieve a specific component for an entity."""
+        """Retrieves a specific component for an entity.
+
+        Args:
+            entity_id: The ID of the entity.
+            comp_type: The type of component to fetch.
+
+        Returns:
+            The component instance if found, otherwise None.
+        """
         return self._components[comp_type].get(entity_id)
 
     def query(self, *component_types: Type) -> Iterator[Tuple[str, List[Any]]]:
-        """Fast retrieval of entities containing ALL specified component types."""
+        """Performs a fast join query across multiple component types.
+
+        Retrieves all entities that possess AT LEAST all of the specified 
+        component types.
+
+        Args:
+            *component_types: One or more component types to filter by.
+
+        Yields:
+            Tuples of (entity_id, [component_instances]).
+        """
         if not component_types:
             return
 
@@ -65,9 +113,15 @@ class EcsWorld(Aggregate):
             )
 
     def check_collisions(self, entity_id: str, pos: PositionComponent) -> None:
-        """Domain logic to check collisions internally within the aggregate boundary."""
-        # Simple dummy logic for demonstration:
-        # If another entity has the exact same position, fire a collision event.
+        """Internal domain logic to detect spatial overlaps.
+
+        Executes a spatial query within the world boundary and emits 
+        CollisionDetectedEvent if entities overlap.
+
+        Args:
+            entity_id: The entity performing the check.
+            pos: The current position used for collision testing.
+        """
         for other_id, comps in self.query(PositionComponent):
             if other_id == entity_id:
                 continue

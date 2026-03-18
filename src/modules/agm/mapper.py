@@ -11,18 +11,56 @@ T = TypeVar("T")
 
 
 class AGMMapper:
+    """Graph-Object Mapper (GOM) for Neo4j.
+    
+    The AGMMapper handles the conversion between Python domain models 
+    and Neo4j node/relationship records. It supports:
+    1. Polymorphism: Loading subclasses based on graph labels.
+    2. Dependency Injection: Hydrating 'Live' fields via Dishka.
+    3. Change Tracking: Identifying changes to trigger background tasks.
+    4. Relationship Mapping: Merging graph relationships from model attributes.
+
+    Attributes:
+        container: Dishka AsyncContainer for live field resolution.
+        message_bus: System MessageBus for side-effect dispatching.
+        retort: Adaptix Retort instance for structural mapping.
+        polymorphic_registry: Map of graph labels to Python classes.
+    """
+
     def __init__(self, container: AsyncContainer, message_bus: MessageBus):
+        """Initializes the AGMMapper.
+
+        Args:
+            container: The active AsyncContainer.
+            message_bus: The system MessageBus.
+        """
         self.container = container
         self.message_bus = message_bus
         self.retort = Retort()
         self.polymorphic_registry = {}
 
     def register_subclass(self, label: str, cls: Type[T]):
+        """Registers a Python class for polymorphic loading by graph label.
+
+        Args:
+            label: The Neo4j label associated with the class.
+            cls: The Python class to instantiate for this label.
+        """
         self.polymorphic_registry[label] = cls
 
     async def load(
         self, model_class: type[T], record: dict[str, Any], resolve_live: bool = True
     ) -> T:
+        """Loads a domain model instance from a database record.
+
+        Args:
+            model_class: The base class expected from the record.
+            record: The raw dictionary record from Neo4j.
+            resolve_live: Whether to hydrate fields marked with @Live.
+
+        Returns:
+            An instance of model_class (or a registered subclass).
+        """
         # 1. Discrimination (Polymorphism)
         labels = record.get("labels", [])
         actual_class = model_class
@@ -64,6 +102,17 @@ class AGMMapper:
     async def save(
         self, model: Any, previous_state: dict[str, Any] = None, session: Any = None
     ):
+        """Saves a domain model instance to Neo4j using Cypher MERGE.
+
+        This method generates a Cypher query based on model attributes 
+        and metadata, merges the node and its relationships, and 
+        dispatches recalculation events for changed source fields.
+
+        Args:
+            model: The domain model instance to save.
+            previous_state: Optional dict representing the state before changes.
+            session: An active Neo4j driver session.
+        """
         if previous_state is None:
             previous_state = {}
 

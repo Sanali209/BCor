@@ -9,10 +9,27 @@ from taskiq import PrometheusMiddleware
 # declaration we can pull it dynamically or use a default.
 NATS_URL = os.getenv("NATS_URL", "nats://localhost:4222")
 
-# Initialize the TaskIQ NATS Broker
-# This broker can be imported and injected into the System composition root
-# and used by module handlers to dispatch tasks.
-broker = NatsBroker(servers=[NATS_URL], queue="my_monolith_tasks")
+def get_broker(is_test: bool = False) -> "taskiq.AsyncBroker":
+    """Initializes and returns a TaskIQ broker instance.
 
-# Attach Observability Middlewares
-broker.add_middlewares(PrometheusMiddleware(server_port=9000))
+    Depending on the environment, it returns either an InMemoryBroker 
+    for testing or a NatsBroker for production, configured with 
+    Prometheus metrics.
+
+    Args:
+        is_test: If True, returns an InMemoryBroker.
+
+    Returns:
+        A configured AsyncBroker instance.
+    """
+    if is_test:
+        from taskiq import InMemoryBroker
+        return InMemoryBroker()
+    
+    broker = NatsBroker(servers=[NATS_URL], queue="my_monolith_tasks")
+    broker.add_middlewares(PrometheusMiddleware(server_port=9000))
+    return broker
+
+
+broker = get_broker(is_test=os.getenv("PYTEST_CURRENT_TEST") is not None)
+"""Global broker instance for the current runtime environment."""

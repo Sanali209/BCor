@@ -9,11 +9,22 @@
 *   `Command(Message)`: Intentions routed to a single handler.
 *   `Event(Message)`: Facts routed to multiple subscribers.
 
+### Lifecycle & Hooks (`decorators.py`)
+*   `@on_start`: Decorator for system startup hooks.
+*   `@on_stop`: Decorator for system shutdown hooks.
+
+### Functional Core (`monads.py`)
+*   `BusinessResult`: Type alias for `Result` monad (Success/Failure).
+*   `success()` / `failure()`: Helpers for Railway Oriented Programming.
+
+### Discovery & Loading (`discovery.py`)
+*   `ModuleDiscovery`: Manifest-based (`app.toml`) module discovery and instantiation.
+
 ### Domain (`domain.py`)
 *   `Aggregate`: Base class for entities boundary. Includes `events` list and `add_event()`.
 
 ### Message Bus (`messagebus.py`)
-*   `MessageBus`: Dispatcher wrapping `bubus.EventBus`.
+*   `MessageBus`: Dispatcher wrapping `bubus.EventBus`. Supports **DI-aware parameter injection** from the Dishka container.
     *   Methods: `register_command()`, `register_event()`, `dispatch()`, `_publish_collected_events()`
 
 ### Ports (`repository.py`, `unit_of_work.py`)
@@ -27,8 +38,8 @@
 *   `BaseModule`: Declarative configuration logic.
     *   State: `settings_class`, `provider`, `command_handlers`, `event_handlers`
 *   `System`: Application composition root.
-    *   Methods: `_bootstrap()` (Initializes Dishka DI container, modules, and settings).
-*   `CoreProvider(dishka.Provider)`: Provides global `MessageBus` instances.
+    *   Methods: `from_manifest()` (Bootstrap via TOML), `start()`, `stop()`.
+*   `CoreProvider(dishka.Provider)`: Provides global `MessageBus` instances and Pydantic settings.
 
 ---
 
@@ -66,18 +77,27 @@
     *   Background task: `build_heavy_report_task` (Taskiq)
 *   **Registration**: `AnalyticsModule(BaseModule)`
 
-### Aetheris Graph Mapper (`agm/`)
-*   **Metadata (`metadata.py`)**: `Stored`, `Live`, `Rel`
-*   **Messages**: `StoredFieldRecalculationRequested(Event)`
-*   **Mapper (`mapper.py`)**:
-    *   `AGMMapper`: Handles `load()` (live resolution, Retort mapping) and `save()` (generates Cypher `MERGE`, dispatches events).
-*   **Fluent Queries (`fluent.py`)**:
-    *   `QueryBuilder[T]`: Generates smart Cypher projections and executes vector searches.
-*   **Models**: `AetherisBaseNode`, `TargetNode`
-*   **Handlers / Tasks**: `handle_stored_field_recalc` -> `compute_stored_field` (Taskiq)
 *   **Registration**: `AGMModule(BaseModule)` with `AGMProvider`
+
+### Virtual File System (`vfs/`)
+*   **Infrastructure**:
+    *   `VfsSettings(BaseSettings)`: Configures connection string.
+    *   `VfsProvider(Provider)`: Provides `FS` (PyFilesystem2) instances with automatic lifecycle management.
+*   **Registration**: `VfsModule(BaseModule)`
 
 ---
 
 ## Adapters (`src/adapters/`)
 *   `taskiq_broker.py`: Configures `NatsBroker` (Taskiq) with Prometheus metrics middleware. Used for async task delegation.
+*   `orm.py`: Imperative mapping registry for SQLAlchemy.
+*   `repository.py`: `SqlAlchemyRepository` (generic implementation).
+*   `unit_of_work.py`: `SqlAlchemyUnitOfWork` (manages DB sessions).
+
+---
+
+## Applications (`src/apps/`)
+*   `app.toml`: Application manifest (enabled modules, settings).
+*   `main.py`: Entry point using `System.from_manifest()`.
+*   **Samples**:
+    *   `hello_app`: Core pattern demonstration.
+    *   `VFSSample`: Demonstrates VFS integration and DI-aware message bus handlers.
