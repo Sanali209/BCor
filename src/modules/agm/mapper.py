@@ -1,19 +1,21 @@
 import asyncio
-from typing import Any, TypeVar, get_type_hints, Annotated, get_origin, get_args, Type
+from typing import Annotated, Any, TypeVar, get_args, get_origin, get_type_hints
+
 from adaptix import Retort
+from dishka import AsyncContainer
+from loguru import logger
+
 from src.core.messagebus import MessageBus
 from src.modules.agm.messages import StoredFieldRecalculationRequested
-from dishka import AsyncContainer
-from src.modules.agm.metadata import Live, Stored, Rel
-from loguru import logger
+from src.modules.agm.metadata import Live, Rel, Stored
 
 T = TypeVar("T")
 
 
 class AGMMapper:
     """Graph-Object Mapper (GOM) for Neo4j.
-    
-    The AGMMapper handles the conversion between Python domain models 
+
+    The AGMMapper handles the conversion between Python domain models
     and Neo4j node/relationship records. It supports:
     1. Polymorphism: Loading subclasses based on graph labels.
     2. Dependency Injection: Hydrating 'Live' fields via Dishka.
@@ -39,7 +41,7 @@ class AGMMapper:
         self.retort = Retort()
         self.polymorphic_registry = {}
 
-    def register_subclass(self, label: str, cls: Type[T]):
+    def register_subclass(self, label: str, cls: type[T]):
         """Registers a Python class for polymorphic loading by graph label.
 
         Args:
@@ -48,9 +50,7 @@ class AGMMapper:
         """
         self.polymorphic_registry[label] = cls
 
-    async def load(
-        self, model_class: type[T], record: dict[str, Any], resolve_live: bool = True
-    ) -> T:
+    async def load(self, model_class: type[T], record: dict[str, Any], resolve_live: bool = True) -> T:
         """Loads a domain model instance from a database record.
 
         Args:
@@ -82,30 +82,24 @@ class AGMMapper:
                     value = await self.container.get(handler_type)
                     setattr(instance, field_name, value)
                 except Exception as e:
-                    logger.warning(
-                        f"Live Hydration failed for field '{field_name}' via handler '{handler_type}': {e}"
-                    )
+                    logger.warning(f"Live Hydration failed for field '{field_name}' via handler '{handler_type}': {e}")
 
             for field_name, field_type in hints.items():
                 if get_origin(field_type) is Annotated:
                     for metadata in get_args(field_type)[1:]:
                         if isinstance(metadata, Live):
-                            live_tasks.append(
-                                fetch_and_set(field_name, metadata.handler)
-                            )
+                            live_tasks.append(fetch_and_set(field_name, metadata.handler))
 
             if live_tasks:
                 await asyncio.gather(*live_tasks)
 
         return instance
 
-    async def save(
-        self, model: Any, previous_state: dict[str, Any] = None, session: Any = None
-    ):
+    async def save(self, model: Any, previous_state: dict[str, Any] = None, session: Any = None):
         """Saves a domain model instance to Neo4j using Cypher MERGE.
 
-        This method generates a Cypher query based on model attributes 
-        and metadata, merges the node and its relationships, and 
+        This method generates a Cypher query based on model attributes
+        and metadata, merges the node and its relationships, and
         dispatches recalculation events for changed source fields.
 
         Args:
@@ -178,9 +172,7 @@ class AGMMapper:
 
         cypher_query = f"MERGE (n:{label} {{id: $id}})\n{set_part}{rel_part}\nRETURN n"
 
-        logger.debug(
-            f"Generated Cypher MERGE:\n{cypher_query}\nParams: {cypher_params}"
-        )
+        logger.debug(f"Generated Cypher MERGE:\n{cypher_query}\nParams: {cypher_params}")
 
         # Execute the query using the provided session
         if session and hasattr(session, "run"):
@@ -211,6 +203,4 @@ class AGMMapper:
             try:
                 await self.message_bus.dispatch(event)
             except Exception as e:
-                logger.error(
-                    f"Failed to dispatch StoredFieldRecalculationRequested event: {e}"
-                )
+                logger.error(f"Failed to dispatch StoredFieldRecalculationRequested event: {e}")

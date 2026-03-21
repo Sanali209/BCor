@@ -1,5 +1,7 @@
-from typing import Optional, Type, TypeVar
+from typing import TypeVar
+
 from sqlalchemy.orm import Session
+
 from src.core.domain import Aggregate
 from src.core.repository import AbstractRepository
 
@@ -17,7 +19,7 @@ class SqlAlchemyRepository(AbstractRepository[T]):
         model_class: The SQLAlchemy mapped class for the aggregate.
     """
 
-    def __init__(self, session: Session, model_class: Type[T]) -> None:
+    def __init__(self, session: Session, model_class: type[T]) -> None:
         """Initializes the repository with a session and model class.
 
         Args:
@@ -36,10 +38,10 @@ class SqlAlchemyRepository(AbstractRepository[T]):
         """
         self.session.add(aggregate)
 
-    def _get(self, reference: str) -> Optional[T]:
+    def _get(self, reference: str) -> T | None:
         """Retrieves an aggregate by reference from the database.
 
-        Attempts to fetch by primary key first, then falls back to 
+        Attempts to fetch by primary key first, then falls back to
         filtering by a `ref` column.
 
         Args:
@@ -51,8 +53,6 @@ class SqlAlchemyRepository(AbstractRepository[T]):
         instance = self.session.get(self.model_class, reference)
 
         if instance is None:
-            instance = (
-                self.session.query(self.model_class).filter_by(ref=reference).first()
-            )
+            instance = self.session.query(self.model_class).filter_by(ref=reference).first()
 
         return instance

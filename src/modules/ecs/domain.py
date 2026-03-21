@@ -1,20 +1,22 @@
-from typing import Any, Iterator, List, Tuple, Dict, Type
 from collections import defaultdict
+from collections.abc import Iterator
 from dataclasses import dataclass
+from typing import Any
 
 from src.core.domain import Aggregate
-from src.modules.ecs.messages import ComponentAddedEvent, CollisionDetectedEvent
+from src.modules.ecs.messages import CollisionDetectedEvent, ComponentAddedEvent
 
 
 # --- Basic ECS Components (Data-only structs) ---
 @dataclass
 class PositionComponent:
     """ECS Component storing 2D spatial coordinates.
-    
+
     Attributes:
         x: Horizontal position in world units.
         y: Vertical position in world units.
     """
+
     x: float
     y: float
 
@@ -22,11 +24,12 @@ class PositionComponent:
 @dataclass
 class VelocityComponent:
     """ECS Component storing 2D movement vectors.
-    
+
     Attributes:
         dx: Horizontal velocity (units per second).
         dy: Vertical velocity (units per second).
     """
+
     dx: float
     dy: float
 
@@ -34,9 +37,9 @@ class VelocityComponent:
 # --- ECS World Aggregate ---
 class EcsWorld(Aggregate):
     """The Root Aggregate acting as the ECS consistency boundary.
-    
-    The EcsWorld manages entities and their associated components, 
-    providing efficient query mechanisms for systems and ensuring 
+
+    The EcsWorld manages entities and their associated components,
+    providing efficient query mechanisms for systems and ensuring
     domain invariants (like collision rules) are maintained.
 
     Attributes:
@@ -53,7 +56,7 @@ class EcsWorld(Aggregate):
         self.world_id = world_id
 
         # Component Type -> {Entity ID -> Component Instance}
-        self._components: Dict[Type, Dict[str, Any]] = defaultdict(dict)
+        self._components: dict[type, dict[str, Any]] = defaultdict(dict)
 
     def add_component(self, entity_id: str, component: Any) -> None:
         """Adds a component to a specific entity and emits an event.
@@ -64,11 +67,9 @@ class EcsWorld(Aggregate):
         """
         comp_type = type(component)
         self._components[comp_type][entity_id] = component
-        self.add_event(
-            ComponentAddedEvent(entity_id=entity_id, component_type=comp_type.__name__)
-        )
+        self.add_event(ComponentAddedEvent(entity_id=entity_id, component_type=comp_type.__name__))
 
-    def get_component(self, entity_id: str, comp_type: Type) -> Any:
+    def get_component(self, entity_id: str, comp_type: type) -> Any:
         """Retrieves a specific component for an entity.
 
         Args:
@@ -80,10 +81,10 @@ class EcsWorld(Aggregate):
         """
         return self._components[comp_type].get(entity_id)
 
-    def query(self, *component_types: Type) -> Iterator[Tuple[str, List[Any]]]:
+    def query(self, *component_types: type) -> Iterator[tuple[str, list[Any]]]:
         """Performs a fast join query across multiple component types.
 
-        Retrieves all entities that possess AT LEAST all of the specified 
+        Retrieves all entities that possess AT LEAST all of the specified
         component types.
 
         Args:
@@ -106,16 +107,13 @@ class EcsWorld(Aggregate):
         for entity_id in base_entities:
             yield (
                 entity_id,
-                [
-                    self._components[comp_type][entity_id]
-                    for comp_type in component_types
-                ],
+                [self._components[comp_type][entity_id] for comp_type in component_types],
             )
 
     def check_collisions(self, entity_id: str, pos: PositionComponent) -> None:
         """Internal domain logic to detect spatial overlaps.
 
-        Executes a spatial query within the world boundary and emits 
+        Executes a spatial query within the world boundary and emits
         CollisionDetectedEvent if entities overlap.
 
         Args:
@@ -127,6 +125,4 @@ class EcsWorld(Aggregate):
                 continue
             other_pos: PositionComponent = comps[0]
             if abs(other_pos.x - pos.x) < 0.1 and abs(other_pos.y - pos.y) < 0.1:
-                self.add_event(
-                    CollisionDetectedEvent(entity_a=entity_id, entity_b=other_id)
-                )
+                self.add_event(CollisionDetectedEvent(entity_a=entity_id, entity_b=other_id))

@@ -5,8 +5,8 @@ from src.adapters.taskiq_broker import broker
 async def compute_stored_field(node_id: str, field_name: str, source_value: str):
     """Background task to recalculate a stored field.
 
-    This task is triggered when a source field changes. It is 
-    responsible for performing heavy computations (e.g., embedding 
+    This task is triggered when a source field changes. It is
+    responsible for performing heavy computations (e.g., embedding
     generation) and updating the graph database.
 
     Args:

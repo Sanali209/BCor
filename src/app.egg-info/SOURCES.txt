@@ -1,0 +1,629 @@
+README.md
+pyproject.toml
+src/adapters/orm.py
+src/adapters/repository.py
+src/adapters/taskiq_broker.py
+src/adapters/unit_of_work.py
+src/app.egg-info/PKG-INFO
+src/app.egg-info/SOURCES.txt
+src/app.egg-info/dependency_links.txt
+src/app.egg-info/requires.txt
+src/app.egg-info/top_level.txt
+src/apps/ImageAnalyze/handlers.py
+src/apps/ImageAnalyze/main.py
+src/apps/ImageAnalyze/messages.py
+src/apps/ImageAnalyze/module.py
+src/apps/ImageAnalyze/adapters/processors/pil_processor.py
+src/apps/ImageAnalyze/adapters/repositories/sqlite_repository.py
+src/apps/ImageAnalyze/adapters/scanners/pil_scanner.py
+src/apps/ImageAnalyze/analytics/analytics_engine.py
+src/apps/ImageAnalyze/analytics/chart_builder.py
+src/apps/ImageAnalyze/analytics/plotly_chart_builder.py
+src/apps/ImageAnalyze/core/batch_engine.py
+src/apps/ImageAnalyze/core/database.py
+src/apps/ImageAnalyze/core/image_scanner.py
+src/apps/ImageAnalyze/core/preset_manager.py
+src/apps/ImageAnalyze/domain/entities/batch_processing.py
+src/apps/ImageAnalyze/domain/entities/image_metadata.py
+src/apps/ImageAnalyze/domain/interfaces/i_image_scanner.py
+src/apps/ImageAnalyze/domain/interfaces/image_processor.py
+src/apps/ImageAnalyze/domain/interfaces/image_repository.py
+src/apps/ImageAnalyze/gui/common.py
+src/apps/ImageAnalyze/gui/main_window.py
+src/apps/ImageAnalyze/gui/utils.py
+src/apps/ImageAnalyze/gui/widgets/batch_operations_widget.py
+src/apps/ImageAnalyze/gui/widgets/dashboard_widget.py
+src/apps/ImageAnalyze/gui/widgets/rule_editor_widget.py
+src/apps/ImageAnalyze/scripts/seed_test_data.py
+src/apps/ImageAnalyze/use_cases/batch_process.py
+src/apps/ImageAnalyze/use_cases/scan_directory.py
+src/apps/ImageDedup/__init__.py
+src/apps/ImageDedup/handlers.py
+src/apps/ImageDedup/messages.py
+src/apps/ImageDedup/module.py
+src/apps/ImageDedup/provider.py
+src/apps/ImageDedup/adapters/annoy_finder.py
+src/apps/ImageDedup/adapters/cv_differ.py
+src/apps/ImageDedup/adapters/pil_thumbnail_cache.py
+src/apps/ImageDedup/adapters/xmp_adapter.py
+src/apps/ImageDedup/domain/__init__.py
+src/apps/ImageDedup/domain/image_group.py
+src/apps/ImageDedup/domain/image_item.py
+src/apps/ImageDedup/domain/project.py
+src/apps/ImageDedup/domain/interfaces/__init__.py
+src/apps/ImageDedup/domain/interfaces/i_image_differ.py
+src/apps/ImageDedup/domain/interfaces/i_xmp_metadata.py
+src/apps/VFSSample/handlers.py
+src/apps/VFSSample/main.py
+src/apps/VFSSample/messages.py
+src/apps/VFSSample/module.py
+src/apps/hello_app/main.py
+src/apps/hello_app/settings.py
+src/apps/hello_app/modules/greeting/domain.py
+src/apps/hello_app/modules/greeting/handlers.py
+src/apps/hello_app/modules/greeting/messages.py
+src/apps/hello_app/modules/greeting/module.py
+src/common/concurrency.py
+src/common/formatters.py
+src/common/monads.py
+src/common/ui/theming/manager.py
+src/common/ui/theming/provider.py
+src/core/decorators.py
+src/core/discovery.py
+src/core/domain.py
+src/core/messagebus.py
+src/core/messages.py
+src/core/module.py
+src/core/monads.py
+src/core/repository.py
+src/core/system.py
+src/core/unit_of_work.py
+src/legacy_to_port/image analize/main.py
+src/legacy_to_port/image analize/analytics/analytics_engine.py
+src/legacy_to_port/image analize/analytics/chart_builder.py
+src/legacy_to_port/image analize/analytics/plotly_chart_builder.py
+src/legacy_to_port/image analize/core/batch_engine.py
+src/legacy_to_port/image analize/core/database.py
+src/legacy_to_port/image analize/core/image_scanner.py
+src/legacy_to_port/image analize/core/preset_manager.py
+src/legacy_to_port/image analize/gui/main_window.py
+src/legacy_to_port/image analize/gui/utils.py
+src/legacy_to_port/image analize/gui/widgets/batch_operations_widget.py
+src/legacy_to_port/image analize/gui/widgets/dashboard_widget.py
+src/legacy_to_port/image analize/gui/widgets/rule_editor_widget.py
+src/legacy_to_port/sanali209/gentest.py
+src/legacy_to_port/sanali209/test.py
+src/legacy_to_port/sanali209/Python/SLM/FuncModule.py
+src/legacy_to_port/sanali209/Python/SLM/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/groupcontext.py
+src/legacy_to_port/sanali209/Python/SLM/Graph/neo4j/neo4j_m.py
+src/legacy_to_port/sanali209/Python/SLM/Graph/neo4j/neo4j_m_test.py
+src/legacy_to_port/sanali209/Python/SLM/Graph/networckx/networckx_m.py
+src/legacy_to_port/sanali209/Python/SLM/Graph/visualiz/vizualizModule.py
+src/legacy_to_port/sanali209/Python/SLM/LangChain/LangChainHelper.py
+src/legacy_to_port/sanali209/Python/SLM/NLPSimple/NLPPipline.py
+src/legacy_to_port/sanali209/Python/SLM/NLPSimple/whoshMach.py
+src/legacy_to_port/sanali209/Python/SLM/actions/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/actions/action_module.py
+src/legacy_to_port/sanali209/Python/SLM/actions/locate_in_exp.py
+src/legacy_to_port/sanali209/Python/SLM/actions/appActions/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/actions/appActions/clear metadata.py
+src/legacy_to_port/sanali209/Python/SLM/actions/appActions/quickdeletefiles.py
+src/legacy_to_port/sanali209/Python/SLM/actions/appActions/startfile.py
+src/legacy_to_port/sanali209/Python/SLM/actions/appActions/SLMFs/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/actions/appActions/SLMFs/annotation/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/actions/appActions/SLMFs/annotation/move_to_directory_by_annotation.py
+src/legacy_to_port/sanali209/Python/SLM/actions/appActions/SLMFs/annotation/relocate_by_label.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/core.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/hashingService.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/helpers.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/math.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/progress_visualize.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/selectionManager.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/timertreaded.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/undo_sustem.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/DAL/DAL.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/DAL/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/DAL/datalist2.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/DAL/treedata.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/DAL/binding/bind.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/DesignPaterns/AbstractBuilder.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/DesignPaterns/MessageSystem.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/DesignPaterns/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/DesignPaterns/factory.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/DesignPaterns/specification.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/iotools/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/iotools/csvHelper.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/iotools/pathtools.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/modularity/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/modularity/modulemanager.py
+src/legacy_to_port/sanali209/Python/SLM/appGlue/xmlrpcclient/xmlrpc_client.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/Environment.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/animation.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/behTree.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/data_board.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/pyglet_render.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/rpg_ent.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/tileMap.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/cartographer/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/cartographer/cart new.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/cartographer/carto.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/py rpg/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/py rpg/animation.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/py rpg/behavior_funct.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/py rpg/bot_actions.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/py rpg/bot_test.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/py rpg/gen.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/py rpg/helper.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/py rpg/map_tracker2.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/py rpg/map_traker.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/py rpg/mtraker.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/py rpg/rpg base.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/py rpg/rpg_ent.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/py rpg/temp.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/py rpg/tileMap.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/superglue/superglue.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/app/superglue/superpoint.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/ribalka/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/botbox/ribalka/riba.py
+src/legacy_to_port/sanali209/Python/SLM/chains/chains_main.py
+src/legacy_to_port/sanali209/Python/SLM/core/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/core/app.py
+src/legacy_to_port/sanali209/Python/SLM/core/backend.py
+src/legacy_to_port/sanali209/Python/SLM/core/component.py
+src/legacy_to_port/sanali209/Python/SLM/core/config.py
+src/legacy_to_port/sanali209/Python/SLM/core/decorators.py
+src/legacy_to_port/sanali209/Python/SLM/core/dependency.py
+src/legacy_to_port/sanali209/Python/SLM/core/lifecycle.py
+src/legacy_to_port/sanali209/Python/SLM/core/message_bus.py
+src/legacy_to_port/sanali209/Python/SLM/core/plugin_system.py
+src/legacy_to_port/sanali209/Python/SLM/core/pySide6_ui_component.py
+src/legacy_to_port/sanali209/Python/SLM/core/singleton.py
+src/legacy_to_port/sanali209/Python/SLM/core/examples/elegant_usage_example.py
+src/legacy_to_port/sanali209/Python/SLM/core/files_db/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/core/files_db/compatibility_models.py
+src/legacy_to_port/sanali209/Python/SLM/core/files_db/compatibility_utils.py
+src/legacy_to_port/sanali209/Python/SLM/core/files_db/files_db_module.py
+src/legacy_to_port/sanali209/Python/SLM/core/files_db/indexing_system.py
+src/legacy_to_port/sanali209/Python/SLM/core/files_db/odm_models.py
+src/legacy_to_port/sanali209/Python/SLM/core/files_db/services.py
+src/legacy_to_port/sanali209/Python/SLM/core/files_db/tests/test_services.py
+src/legacy_to_port/sanali209/Python/SLM/core/mongoODM/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/core/mongoODM/db_component.py
+src/legacy_to_port/sanali209/Python/SLM/core/mongoODM/documents.py
+src/legacy_to_port/sanali209/Python/SLM/core/mongoODM/fields.py
+src/legacy_to_port/sanali209/Python/SLM/core/mongoODM/metaclass.py
+src/legacy_to_port/sanali209/Python/SLM/core/mongoODM/queryset.py
+src/legacy_to_port/sanali209/Python/SLM/core/mongoODM/examples/run_examples.py
+src/legacy_to_port/sanali209/Python/SLM/core/mongoODM/tests/test_odm.py
+src/legacy_to_port/sanali209/Python/SLM/debug/timemesurments.py
+src/legacy_to_port/sanali209/Python/SLM/destr_worck/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/destr_worck/assinkTasks.py
+src/legacy_to_port/sanali209/Python/SLM/destr_worck/bg_worcker.py
+src/legacy_to_port/sanali209/Python/SLM/destr_worck/bgworcer2.py
+src/legacy_to_port/sanali209/Python/SLM/destr_worck/destr_worck.py
+src/legacy_to_port/sanali209/Python/SLM/destr_worck/dusk remote/dusk worck.py
+src/legacy_to_port/sanali209/Python/SLM/destr_worck/dusk remote/duskshedeulerandworcker.py
+src/legacy_to_port/sanali209/Python/SLM/destr_worck/grpcTascks/calcHash.py
+src/legacy_to_port/sanali209/Python/SLM/destr_worck/grpcTascks/check.py
+src/legacy_to_port/sanali209/Python/SLM/destr_worck/grpcTascks/client.py
+src/legacy_to_port/sanali209/Python/SLM/destr_worck/grpcTascks/proto_gen.py
+src/legacy_to_port/sanali209/Python/SLM/destr_worck/grpcTascks/shedeuler.py
+src/legacy_to_port/sanali209/Python/SLM/destr_worck/grpcTascks/task_service_pb2.py
+src/legacy_to_port/sanali209/Python/SLM/destr_worck/grpcTascks/task_service_pb2_grpc.py
+src/legacy_to_port/sanali209/Python/SLM/destr_worck/grpcTascks/worker.py
+src/legacy_to_port/sanali209/Python/SLM/fileBachOperations/BachFileOperation.py
+src/legacy_to_port/sanali209/Python/SLM/fileBachOperations/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/fileBachOperations/folder merge.py
+src/legacy_to_port/sanali209/Python/SLM/files_data_cache/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/files_data_cache/files_data_cache_module.py
+src/legacy_to_port/sanali209/Python/SLM/files_data_cache/imageToLabel.py
+src/legacy_to_port/sanali209/Python/SLM/files_data_cache/imagedatacache.py
+src/legacy_to_port/sanali209/Python/SLM/files_data_cache/pool.py
+src/legacy_to_port/sanali209/Python/SLM/files_data_cache/tensor.py
+src/legacy_to_port/sanali209/Python/SLM/files_data_cache/thumbnail.py
+src/legacy_to_port/sanali209/Python/SLM/files_data_cache/md_5_backends/Md5PilContentBackend.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/files_db_module.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/annotation_tool/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/annotation_tool/annotation.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/annotation_tool/annotation_export.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/annotation_tool/avg_rating_interference.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/annotation_tool/avg_rating_train.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/annotation_tool/singl_label_train_5.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/annotation_tool/singl_label_tune2.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/annotation_tool/predefained_jobs/jobs_multiclass.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/components/CollectionRecordScheme.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/components/File_record_wraper.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/components/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/components/collectionItem.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/components/fs_tag.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/components/catalogs/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/components/catalogs/catalog.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/components/relations/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/components/relations/dubsearch.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/components/relations/relation.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/components/web_link/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/components/web_link/web_link_record.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/files_functions/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/files_functions/delete_exist_file.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/files_functions/index_folder.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/indexers/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/indexers/image/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/indexers/image/content_md5.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/indexers/image/deepdanboru.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/indexers/image/face_detection.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/indexers/image/llava_describe.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/indexers/image/metadata_read.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/indexers/image/tags_from_name.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/object_recognition/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/object_recognition/object_recognition.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/vector_db_ext/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/files_db/vector_db_ext/vector_db_ext.py
+src/legacy_to_port/sanali209/Python/SLM/flet/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/flet/flet_ext.py
+src/legacy_to_port/sanali209/Python/SLM/flet/hierarhicallist.py
+src/legacy_to_port/sanali209/Python/SLM/flet/listView.py
+src/legacy_to_port/sanali209/Python/SLM/flet/listView2.py
+src/legacy_to_port/sanali209/Python/SLM/flet/object_editor.py
+src/legacy_to_port/sanali209/Python/SLM/flet/bindings/binds.py
+src/legacy_to_port/sanali209/Python/SLM/flet/ref_xml_gui/controls.py
+src/legacy_to_port/sanali209/Python/SLM/flet/ref_xml_gui/xml_gui.py
+src/legacy_to_port/sanali209/Python/SLM/indexerpyiplain/idexpyiplain.py
+src/legacy_to_port/sanali209/Python/SLM/iterable/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/iterable/bach_builder.py
+src/legacy_to_port/sanali209/Python/SLM/logging/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/logging/image_processor_logger.py
+src/legacy_to_port/sanali209/Python/SLM/logging/log_analyzer.py
+src/legacy_to_port/sanali209/Python/SLM/metadata/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/metadata/functions.py
+src/legacy_to_port/sanali209/Python/SLM/metadata/MDManager/mdmanager.py
+src/legacy_to_port/sanali209/Python/SLM/mongoext/MongoClientEXT_f.py
+src/legacy_to_port/sanali209/Python/SLM/mongoext/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/mongoext/collectionQueryDSL.py
+src/legacy_to_port/sanali209/Python/SLM/mongoext/modular_str_to_query.py
+src/legacy_to_port/sanali209/Python/SLM/mongoext/mongoQuery.py
+src/legacy_to_port/sanali209/Python/SLM/mongoext/mongoQueryTextParser2.py
+src/legacy_to_port/sanali209/Python/SLM/mongoext/mongoext_module.py
+src/legacy_to_port/sanali209/Python/SLM/mongoext/wraper.py
+src/legacy_to_port/sanali209/Python/SLM/parsing/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/parsing/param.py
+src/legacy_to_port/sanali209/Python/SLM/parsing/string.py
+src/legacy_to_port/sanali209/Python/SLM/parsing/htmltomd/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/parsing/htmltomd/htmtomd.py
+src/legacy_to_port/sanali209/Python/SLM/parsing/xml_gui/xml_parse.py
+src/legacy_to_port/sanali209/Python/SLM/pySide6Ext/ListView.py
+src/legacy_to_port/sanali209/Python/SLM/pySide6Ext/TestPySide6.py
+src/legacy_to_port/sanali209/Python/SLM/pySide6Ext/binding.py
+src/legacy_to_port/sanali209/Python/SLM/pySide6Ext/dialogsEx.py
+src/legacy_to_port/sanali209/Python/SLM/pySide6Ext/pySide6Q.py
+src/legacy_to_port/sanali209/Python/SLM/pySide6Ext/RichTreeView/example.py
+src/legacy_to_port/sanali209/Python/SLM/pySide6Ext/RichTreeView/rich_item_delegate.py
+src/legacy_to_port/sanali209/Python/SLM/pySide6Ext/RichTreeView/rich_tree_model.py
+src/legacy_to_port/sanali209/Python/SLM/pySide6Ext/RichTreeView/rich_tree_view.py
+src/legacy_to_port/sanali209/Python/SLM/pySide6Ext/RichTreeView/tree_node.py
+src/legacy_to_port/sanali209/Python/SLM/pySide6Ext/widget_dsl/parser.py
+src/legacy_to_port/sanali209/Python/SLM/pySide6Ext/widgets/ImageWidget.py
+src/legacy_to_port/sanali209/Python/SLM/pySide6Ext/widgets/detection_editor.py
+src/legacy_to_port/sanali209/Python/SLM/pySide6Ext/widgets/graph_editor.py
+src/legacy_to_port/sanali209/Python/SLM/pySide6Ext/widgets/object_editor.py
+src/legacy_to_port/sanali209/Python/SLM/pySide6Ext/widgets/tagautocomplete.py
+src/legacy_to_port/sanali209/Python/SLM/pySide6Ext/widgets/tools.py
+src/legacy_to_port/sanali209/Python/SLM/pySide6Ext/widgets/obj_detection/edit_rec_obj.py
+src/legacy_to_port/sanali209/Python/SLM/tests/flet_controls.py
+src/legacy_to_port/sanali209/Python/SLM/tests/llavagradio client.py
+src/legacy_to_port/sanali209/Python/SLM/tests/dal/binding.py
+src/legacy_to_port/sanali209/Python/SLM/tests/fs_db/fs_db_test_frozen.py
+src/legacy_to_port/sanali209/Python/SLM/tests/fs_db/fs_db_tests.py
+src/legacy_to_port/sanali209/Python/SLM/tests/fs_db/fs_db_references/fs_db_ref_test.py
+src/legacy_to_port/sanali209/Python/SLM/tests/lang_chain/template_dev/text_sumarization.py
+src/legacy_to_port/sanali209/Python/SLM/tests/vector_db/vector_db_test.py
+src/legacy_to_port/sanali209/Python/SLM/vector_db/vector_db.py
+src/legacy_to_port/sanali209/Python/SLM/vector_db/vector_db_module.py
+src/legacy_to_port/sanali209/Python/SLM/vision/LLMBackend.py
+src/legacy_to_port/sanali209/Python/SLM/vision/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/vision/cnnhelper.py
+src/legacy_to_port/sanali209/Python/SLM/vision/dubFileHelper.py
+src/legacy_to_port/sanali209/Python/SLM/vision/vector_fuse.py
+src/legacy_to_port/sanali209/Python/SLM/vision/vision_module.py
+src/legacy_to_port/sanali209/Python/SLM/vision/window_capture.py
+src/legacy_to_port/sanali209/Python/SLM/vision/Backends/classification_image_genres_v001.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/CNN_Encoding.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/CNN_Finder.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/backends/BLIP.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/backends/DINO.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/backends/OFA.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/backends/UNITER.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/backends/VLT5.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/backends/alex_net.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/backends/clip_vit_dirml.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/backends/color_histogram.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/backends/color_histogram_module.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/backends/inceptionV3.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/backends/inception_resnet_v2.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/backends/mobile_net_v3.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/backends/resnet.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/backends/resnet_module.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/backends/resnetinceptionfacenet512.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/custom/custom_emb.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/custom/interf.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/custom/train4.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/custom_mobile_net/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/custom_mobile_net/custom_mobilenetv2.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/custom_mobile_net/custom_mobv2_emb.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotensor/custom_mobile_net/train2.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotext/ImageToLabel.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotext/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotext/ddtest.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotext/backends/deep_dan_boru.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotext/backends/gemini_pro_vision.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotext/backends/visheratic_mc_llava_3b.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotext/backends/custom_multitag/dataset.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotext/backends/custom_multitag/inference.py
+src/legacy_to_port/sanali209/Python/SLM/vision/imagetotext/backends/custom_multitag/train.py
+src/legacy_to_port/sanali209/Python/SLM/vision/objectdetectors/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/vision/objectdetectors/object_detect.py
+src/legacy_to_port/sanali209/Python/SLM/vision/objectdetectors/test_backends.py
+src/legacy_to_port/sanali209/Python/SLM/vision/objectdetectors/backends/DETR/facebook_resnet_50.py
+src/legacy_to_port/sanali209/Python/SLM/vision/objectdetectors/backends/autodistil/face/ground_dino_face.py
+src/legacy_to_port/sanali209/Python/SLM/vision/objectdetectors/backends/torch/mtcnn.py
+src/legacy_to_port/sanali209/Python/SLM/vision/objectdetectors/backends/torch/yolov8.py
+src/legacy_to_port/sanali209/Python/SLM/vision/ocv/__init__.py
+src/legacy_to_port/sanali209/Python/SLM/vision/ocv/cvhelper.py
+src/legacy_to_port/sanali209/Python/SLM/vision/ocv/imageDif.py
+src/legacy_to_port/sanali209/Python/SLM/vision/siamnes/mageSiamnes.py
+src/legacy_to_port/sanali209/Python/SLM/webtools/pexel_api.py
+src/legacy_to_port/sanali209/Python/SLM/webtools/pexel_download.py
+src/legacy_to_port/sanali209/Python/SLM/webtools/dackdacksearch/dackdackgo search.py
+src/legacy_to_port/sanali209/Python/applications/__init__.py
+src/legacy_to_port/sanali209/Python/applications/copy_to_clipbord.py
+src/legacy_to_port/sanali209/Python/applications/count_lines.py
+src/legacy_to_port/sanali209/Python/applications/dochelper.py
+src/legacy_to_port/sanali209/Python/applications/ImageDedupApp/__init__.py
+src/legacy_to_port/sanali209/Python/applications/ImageDedupApp/qtapp.py
+src/legacy_to_port/sanali209/Python/applications/ImageDedupApp/ImageManage/ImageSortProject.py
+src/legacy_to_port/sanali209/Python/applications/ImageDedupApp/ImageManage/__init__.py
+src/legacy_to_port/sanali209/Python/applications/ImageDedupApp/ImageManage/grouplist.py
+src/legacy_to_port/sanali209/Python/applications/ImageDedupApp/ImageManage/imageGroup.py
+src/legacy_to_port/sanali209/Python/applications/ImageDedupApp/ImageManage/imageItem.py
+src/legacy_to_port/sanali209/Python/applications/ImageDedupApp/ImageManage/jsonconverters.py
+src/legacy_to_port/sanali209/Python/applications/ImageSearchDuckDuckGo_PySide6/image_search_app.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/__init__.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/collection_tool_flet_app.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/export_single_lable.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/airenametool/__init__.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/airenametool/ai_rename_tool.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/airenametool/file renamer.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/components/event_dispatcher.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/components/modules.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/__init__.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/edit_obj_view.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/collection_list_view/__init__.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/collection_list_view/file_list_exp.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/collection_list_view/tascks.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/collection_list_view/view_controller.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/collection_list_view/DocumentMan/doc_context.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/collection_list_view/NavTree/item_models_view.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/collection_list_view/NavTree/items_models.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/collection_list_view/NavTree/navTree.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/collection_list_view/NavTree/catalogs/catalogs.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/collection_list_view/NavTree/object_recognition/object_recognition_nav_tree.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/collection_list_view/NavTree/tags/tags.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/collection_list_view/collectionView/listViewModel.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/collection_list_view/propEditPanel/prop_edit_panel.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/collection_list_view/selectionManager/selection_manager.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/collection_list_view/tools/similar_items_explorer/similar_item_explorer_f.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/half_auto_annotation/__init__.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/half_auto_annotation/annotation_prediction.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/half_auto_annotation/half_auto_anotation_flet_v2.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/half_auto_annotation/half_auto_qt_main.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/half_auto_annotation/prediction_pip/NsrwFilterHF.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/single_anotation/__init__.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/single_anotation/actions.py
+src/legacy_to_port/sanali209/Python/applications/collectionTools/views/single_anotation/single_anotation_flet.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/__init__.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/data_transfer_helper.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/db_maintain_panel_v2.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/drag_drop_handler.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/file_record_find.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_editor.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/mongo_query_helper.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/py_detection_graph.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/py_detection_view.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/py_image_graph2.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/tag_editor.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/tag_tree_search.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/analitics_manager.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/anotation_tool.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/comparison_service.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/constants.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/data_io_operations.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/data_manager.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/image_rating_gui_v4.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/list_view_actions.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/menu_actions.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/model_config.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/qtWidjets.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/rating_helpers.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/rating_operations.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/six_image_ranking_view.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/tools.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/ui_helpers.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/services/__init__.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/services/cache_service.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/services/configuration_service.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/services/data_service.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/services/rating_service.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/services/service_container.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/image_reit_4_back/services/validation_service.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/images_graph_editor/graph_editor.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/qtExt/__init__.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/qtExt/components.py
+src/legacy_to_port/sanali209/Python/applications/image_graph_qt/qtExt/image_viewer_widjet.py
+src/legacy_to_port/sanali209/Python/applications/llm_tags_to_xmp/__init__.py
+src/legacy_to_port/sanali209/Python/applications/llm_tags_to_xmp/llm_xmp_tagger.py
+src/legacy_to_port/sanali209/Python/applications/llm_tags_to_xmp/tagger_engine.py
+src/legacy_to_port/sanali209/Python/applications/llm_tags_to_xmp/xmp_writer.py
+src/legacy_to_port/sanali209/Python/applications/reducer samples/train2dim.py
+src/legacy_to_port/sanali209/Python/applications/reducer samples/train3dim.py
+src/legacy_to_port/sanali209/Python/applications/reducer samples/viewImagesIn3d.py
+src/legacy_to_port/sanali209/Python/applications/samples/LM studio interf.py
+src/legacy_to_port/sanali209/Python/applications/samples/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/conv_lS_json_to_Transformers_ds.py
+src/legacy_to_port/sanali209/Python/applications/samples/gemini_pro_lang_chain.py
+src/legacy_to_port/sanali209/Python/applications/samples/genaiApitest.py
+src/legacy_to_port/sanali209/Python/applications/samples/llava_test.py
+src/legacy_to_port/sanali209/Python/applications/samples/map track.py
+src/legacy_to_port/sanali209/Python/applications/samples/node example.py
+src/legacy_to_port/sanali209/Python/applications/samples/pyexiv2_test.py
+src/legacy_to_port/sanali209/Python/applications/samples/pyqtimqgeview sample.py
+src/legacy_to_port/sanali209/Python/applications/samples/quick editor.py
+src/legacy_to_port/sanali209/Python/applications/samples/xml rpc client.py
+src/legacy_to_port/sanali209/Python/applications/samples/LabelStudio/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/LabelStudio/cocoadatasetprep.py
+src/legacy_to_port/sanali209/Python/applications/samples/LabelStudio/conv_lS_json_to_Transformers_ds.py
+src/legacy_to_port/sanali209/Python/applications/samples/LabelStudio/copy file from csv to folder.py
+src/legacy_to_port/sanali209/Python/applications/samples/LabelStudio/custom detr model.py
+src/legacy_to_port/sanali209/Python/applications/samples/LabelStudio/metadataToDataset.py
+src/legacy_to_port/sanali209/Python/applications/samples/LabelStudio/ai tools/NNImageClasificationHF.py
+src/legacy_to_port/sanali209/Python/applications/samples/LabelStudio/ai tools/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/LabelStudio/label studio in/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/LabelStudio/label studio in/create import list from csv.py
+src/legacy_to_port/sanali209/Python/applications/samples/LabelStudio/label studio in/importimageclasificationlabelstudio.py
+src/legacy_to_port/sanali209/Python/applications/samples/LabelStudio/objectDetection/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/LabelStudio/objectDetection/importlistWithprediction.py
+src/legacy_to_port/sanali209/Python/applications/samples/LabelStudio/outh/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/LabelStudio/outh/embed json to xmp.py
+src/legacy_to_port/sanali209/Python/applications/samples/autodistil/autodistil_clip_clasification.py
+src/legacy_to_port/sanali209/Python/applications/samples/autodistil/autodistil_grounding_dino.py
+src/legacy_to_port/sanali209/Python/applications/samples/console tools/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/console tools/files nlp analize/NLPCreateBagOfWordsFromFileList.py
+src/legacy_to_port/sanali209/Python/applications/samples/console tools/files nlp analize/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/console tools/files nlp analize/merge_bags_of_worlds.py
+src/legacy_to_port/sanali209/Python/applications/samples/deepface/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/deepface/deepfaceexample.py
+src/legacy_to_port/sanali209/Python/applications/samples/fast api sample/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/fast api sample/main.py
+src/legacy_to_port/sanali209/Python/applications/samples/flusk/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/flusk/flFiles.py
+src/legacy_to_port/sanali209/Python/applications/samples/imageAnalize/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/imageAnalize/modelTraining/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/imageAnalize/modelTraining/image_multilabel/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/imageAnalize/modelTraining/image_multilabel/multilabelclasification.py
+src/legacy_to_port/sanali209/Python/applications/samples/imageAnalize/tools/AIRename.py
+src/legacy_to_port/sanali209/Python/applications/samples/imageAnalize/tools/Tag_transform_dict.py
+src/legacy_to_port/sanali209/Python/applications/samples/imageAnalize/tools/XMPTagsTransform.py
+src/legacy_to_port/sanali209/Python/applications/samples/imageAnalize/tools/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/imageAnalize/tools/deepdanboru.py
+src/legacy_to_port/sanali209/Python/applications/samples/imageAnalize/tools/file move by nlp tokens.py
+src/legacy_to_port/sanali209/Python/applications/samples/imageAnalize/tools/galAllImagesTags.py
+src/legacy_to_port/sanali209/Python/applications/samples/imageAnalize/tools/sortByFuture.py
+src/legacy_to_port/sanali209/Python/applications/samples/imageAnalize/tools/split_image_repo.py
+src/legacy_to_port/sanali209/Python/applications/samples/langchain_s/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/langchain_s/tootor.py
+src/legacy_to_port/sanali209/Python/applications/samples/mongo/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/mongo/mongotests.py
+src/legacy_to_port/sanali209/Python/applications/samples/pyglet/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/pyglet/test.py
+src/legacy_to_port/sanali209/Python/applications/samples/python/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/python/decorators/__init__.py
+src/legacy_to_port/sanali209/Python/applications/samples/python/decorators/decoration.py
+src/legacy_to_port/sanali209/Python/applications/scraper/__init__.py
+src/legacy_to_port/sanali209/Python/applications/scraper/populate_md5_cache.py
+src/legacy_to_port/sanali209/Python/applications/scraper/proxi_find.py
+src/legacy_to_port/sanali209/Python/applications/scraper/ws3_sync.py
+src/legacy_to_port/sanali209/Python/applications/scraper/ws3_sync1.py
+src/legacy_to_port/sanali209/Python/applications/scraper/ws3_sync2.py
+src/legacy_to_port/sanali209/Python/applications/scraper/ws4_s1.py
+src/legacy_to_port/sanali209/Python/core_apps/duck_duck_search/src/__init__.py
+src/legacy_to_port/sanali209/Python/core_apps/duck_duck_search/src/components/__init__.py
+src/legacy_to_port/sanali209/Python/core_apps/duck_duck_search/src/components/image_download_service.py
+src/legacy_to_port/sanali209/Python/core_apps/duck_duck_search/src/components/image_search_service.py
+src/legacy_to_port/sanali209/Python/core_apps/duck_duck_search/src/components/progress_service.py
+src/legacy_to_port/sanali209/Python/core_apps/duck_duck_search/src/components/settings_service.py
+src/legacy_to_port/sanali209/Python/core_apps/duck_duck_search/src/components/thumbnail_cache_service.py
+src/legacy_to_port/sanali209/Python/core_apps/duck_duck_search/src/utils/__init__.py
+src/legacy_to_port/sanali209/Python/core_apps/duck_duck_search/src/utils/logging_config.py
+src/legacy_to_port/sanali209/Python/core_apps/duck_duck_search/src/utils/path_utils.py
+src/legacy_to_port/sanali209/Python/core_apps/repository/__init__.py
+src/legacy_to_port/sanali209/Python/core_apps/repository/annotation_repository.py
+src/legacy_to_port/sanali209/Python/core_apps/services/__init__.py
+src/legacy_to_port/sanali209/Python/core_apps/services/configuration_service.py
+src/legacy_to_port/sanali209/Python/core_apps/services/service_container.py
+src/legacy_to_port/sanali209/google colab/google colab template.py
+src/legacy_to_port/sanali209/obs_v/_dev_docs/apps.py
+src/legacy_to_port/sanali209/obs_v/_dev_docs/todos.py
+src/legacy_to_port/sanali209/python not actual/__init__.py
+src/legacy_to_port/sanali209/python not actual/SLM/ORMforSQLLiteBase.py
+src/legacy_to_port/sanali209/python not actual/SLM/__init__.py
+src/legacy_to_port/sanali209/python not actual/SLM/appcontext.py
+src/legacy_to_port/sanali209/python not actual/SLM/c# extensions/__init__.py
+src/legacy_to_port/sanali209/python not actual/SLM/c# extensions/metadataextractor.py
+src/legacy_to_port/sanali209/python not actual/SLM/kivy/__init__.py
+src/legacy_to_port/sanali209/python not actual/SLM/kivy/ext.py
+src/legacy_to_port/sanali209/python not actual/SLM/kivy/ui/__init__.py
+src/legacy_to_port/sanali209/python not actual/SLM/kivy/ui/listview.py
+src/legacy_to_port/sanali209/python not actual/SLM/multiTreading/__init__.py
+src/legacy_to_port/sanali209/python not actual/SLM/multiTreading/asyncTools.py
+src/legacy_to_port/sanali209/python not actual/SLM/multiTreading/multiTreadWorck.py
+src/legacy_to_port/sanali209/python not actual/SLM/webtools/__init__.py
+src/legacy_to_port/sanali209/python not actual/SLM/webtools/Notion/NotionAuto.py
+src/legacy_to_port/sanali209/python not actual/SLM/webtools/Notion/__init__.py
+src/legacy_to_port/sanali209/python not actual/SLM/webtools/page_preview/__init__.py
+src/legacy_to_port/sanali209/python not actual/SLM/webtools/page_preview/web_page_preview.py
+src/legacy_to_port/sanali209/python not actual/blender/quick_obj_import.py
+src/legacy_to_port/sanali209/python not actual/completed/__init__.py
+src/legacy_to_port/sanali209/python not actual/completed/ZIpFolderTool/__init__.py
+src/legacy_to_port/sanali209/python not actual/completed/ZIpFolderTool/main.py
+src/legacy_to_port/sanali209/python not actual/completed/ZIpFolderTool/programvar.py
+src/legacy_to_port/sanali209/python not actual/completed/ZIpFolderTool/tkgui.py
+src/legacy_to_port/sanali209/python not actual/danboru/__init__.py
+src/legacy_to_port/sanali209/python not actual/danboru/tagsindex.py
+src/legacy_to_port/sanali209/python not actual/suspendet/__init__.py
+src/legacy_to_port/sanali209/python not actual/suspendet/Add Link to notion/__init__.py
+src/legacy_to_port/sanali209/python not actual/suspendet/Add Link to notion/add link to link db.py
+src/legacy_to_port/sanali209/python not actual/suspendet/automation/__init__.py
+src/legacy_to_port/sanali209/python not actual/suspendet/automation/EveAutomation/__init__.py
+src/legacy_to_port/sanali209/python not actual/suspendet/automation/EveAutomation/drawRect.py
+src/legacy_to_port/sanali209/python not actual/suspendet/automation/EveAutomation/main.py
+src/legacy_to_port/sanali209/python not actual/suspendet/automation/EveAutomation/mw.py
+src/legacy_to_port/sanali209/python not actual/suspendet/automation/EveEchobot/__init__.py
+src/legacy_to_port/sanali209/python not actual/suspendet/automation/EveEchobot/eveechomain.py
+src/legacy_to_port/sanali209/python not actual/suspendet/automation/Tumbsbsar/__init__.py
+src/legacy_to_port/sanali209/python not actual/suspendet/automation/Tumbsbsar/tumb sbsar.py
+src/legacy_to_port/sanali209/python not actual/suspendet/automation/heihtrendertools/__init__.py
+src/legacy_to_port/sanali209/python not actual/suspendet/automation/heihtrendertools/heightrendertool.py
+src/legacy_to_port/sanali209/python not actual/suspendet/web scrapers/__init__.py
+src/legacy_to_port/sanali209/python not actual/suspendet/web scrapers/AnimeBestParser/__init__.py
+src/legacy_to_port/sanali209/python not actual/suspendet/web scrapers/AnimeBestParser/animebestParse.py
+src/legacy_to_port/sanali209/python not actual/suspendet/web scrapers/AnimeSDb/AnimeItem.py
+src/legacy_to_port/sanali209/python not actual/suspendet/web scrapers/AnimeSDb/__init__.py
+src/legacy_to_port/sanali209/python not actual/suspendet/web scrapers/AnimeSDb/model.py
+src/legacy_to_port/sanali209/python not actual/suspendet/web scrapers/Unity package tools/Asset store grabber.py
+src/legacy_to_port/sanali209/python not actual/suspendet/web scrapers/Unity package tools/__init__.py
+src/legacy_to_port/sanali209/python not actual/voice_typing_app/main.py
+src/modules/agm/__init__.py
+src/modules/agm/example.py
+src/modules/agm/fluent.py
+src/modules/agm/handlers.py
+src/modules/agm/mapper.py
+src/modules/agm/messages.py
+src/modules/agm/metadata.py
+src/modules/agm/module.py
+src/modules/agm/tasks.py
+src/modules/analytics/domain.py
+src/modules/ecs/domain.py
+src/modules/ecs/handlers.py
+src/modules/ecs/messages.py
+src/modules/ecs/module.py
+src/modules/ecs/ports.py
+src/modules/orders/domain.py
+src/modules/orders/handlers.py
+src/modules/orders/messages.py
+src/modules/orders/module.py
+src/modules/vfs/module.py
+src/modules/vfs/settings.py

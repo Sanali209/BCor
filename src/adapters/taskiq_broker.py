@@ -1,6 +1,8 @@
 import os
-from taskiq_nats import NatsBroker
+
 from taskiq import PrometheusMiddleware
+from taskiq_nats import NatsBroker
+
 # From the prompt: "TaskiqInstrumentor" / "OpenTelemetryMiddleware"
 # We will use the built-in instrumentor or custom middleware if it exists.
 # `taskiq-opentelemetry` didn't exist in pip directly, but we can implement a basic span propagation middleware or just use Prometheus.
@@ -9,11 +11,12 @@ from taskiq import PrometheusMiddleware
 # declaration we can pull it dynamically or use a default.
 NATS_URL = os.getenv("NATS_URL", "nats://localhost:4222")
 
+
 def get_broker(is_test: bool = False) -> "taskiq.AsyncBroker":
     """Initializes and returns a TaskIQ broker instance.
 
-    Depending on the environment, it returns either an InMemoryBroker 
-    for testing or a NatsBroker for production, configured with 
+    Depending on the environment, it returns either an InMemoryBroker
+    for testing or a NatsBroker for production, configured with
     Prometheus metrics.
 
     Args:
@@ -24,8 +27,9 @@ def get_broker(is_test: bool = False) -> "taskiq.AsyncBroker":
     """
     if is_test:
         from taskiq import InMemoryBroker
+
         return InMemoryBroker()
-    
+
     broker = NatsBroker(servers=[NATS_URL], queue="my_monolith_tasks")
     broker.add_middlewares(PrometheusMiddleware(server_port=9000))
     return broker

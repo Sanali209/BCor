@@ -1,25 +1,26 @@
 from typing import (
-    TypeVar,
-    Generic,
-    Type,
-    Any,
-    get_type_hints,
     Annotated,
-    get_origin,
+    Any,
+    Generic,
+    TypeVar,
     get_args,
+    get_origin,
+    get_type_hints,
 )
+
+from loguru import logger
+
 from src.modules.agm.mapper import AGMMapper
 from src.modules.agm.metadata import Live, Rel
-from loguru import logger
 
 T = TypeVar("T")
 
 
 class QueryBuilder(Generic[T]):
     """Fluent API for querying the graph and loading domain models.
-    
-    QueryBuilder provides a high-level interface for retrieving nodes from 
-    Neo4j, supporting vector search, smart projections, and 'Live' 
+
+    QueryBuilder provides a high-level interface for retrieving nodes from
+    Neo4j, supporting vector search, smart projections, and 'Live'
     hydration of results.
 
     Attributes:
@@ -27,7 +28,7 @@ class QueryBuilder(Generic[T]):
         model_class: The Python class representing the expected results.
     """
 
-    def __init__(self, mapper: AGMMapper, model_class: Type[T]):
+    def __init__(self, mapper: AGMMapper, model_class: type[T]):
         """Initializes the QueryBuilder.
 
         Args:
@@ -42,7 +43,7 @@ class QueryBuilder(Generic[T]):
     def resolve_live(self) -> "QueryBuilder[T]":
         """Enables live data hydration for the query results.
 
-        When enabled, fields marked with @Live will be automatically 
+        When enabled, fields marked with @Live will be automatically
         populated via DI during the load phase.
 
         Returns:
@@ -51,9 +52,7 @@ class QueryBuilder(Generic[T]):
         self._resolve_live = True
         return self
 
-    def vector_search(
-        self, vector_index: str, query_text: str, top_k: int = 5
-    ) -> "QueryBuilder[T]":
+    def vector_search(self, vector_index: str, query_text: str, top_k: int = 5) -> "QueryBuilder[T]":
         """Configures the query to perform a vector similarity search.
 
         Args:
@@ -74,7 +73,7 @@ class QueryBuilder(Generic[T]):
     def _generate_smart_projection(self) -> str:
         """Generates a Cypher map projection based on model type hints.
 
-        Excludes @Live and @Rel fields from the initial database fetch 
+        Excludes @Live and @Rel fields from the initial database fetch
         to optimize performance and avoid unnecessary data retrieval.
 
         Returns:
@@ -96,19 +95,13 @@ class QueryBuilder(Generic[T]):
         if not return_fields:
             return "n"
 
-        projection = (
-            "{"
-            + ", ".join(
-                [f"{f.split(' AS ')[1]}: {f.split(' AS ')[0]}" for f in return_fields]
-            )
-            + "}"
-        )
+        projection = "{" + ", ".join([f"{f.split(' AS ')[1]}: {f.split(' AS ')[0]}" for f in return_fields]) + "}"
         return projection
 
     async def execute(self, session: Any) -> list[T]:
         """Executes the query and returns a list of loaded model instances.
 
-        Depending on configuration, this will perform either a standard 
+        Depending on configuration, this will perform either a standard
         MATCH query or a CALL to a vector index.
 
         Args:
@@ -151,9 +144,7 @@ class QueryBuilder(Generic[T]):
 
         results = []
         for record in db_records:
-            model = await self.mapper.load(
-                self.model_class, record, resolve_live=self._resolve_live
-            )
+            model = await self.mapper.load(self.model_class, record, resolve_live=self._resolve_live)
             results.append(model)
 
         return results

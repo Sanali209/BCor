@@ -1,18 +1,26 @@
 """Normalization of raw API data to canonical schema."""
 
-from typing import Any, Dict, List, TypeVar, Union
+from typing import Any, TypeVar
 
 from . import dates, schema
 
-T = TypeVar("T", schema.RedditItem, schema.XItem, schema.WebSearchItem, schema.YouTubeItem, schema.HackerNewsItem, schema.PolymarketItem)
+T = TypeVar(
+    "T",
+    schema.RedditItem,
+    schema.XItem,
+    schema.WebSearchItem,
+    schema.YouTubeItem,
+    schema.HackerNewsItem,
+    schema.PolymarketItem,
+)
 
 
 def filter_by_date_range(
-    items: List[T],
+    items: list[T],
     from_date: str,
     to_date: str,
     require_date: bool = False,
-) -> List[T]:
+) -> list[T]:
     """Hard filter: Remove items outside the date range.
 
     This is the safety net - even if the prompt lets old content through,
@@ -48,10 +56,10 @@ def filter_by_date_range(
 
 
 def normalize_reddit_items(
-    items: List[Dict[str, Any]],
+    items: list[dict[str, Any]],
     from_date: str,
     to_date: str,
-) -> List[schema.RedditItem]:
+) -> list[schema.RedditItem]:
     """Normalize raw Reddit items to schema.
 
     Args:
@@ -78,40 +86,44 @@ def normalize_reddit_items(
         # Parse comments
         top_comments = []
         for c in item.get("top_comments", []):
-            top_comments.append(schema.Comment(
-                score=c.get("score", 0),
-                date=c.get("date"),
-                author=c.get("author", ""),
-                excerpt=c.get("excerpt", ""),
-                url=c.get("url", ""),
-            ))
+            top_comments.append(
+                schema.Comment(
+                    score=c.get("score", 0),
+                    date=c.get("date"),
+                    author=c.get("author", ""),
+                    excerpt=c.get("excerpt", ""),
+                    url=c.get("url", ""),
+                )
+            )
 
         # Determine date confidence
         date_str = item.get("date")
         date_confidence = dates.get_date_confidence(date_str, from_date, to_date)
 
-        normalized.append(schema.RedditItem(
-            id=item.get("id", ""),
-            title=item.get("title", ""),
-            url=item.get("url", ""),
-            subreddit=item.get("subreddit", ""),
-            date=date_str,
-            date_confidence=date_confidence,
-            engagement=engagement,
-            top_comments=top_comments,
-            comment_insights=item.get("comment_insights", []),
-            relevance=item.get("relevance", 0.5),
-            why_relevant=item.get("why_relevant", ""),
-        ))
+        normalized.append(
+            schema.RedditItem(
+                id=item.get("id", ""),
+                title=item.get("title", ""),
+                url=item.get("url", ""),
+                subreddit=item.get("subreddit", ""),
+                date=date_str,
+                date_confidence=date_confidence,
+                engagement=engagement,
+                top_comments=top_comments,
+                comment_insights=item.get("comment_insights", []),
+                relevance=item.get("relevance", 0.5),
+                why_relevant=item.get("why_relevant", ""),
+            )
+        )
 
     return normalized
 
 
 def normalize_x_items(
-    items: List[Dict[str, Any]],
+    items: list[dict[str, Any]],
     from_date: str,
     to_date: str,
-) -> List[schema.XItem]:
+) -> list[schema.XItem]:
     """Normalize raw X items to schema.
 
     Args:
@@ -140,26 +152,28 @@ def normalize_x_items(
         date_str = item.get("date")
         date_confidence = dates.get_date_confidence(date_str, from_date, to_date)
 
-        normalized.append(schema.XItem(
-            id=item.get("id", ""),
-            text=item.get("text", ""),
-            url=item.get("url", ""),
-            author_handle=item.get("author_handle", ""),
-            date=date_str,
-            date_confidence=date_confidence,
-            engagement=engagement,
-            relevance=item.get("relevance", 0.5),
-            why_relevant=item.get("why_relevant", ""),
-        ))
+        normalized.append(
+            schema.XItem(
+                id=item.get("id", ""),
+                text=item.get("text", ""),
+                url=item.get("url", ""),
+                author_handle=item.get("author_handle", ""),
+                date=date_str,
+                date_confidence=date_confidence,
+                engagement=engagement,
+                relevance=item.get("relevance", 0.5),
+                why_relevant=item.get("why_relevant", ""),
+            )
+        )
 
     return normalized
 
 
 def normalize_youtube_items(
-    items: List[Dict[str, Any]],
+    items: list[dict[str, Any]],
     from_date: str,
     to_date: str,
-) -> List[schema.YouTubeItem]:
+) -> list[schema.YouTubeItem]:
     """Normalize raw YouTube items to schema.
 
     Args:
@@ -184,27 +198,29 @@ def normalize_youtube_items(
         # YouTube dates are reliable (always YYYY-MM-DD from yt-dlp)
         date_str = item.get("date")
 
-        normalized.append(schema.YouTubeItem(
-            id=item.get("video_id", ""),
-            title=item.get("title", ""),
-            url=item.get("url", ""),
-            channel_name=item.get("channel_name", ""),
-            date=date_str,
-            date_confidence="high",
-            engagement=engagement,
-            transcript_snippet=item.get("transcript_snippet", ""),
-            relevance=item.get("relevance", 0.7),
-            why_relevant=item.get("why_relevant", ""),
-        ))
+        normalized.append(
+            schema.YouTubeItem(
+                id=item.get("video_id", ""),
+                title=item.get("title", ""),
+                url=item.get("url", ""),
+                channel_name=item.get("channel_name", ""),
+                date=date_str,
+                date_confidence="high",
+                engagement=engagement,
+                transcript_snippet=item.get("transcript_snippet", ""),
+                relevance=item.get("relevance", 0.7),
+                why_relevant=item.get("why_relevant", ""),
+            )
+        )
 
     return normalized
 
 
 def normalize_hackernews_items(
-    items: List[Dict[str, Any]],
+    items: list[dict[str, Any]],
     from_date: str,
     to_date: str,
-) -> List[schema.HackerNewsItem]:
+) -> list[schema.HackerNewsItem]:
     """Normalize raw Hacker News items to schema.
 
     Args:
@@ -228,40 +244,44 @@ def normalize_hackernews_items(
         # Parse comments (from enrichment)
         top_comments = []
         for c in item.get("top_comments", []):
-            top_comments.append(schema.Comment(
-                score=c.get("points", 0),
-                date=None,
-                author=c.get("author", ""),
-                excerpt=c.get("text", ""),
-                url="",
-            ))
+            top_comments.append(
+                schema.Comment(
+                    score=c.get("points", 0),
+                    date=None,
+                    author=c.get("author", ""),
+                    excerpt=c.get("text", ""),
+                    url="",
+                )
+            )
 
         # HN dates are always high confidence (exact timestamps from Algolia)
         date_str = item.get("date")
 
-        normalized.append(schema.HackerNewsItem(
-            id=f"HN{i+1}",
-            title=item.get("title", ""),
-            url=item.get("url", ""),
-            hn_url=item.get("hn_url", ""),
-            author=item.get("author", ""),
-            date=date_str,
-            date_confidence="high",
-            engagement=engagement,
-            top_comments=top_comments,
-            comment_insights=item.get("comment_insights", []),
-            relevance=item.get("relevance", 0.5),
-            why_relevant=item.get("why_relevant", ""),
-        ))
+        normalized.append(
+            schema.HackerNewsItem(
+                id=f"HN{i + 1}",
+                title=item.get("title", ""),
+                url=item.get("url", ""),
+                hn_url=item.get("hn_url", ""),
+                author=item.get("author", ""),
+                date=date_str,
+                date_confidence="high",
+                engagement=engagement,
+                top_comments=top_comments,
+                comment_insights=item.get("comment_insights", []),
+                relevance=item.get("relevance", 0.5),
+                why_relevant=item.get("why_relevant", ""),
+            )
+        )
 
     return normalized
 
 
 def normalize_polymarket_items(
-    items: List[Dict[str, Any]],
+    items: list[dict[str, Any]],
     from_date: str,
     to_date: str,
-) -> List[schema.PolymarketItem]:
+) -> list[schema.PolymarketItem]:
     """Normalize raw Polymarket items to schema.
 
     Args:
@@ -284,25 +304,27 @@ def normalize_polymarket_items(
 
         date_str = item.get("date")
 
-        normalized.append(schema.PolymarketItem(
-            id=f"PM{i+1}",
-            title=item.get("title", ""),
-            question=item.get("question", ""),
-            url=item.get("url", ""),
-            outcome_prices=item.get("outcome_prices", []),
-            outcomes_remaining=item.get("outcomes_remaining", 0),
-            price_movement=item.get("price_movement"),
-            date=date_str,
-            date_confidence="high",
-            engagement=engagement,
-            end_date=item.get("end_date"),
-            relevance=item.get("relevance", 0.5),
-            why_relevant=item.get("why_relevant", ""),
-        ))
+        normalized.append(
+            schema.PolymarketItem(
+                id=f"PM{i + 1}",
+                title=item.get("title", ""),
+                question=item.get("question", ""),
+                url=item.get("url", ""),
+                outcome_prices=item.get("outcome_prices", []),
+                outcomes_remaining=item.get("outcomes_remaining", 0),
+                price_movement=item.get("price_movement"),
+                date=date_str,
+                date_confidence="high",
+                engagement=engagement,
+                end_date=item.get("end_date"),
+                relevance=item.get("relevance", 0.5),
+                why_relevant=item.get("why_relevant", ""),
+            )
+        )
 
     return normalized
 
 
-def items_to_dicts(items: List) -> List[Dict[str, Any]]:
+def items_to_dicts(items: list) -> list[dict[str, Any]]:
     """Convert schema items to dicts for JSON serialization."""
     return [item.to_dict() for item in items]

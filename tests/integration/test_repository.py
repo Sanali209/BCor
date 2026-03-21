@@ -1,6 +1,7 @@
 import pytest
-from sqlalchemy import Table, Column, String, Integer, create_engine, text
+from sqlalchemy import Column, Integer, String, Table, create_engine, text
 from sqlalchemy.orm import Session, clear_mappers
+
 from src.adapters.orm import mapper_registry
 from src.adapters.repository import SqlAlchemyRepository
 from tests.conftest import FakeAggregate
@@ -34,16 +35,12 @@ def test_repository_can_save_aggregate(sqlite_session):
     repo.add(agg)
     sqlite_session.commit()
 
-    rows = list(
-        sqlite_session.execute(text("SELECT ref, version FROM fake_aggregates"))
-    )
+    rows = list(sqlite_session.execute(text("SELECT ref, version FROM fake_aggregates")))
     assert rows == [("agg_save", 1)]
 
 
 def test_repository_can_retrieve_aggregate(sqlite_session):
-    sqlite_session.execute(
-        text("INSERT INTO fake_aggregates (ref, version) VALUES ('agg_get', 2)")
-    )
+    sqlite_session.execute(text("INSERT INTO fake_aggregates (ref, version) VALUES ('agg_get', 2)"))
     sqlite_session.commit()
 
     repo = SqlAlchemyRepository(sqlite_session, FakeAggregate)

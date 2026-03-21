@@ -1,0 +1,131 @@
+Metadata-Version: 2.4
+Name: app
+Version: 0.1.0
+Summary: Add your description here
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: adaptix>=3.0.0b11
+Requires-Dist: bubus>=1.5.6
+Requires-Dist: dishka>=1.9.1
+Requires-Dist: fs>=2.4.16
+Requires-Dist: loguru>=0.7.3
+Requires-Dist: neo4j>=6.1.0
+Requires-Dist: opentelemetry-api>=1.40.0
+Requires-Dist: opentelemetry-sdk>=1.40.0
+Requires-Dist: prometheus-client>=0.24.1
+Requires-Dist: pydantic>=2.12.5
+Requires-Dist: pydantic-settings>=2.13.1
+Requires-Dist: pytest>=9.0.2
+Requires-Dist: pytest-asyncio>=1.3.0
+Requires-Dist: returns>=0.26.0
+Requires-Dist: sqlalchemy>=2.0.48
+Requires-Dist: taskiq>=0.12.1
+Requires-Dist: taskiq-nats>=0.6.0
+Requires-Dist: tenacity>=9.1.4
+Provides-Extra: legacy-phase1
+Requires-Dist: pillow>=10.2.0; extra == "legacy-phase1"
+Requires-Dist: opencv-python>=4.9.0.80; extra == "legacy-phase1"
+Requires-Dist: PySide6; extra == "legacy-phase1"
+Requires-Dist: pyexiv2>=2.15.4; extra == "legacy-phase1"
+Requires-Dist: Send2Trash>=1.8.3; extra == "legacy-phase1"
+Requires-Dist: pyperclip>=1.8.2; extra == "legacy-phase1"
+Requires-Dist: torch>=2.4.1; extra == "legacy-phase1"
+Requires-Dist: numpy>=1.24.4; extra == "legacy-phase1"
+Requires-Dist: annoy>=1.17.0; extra == "legacy-phase1"
+Provides-Extra: legacy-phase3
+Requires-Dist: langchain>=0.3.14; extra == "legacy-phase3"
+Requires-Dist: langchain-community>=0.3.14; extra == "legacy-phase3"
+Requires-Dist: langchain-core>=0.3.29; extra == "legacy-phase3"
+Requires-Dist: openai>=1.59.7; extra == "legacy-phase3"
+Requires-Dist: transformers>=4.41.2; extra == "legacy-phase3"
+Requires-Dist: huggingface-hub>=0.23.3; extra == "legacy-phase3"
+Requires-Dist: chromadb>=0.5.0; extra == "legacy-phase3"
+Provides-Extra: legacy-phase4
+Requires-Dist: playwright>=1.51.0; extra == "legacy-phase4"
+Requires-Dist: selenium>=4.9.1; extra == "legacy-phase4"
+Requires-Dist: duckduckgo_search>=8.0.1; extra == "legacy-phase4"
+Requires-Dist: beautifulsoup4>=4.12.3; extra == "legacy-phase4"
+Requires-Dist: requests>=2.28.2; extra == "legacy-phase4"
+Requires-Dist: Flask>=3.1.1; extra == "legacy-phase4"
+
+# Модульный Монолит, Управляемый Событиями (Event-Driven Modular Monolith)
+
+Это ядро архитектурного фреймворка, построенное на принципах чистой архитектуры, предметно-ориентированного проектирования (DDD), разделения команд и запросов (CQRS) и асинхронного выполнения задач.
+
+Вся документация в этом репозитории следует правилу **Code First** (Сначала Код): источником истины является актуальная реализация, описанная здесь.
+
+## Основной стек технологий (The Stack)
+*   **Управление пакетами:** `uv`
+*   **Внутренняя шина событий (In-Memory Bus):** `bubus`
+*   **DI-Контейнер:** `dishka`
+*   **Декларативные настройки (Settings):** `pydantic-settings`
+*   **Внешний брокер (Фоновые задачи):** `TaskIQ` + `NATS` (`taskiq-nats`)
+*   **Отказоустойчивость и обработка ошибок:** `returns` (Result Monad)
+*   **Наблюдаемость (Observability):** `loguru` (Логирование), `OpenTelemetry` (Распределенная трассировка), `Prometheus` (Метрики воркеров)
+*   **Тестирование:** `pytest`, `pytest-asyncio`
+
+---
+
+## Архитектура системы
+
+### 1. Композитный корень (Composition Root & Settings)
+Система собирается воедино классом `System` (`src/core/system.py`).
+Вместо глобальных монолитных конфигов, настройки объявляются декларативно внутри каждого модуля через Pydantic-схемы (Fail-Fast принцип). Во время бутстрапа (запуска приложения) `System` обходит все модули, инстанцирует их конфигурацию из переменных окружения и возвращает провалидированный объект `module.settings`.
+
+Также `System` собирает все DI-провайдеры (используя библиотеку `dishka`) в единый асинхронный IoC-контейнер. Жизненный цикл жестко разграничен:
+*   `Scope.APP`: Настройки, пулы соединений, Шина сообщений.
+*   `Scope.REQUEST`: Открытая транзакция к базе данных (через `AbstractUnitOfWork`).
+
+### 2. Внутренняя Шина Сообщений (bubus CQRS)
+Ядро маршрутизации реализовано в `src/core/messagebus.py`, оборачивающем `bubus.EventBus`. Оно строго разделяет два типа сообщений:
+*   **Команды (Commands):** Выражают намерение. Маршрутизируются строго к *одному* обработчику. Если возникает ошибка (например, валидация или бизнес-правило), она пробрасывается наверх (Fail Fast).
+*   **События (Events):** Факт, который уже произошел (например, `OrderCreated`). Рассылаются *многим* подписчикам. Ошибки в обработчиках событий изолируются: они логируются, но не ломают транзакцию и цикл обработки других событий (Fail Safe).
+
+Шина сообщений автоматически внедряет `UnitOfWork` (запрошенный через Dishka) в обработчики, а после успешного выполнения — собирает из него новые сгенерированные Доменные События (`uow.collect_new_events()`) и публикует их в шину.
+
+### 3. Распределенное выполнение тяжелых задач (TaskIQ + NATS)
+Не все операции можно выполнить в рамках синхронного цикла запроса. Для долгих процессов (отправка email, генерация отчетов) используется связка **TaskIQ + NATS** (`src/adapters/taskiq_broker.py`).
+Событие или Команда внутри `bubus` вызывает асинхронную функцию через `.kiq()`, которая мгновенно передает задачу в брокер NATS. Затем отдельный фоновый процесс (воркер TaskIQ) вычитывает эту задачу и выполняет её, сохраняя высокую производительность API и UI.
+
+### 4. Доменная Модель и Отказоустойчивость
+*   **Агрегаты (Aggregates):** Являются корнями согласованности. Они не публикуют события напрямую, а накапливают их во внутреннем списке `self.events`, откуда их забирает `UnitOfWork`.
+*   **Репозитории (Repositories):** Инкапсулируют логику работы с БД. Умеют сохранять и извлекать только Агрегаты.
+*   **Result Monads:** Чтобы избежать бизнес-логики, построенной на `try-except` (что является антипаттерном), используется библиотека `returns`. Хэндлеры возвращают типизированные контейнеры `BusinessResult` (Success / Failure).
+
+### 5. Наблюдаемость (Observability)
+Для контроля над распределенной и асинхронной системой внедрены следующие инструменты:
+*   **Логирование:** Встроенный модуль `logging` заменен на `loguru` (в том числе при обработке событий `bubus`).
+*   **Трассировка:** Каждый переход Команды или События внутри `MessageBus` оборачивается в спаны `OpenTelemetry`. Это позволяет видеть сквозной путь данных от HTTP-запроса до NATS-воркера.
+*   **Метрики:** NATS-брокер `TaskIQ` содержит встроенный `PrometheusMiddleware`, отдающий метрики на порту 9000.
+
+---
+
+## Структура проекта
+```text
+.
+├── src/
+│   ├── adapters/         # Внешние системы (ORM мапперы, брокеры NATS)
+│   ├── core/             # Ядро (MessageBus, UnitOfWork, Monads, System)
+│   ├── entrypoints/      # Точки входа (FastAPI, CLI, PySide)
+│   └── modules/          # Бизнес-модули (Изолированные домены)
+├── tests/
+│   ├── conftest.py       # FakeRepository, FakeUnitOfWork
+│   └── unit/             # Быстрые тесты бизнес-логики (TDD)
+├── Ddocks/               # Концептуальная документация
+├── pyproject.toml        # Конфигурация uv и зависимостей
+└── README.md             # Этот файл
+```
+
+## Документация (Ddocks)
+Подробное описание компонентов и руководства доступны в директории `Ddocks/`:
+*   [Roadmap](Ddocks/Roadmap.md) — Текущий статус и план разработки.
+*   [Concept Doc](Ddocks/Conceptdock.md) — Общее архитектурное видение.
+*   [Orders Module](Ddocks/orders_dock.md) [NEW] — Описание эталонного бизнес-модуля.
+*   [AGM Module](Ddocks/agm_dock.md) — Детали графового маппера.
+*   [How-to: Add New Module](Ddocks/How-tos/Add_New_Module.md) [NEW] — Гид для разработчиков.
+
+## Разработка
+Все новые фичи разрабатываются через **TDD (Test-Driven Development)** с использованием `pytest`.
+Поддельные адаптеры (`FakeRepository`, `FakeUnitOfWork` в `conftest.py`) позволяют мгновенно тестировать сервисный слой без необходимости поднимать Docker-контейнеры с базами данных.
+
+➡️ **Как начать работу с репозиторием:** Читайте руководство [First Steps](firststeps.md).

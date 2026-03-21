@@ -1,15 +1,17 @@
-from typing import Callable, List, Any
 import asyncio
-import functools
+from collections.abc import Callable
+from typing import Any
+
 from loguru import logger
 
 # Global registries for lifecycle hooks
-_START_HOOKS: List[Callable] = []
-_STOP_HOOKS: List[Callable] = []
+_START_HOOKS: list[Callable[..., Any]] = []
+_STOP_HOOKS: list[Callable[..., Any]] = []
 
-def on_start(func: Callable) -> Callable:
+
+def on_start(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator to mark a function to be called on system start.
-    
+
     Supports both sync and async functions. Registered functions will be
     executed during the `System.start()` phase.
 
@@ -24,9 +26,9 @@ def on_start(func: Callable) -> Callable:
     return func
 
 
-def on_stop(func: Callable) -> Callable:
+def on_stop(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator to mark a function to be called on system stop.
-    
+
     Supports both sync and async functions. Registered functions will be
     executed during the `System.stop()` phase.
 
@@ -41,7 +43,7 @@ def on_stop(func: Callable) -> Callable:
     return func
 
 
-async def _run_hooks(hooks: List[Callable]):
+async def _run_hooks(hooks: list[Callable[..., Any]]) -> None:
     """Helper to run a list of hooks (sync or async) sequentially.
 
     Args:
@@ -61,7 +63,7 @@ async def _run_hooks(hooks: List[Callable]):
             raise
 
 
-def get_start_hooks() -> List[Callable]:
+def get_start_hooks() -> list[Callable[..., Any]]:
     """Gets all registered start hooks.
 
     Returns:
@@ -70,7 +72,7 @@ def get_start_hooks() -> List[Callable]:
     return _START_HOOKS
 
 
-def get_stop_hooks() -> List[Callable]:
+def get_stop_hooks() -> list[Callable[..., Any]]:
     """Gets all registered stop hooks.
 
     Returns:
@@ -79,7 +81,7 @@ def get_stop_hooks() -> List[Callable]:
     return _STOP_HOOKS
 
 
-def clear_hooks():
+def clear_hooks() -> None:
     """Clears all registered hooks.
 
     Mainly used for resetting global state during unit testing.

@@ -3,7 +3,7 @@ name = "app"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
     "adaptix>=3.0.0b11",
     "bubus>=1.5.6",
@@ -23,4 +23,71 @@ dependencies = [
     "taskiq>=0.12.1",
     "taskiq-nats>=0.6.0",
     "tenacity>=9.1.4",
+    "diskcache>=5.6.3",
+    "tqdm>=4.66.1",
+    "psutil>=5.9.8",
+    "motor>=3.3.2",
+    "pymongo>=4.6.0",
 ]
+
+# Legacy dependencies: install with `uv pip install -e ".[legacy-phase1]"` etc.
+[project.optional-dependencies]
+# Phase 1: ImageDedupApp migration deps
+legacy-phase1 = [
+    "pillow>=10.2.0",
+    "opencv-python>=4.9.0.80",
+    "PySide6",
+    "pyexiv2>=2.15.4",
+    "Send2Trash>=1.8.3",
+    "pyperclip>=1.8.2",
+    "torch>=2.4.1",
+    "torchvision>=0.19.1",
+    "numpy>=1.24.4",
+    "annoy>=1.17.0",
+    "timm>=1.0.3",
+]
+# Phase 3: LLM / NLP migration deps
+legacy-phase3 = [
+    "langchain>=0.3.14",
+    "langchain-community>=0.3.14",
+    "langchain-core>=0.3.29",
+    "openai>=1.59.7",
+    "transformers>=4.41.2",
+    "huggingface-hub>=0.23.3",
+    "chromadb>=0.5.0",
+    "nltk>=3.8.1",
+]
+# Phase 4: Web/Scraper migration deps
+legacy-phase4 = [
+    "playwright>=1.51.0",
+    "selenium>=4.9.1",
+    "duckduckgo_search>=8.0.1",
+    "beautifulsoup4>=4.12.3",
+    "requests>=2.28.2",
+    "Flask>=3.1.1",
+]
+# Phase 6: Core Framework migration deps
+legacy-phase6 = [
+    "motor>=3.3.2",
+    "pymongo>=4.6.0",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I", "UP", "PT", "ANN"]
+ignore = ["ANN101", "ANN102"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+namespace_packages = true
+explicit_package_bases = true
+exclude = ["src/legacy_to_port/.*"]

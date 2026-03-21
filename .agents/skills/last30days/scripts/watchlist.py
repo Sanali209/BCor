@@ -20,7 +20,6 @@ import json
 import subprocess
 import sys
 import time
-from datetime import datetime
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
@@ -57,12 +56,16 @@ def cmd_remove(args):
 
     remaining = store.list_topics()
 
-    print(json.dumps({
-        "action": "removed",
-        "topic": args.topic,
-        "message": f'Removed "{args.topic}" from watchlist.',
-        "remaining": len(remaining),
-    }))
+    print(
+        json.dumps(
+            {
+                "action": "removed",
+                "topic": args.topic,
+                "message": f'Removed "{args.topic}" from watchlist.',
+                "remaining": len(remaining),
+            }
+        )
+    )
 
 
 def cmd_list(args):
@@ -105,22 +108,29 @@ def cmd_run_all(args):
         # Budget guard
         daily_cost = store.get_daily_cost()
         if daily_cost >= budget_limit:
-            results.append({
-                "topic": topic["name"],
-                "status": "skipped",
-                "reason": f"Budget exceeded: ${daily_cost:.2f}/${budget_limit:.2f}",
-            })
+            results.append(
+                {
+                    "topic": topic["name"],
+                    "status": "skipped",
+                    "reason": f"Budget exceeded: ${daily_cost:.2f}/${budget_limit:.2f}",
+                }
+            )
             continue
 
         result = _run_topic(topic)
         results.append(result)
 
-    print(json.dumps({
-        "action": "run_all",
-        "results": results,
-        "budget_used": store.get_daily_cost(),
-        "budget_limit": budget_limit,
-    }, default=str))
+    print(
+        json.dumps(
+            {
+                "action": "run_all",
+                "results": results,
+                "budget_used": store.get_daily_cost(),
+                "budget_limit": budget_limit,
+            },
+            default=str,
+        )
+    )
 
 
 def _run_topic(topic: dict) -> dict:
@@ -168,26 +178,30 @@ def _run_topic(topic: dict) -> dict:
         # Convert research items to findings format
         findings = []
         for item in data.get("reddit", []):
-            findings.append({
-                "source": "reddit",
-                "url": item.get("url", ""),
-                "title": item.get("title", ""),
-                "author": item.get("author", ""),
-                "content": item.get("title", ""),
-                "summary": item.get("top_comments_summary", ""),
-                "engagement_score": item.get("upvotes", 0),
-                "relevance_score": item.get("relevance", 0),
-            })
+            findings.append(
+                {
+                    "source": "reddit",
+                    "url": item.get("url", ""),
+                    "title": item.get("title", ""),
+                    "author": item.get("author", ""),
+                    "content": item.get("title", ""),
+                    "summary": item.get("top_comments_summary", ""),
+                    "engagement_score": item.get("upvotes", 0),
+                    "relevance_score": item.get("relevance", 0),
+                }
+            )
         for item in data.get("x", []):
-            findings.append({
-                "source": "x",
-                "url": item.get("url", ""),
-                "title": item.get("text", "")[:100],
-                "author": item.get("author_handle", ""),
-                "content": item.get("text", ""),
-                "engagement_score": (item.get("engagement") or {}).get("likes", 0),
-                "relevance_score": item.get("relevance", 0),
-            })
+            findings.append(
+                {
+                    "source": "x",
+                    "url": item.get("url", ""),
+                    "title": item.get("text", "")[:100],
+                    "author": item.get("author_handle", ""),
+                    "content": item.get("text", ""),
+                    "engagement_score": (item.get("engagement") or {}).get("likes", 0),
+                    "relevance_score": item.get("relevance", 0),
+                }
+            )
 
         # Store with dedup
         counts = store.store_findings(run_id, topic_id, findings)
@@ -211,7 +225,8 @@ def _run_topic(topic: dict) -> dict:
     except subprocess.TimeoutExpired:
         duration = time.time() - start_time
         store.update_run(
-            run_id, status="failed",
+            run_id,
+            status="failed",
             error_message="Research timed out after 300s",
             duration_seconds=duration,
         )
@@ -220,7 +235,8 @@ def _run_topic(topic: dict) -> dict:
     except json.JSONDecodeError as e:
         duration = time.time() - start_time
         store.update_run(
-            run_id, status="failed",
+            run_id,
+            status="failed",
             error_message=f"Invalid JSON output: {e}",
             duration_seconds=duration,
         )
@@ -229,7 +245,8 @@ def _run_topic(topic: dict) -> dict:
     except Exception as e:
         duration = time.time() - start_time
         store.update_run(
-            run_id, status="failed",
+            run_id,
+            status="failed",
             error_message=str(e)[:500],
             duration_seconds=duration,
         )

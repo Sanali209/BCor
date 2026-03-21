@@ -1,6 +1,7 @@
 import pytest
-from sqlalchemy import Table, Column, String, Integer, create_engine, text
-from sqlalchemy.orm import sessionmaker, clear_mappers
+from sqlalchemy import Column, Integer, String, Table, create_engine, text
+from sqlalchemy.orm import clear_mappers, sessionmaker
+
 from src.adapters.orm import mapper_registry
 from src.adapters.unit_of_work import SqlAlchemyUnitOfWork
 from tests.conftest import FakeAggregate
@@ -27,9 +28,7 @@ def sqlite_session_factory():
 
 def test_uow_can_retrieve_and_commit(sqlite_session_factory):
     session = sqlite_session_factory()
-    session.execute(
-        text("INSERT INTO fake_aggregates_uow (ref, version) VALUES ('agg_uow1', 1)")
-    )
+    session.execute(text("INSERT INTO fake_aggregates_uow (ref, version) VALUES ('agg_uow1', 1)"))
     session.commit()
 
     uow = SqlAlchemyUnitOfWork(sqlite_session_factory, model_class=FakeAggregate)
@@ -39,11 +38,7 @@ def test_uow_can_retrieve_and_commit(sqlite_session_factory):
         uow.commit()
 
     session = sqlite_session_factory()
-    rows = list(
-        session.execute(
-            text("SELECT version FROM fake_aggregates_uow WHERE ref='agg_uow1'")
-        )
-    )
+    rows = list(session.execute(text("SELECT version FROM fake_aggregates_uow WHERE ref='agg_uow1'")))
     assert rows == [(2,)]
 
 

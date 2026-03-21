@@ -1,0 +1,83 @@
+/* ImageAnalyze Base Style Template */
+
+QWidget {
+    background-color: @bg-main;
+    color: @text-main;
+    font-family: "Segoe UI", "Roboto", sans-serif;
+}
+
+QMainWindow {
+    background-color: @bg-dark;
+}
+
+QPushButton {
+    background-color: @btn-primary;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+QPushButton:hover {
+    background-color: @btn-hover;
+}
+
+QPushButton:pressed {
+    background-color: @btn-active;
+}
+
+QProgressBar {
+    border: 1px solid @border-color;
+    border-radius: 5px;
+    text-align: center;
+    background-color: @bg-dark;
+}
+
+QProgressBar::chunk {
+    background-color: @accent-color;
+    width: 20px;
+}
+
+QFrame#SidebarFrame {
+    background-color: @sidebar-bg;
+    border-right: 1px solid @border-color;
+}
+
+QPushButton#RunButton {
+    background-color: @btn-primary;
+}
+
+QPushButton#AddButton {
+    background-color: @btn-success;
+}
+
+QPushButton#AddButton:hover {
+    background-color: @btn-success-hover;
+}
+
+QTextEdit#LogArea {
+    background-color: @bg-input;
+    color: @text-muted;
+    font-family: "Consolas", "Courier New", monospace;
+}
+
+QListWidget {
+    background-color: @bg-input;
+    border: 1px solid @border-color;
+    color: @text-main;
+}
+
+QTextEdit, QLineEdit, QComboBox, StatCard {
+    background-color: @bg-input;
+    border: 1px solid @border-color;
+    padding: 5px;
+    color: @text-main;
+}
+
+QLabel#HeaderLabel {
+    font-size: 18px;
+    font-weight: bold;
+    color: @accent-color;
+    margin-bottom: 10px;
+}

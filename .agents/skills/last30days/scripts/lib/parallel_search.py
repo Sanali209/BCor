@@ -7,9 +7,8 @@ with extended excerpts ranked by relevance.
 API docs: https://docs.parallel.ai/search-api/search-quickstart
 """
 
-import json
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 from . import http
@@ -18,8 +17,13 @@ ENDPOINT = "https://api.parallel.ai/v1beta/search"
 
 # Domains to exclude (handled by Reddit/X search)
 EXCLUDED_DOMAINS = {
-    "reddit.com", "www.reddit.com", "old.reddit.com",
-    "twitter.com", "www.twitter.com", "x.com", "www.x.com",
+    "reddit.com",
+    "www.reddit.com",
+    "old.reddit.com",
+    "twitter.com",
+    "www.twitter.com",
+    "x.com",
+    "www.x.com",
 }
 
 
@@ -29,7 +33,7 @@ def search_web(
     to_date: str,
     api_key: str,
     depth: str = "default",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Search the web via Parallel AI Search API.
 
     Args:
@@ -73,7 +77,7 @@ def search_web(
     return _normalize_results(response)
 
 
-def _normalize_results(response: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _normalize_results(response: dict[str, Any]) -> list[dict[str, Any]]:
     """Convert Parallel AI response to websearch item schema.
 
     Args:
@@ -121,17 +125,19 @@ def _normalize_results(response: Dict[str, Any]) -> List[Dict[str, Any]]:
         except (TypeError, ValueError):
             relevance = 0.6
 
-        items.append({
-            "id": f"W{i+1}",
-            "title": title[:200],
-            "url": url,
-            "source_domain": domain,
-            "snippet": snippet[:500],
-            "date": result.get("published_date", result.get("date")),
-            "date_confidence": "med" if result.get("published_date") or result.get("date") else "low",
-            "relevance": relevance,
-            "why_relevant": str(result.get("summary", "")).strip()[:200],
-        })
+        items.append(
+            {
+                "id": f"W{i + 1}",
+                "title": title[:200],
+                "url": url,
+                "source_domain": domain,
+                "snippet": snippet[:500],
+                "date": result.get("published_date", result.get("date")),
+                "date_confidence": "med" if result.get("published_date") or result.get("date") else "low",
+                "relevance": relevance,
+                "why_relevant": str(result.get("summary", "")).strip()[:200],
+            }
+        )
 
     sys.stderr.write(f"[Web] Parallel AI: {len(items)} results\n")
     sys.stderr.flush()

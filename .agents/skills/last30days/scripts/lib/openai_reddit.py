@@ -3,9 +3,9 @@
 import json
 import re
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from . import http, env
+from . import env, http
 
 # Fallback models when the selected model isn't accessible (e.g., org not verified for GPT-5)
 # Note: gpt-4o-mini does NOT support web_search with filters param, so exclude it
@@ -32,13 +32,16 @@ def _is_model_access_error(error: http.HTTPError) -> bool:
         return False
     body_lower = error.body.lower()
     # Check for common access/verification error messages
-    return any(phrase in body_lower for phrase in [
-        "verified",
-        "organization must be",
-        "does not have access",
-        "not available",
-        "not found",
-    ])
+    return any(
+        phrase in body_lower
+        for phrase in [
+            "verified",
+            "organization must be",
+            "does not have access",
+            "not available",
+            "not found",
+        ]
+    )
 
 
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
@@ -53,7 +56,7 @@ CODEX_INSTRUCTIONS = (
 )
 
 
-def _parse_sse_chunk(chunk: str) -> Optional[Dict[str, Any]]:
+def _parse_sse_chunk(chunk: str) -> dict[str, Any] | None:
     """Parse a single SSE chunk into a JSON object."""
     lines = chunk.split("\n")
     data_lines = []
@@ -75,9 +78,9 @@ def _parse_sse_chunk(chunk: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def _parse_sse_stream_raw(raw: str) -> List[Dict[str, Any]]:
+def _parse_sse_stream_raw(raw: str) -> list[dict[str, Any]]:
     """Parse SSE stream from raw text and return JSON events."""
-    events: List[Dict[str, Any]] = []
+    events: list[dict[str, Any]] = []
     buffer = ""
     for chunk in raw.splitlines(keepends=True):
         buffer += chunk
@@ -93,7 +96,7 @@ def _parse_sse_stream_raw(raw: str) -> List[Dict[str, Any]]:
     return events
 
 
-def _parse_codex_stream(raw: str) -> Dict[str, Any]:
+def _parse_codex_stream(raw: str) -> dict[str, Any]:
     """Parse SSE stream from Codex responses into a response-like dict."""
     events = _parse_sse_stream_raw(raw)
 
@@ -129,6 +132,7 @@ def _parse_codex_stream(raw: str) -> Dict[str, Any]:
         }
 
     return {}
+
 
 # Depth configurations: (min, max) threads to request
 # Request MORE than needed since many get filtered by date
@@ -183,12 +187,30 @@ Return JSON:
 
 def _extract_core_subject(topic: str) -> str:
     """Extract core subject from verbose query for retry."""
-    noise = ['best', 'top', 'how to', 'tips for', 'practices', 'features',
-             'killer', 'guide', 'tutorial', 'recommendations', 'advice',
-             'prompting', 'using', 'for', 'with', 'the', 'of', 'in', 'on']
+    noise = [
+        "best",
+        "top",
+        "how to",
+        "tips for",
+        "practices",
+        "features",
+        "killer",
+        "guide",
+        "tutorial",
+        "recommendations",
+        "advice",
+        "prompting",
+        "using",
+        "for",
+        "with",
+        "the",
+        "of",
+        "in",
+        "on",
+    ]
     words = topic.lower().split()
     result = [w for w in words if w not in noise]
-    return ' '.join(result[:3]) or topic  # Keep max 3 words
+    return " ".join(result[:3]) or topic  # Keep max 3 words
 
 
 def _build_subreddit_query(topic: str) -> str:
@@ -199,23 +221,16 @@ def _build_subreddit_query(topic: str) -> str:
     """
     core = _extract_core_subject(topic)
     # Remove dots and special chars for subreddit name guess
-    sub_name = core.replace('.', '').replace(' ', '').lower()
+    sub_name = core.replace(".", "").replace(" ", "").lower()
     return f"r/{sub_name} site:reddit.com"
 
 
-def _build_payload(model: str, instructions_text: str, input_text: str, auth_source: str) -> Dict[str, Any]:
+def _build_payload(model: str, instructions_text: str, input_text: str, auth_source: str) -> dict[str, Any]:
     """Build responses payload for OpenAI or Codex endpoints."""
     payload = {
         "model": model,
         "store": False,
-        "tools": [
-            {
-                "type": "web_search",
-                "filters": {
-                    "allowed_domains": ["reddit.com"]
-                }
-            }
-        ],
+        "tools": [{"type": "web_search", "filters": {"allowed_domains": ["reddit.com"]}}],
         "include": ["web_search_call.action.sources"],
         "instructions": instructions_text,
         "input": input_text,
@@ -240,10 +255,10 @@ def search_reddit(
     to_date: str,
     depth: str = "default",
     auth_source: str = "api_key",
-    account_id: Optional[str] = None,
-    mock_response: Optional[Dict] = None,
+    account_id: str | None = None,
+    mock_response: dict | None = None,
     _retry: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Search Reddit for relevant threads using OpenAI Responses API.
 
     Args:
@@ -300,6 +315,7 @@ def search_reddit(
     if auth_source == env.AUTH_SOURCE_CODEX:
         # Codex auth: try model with fallback chain
         from . import models as models_mod
+
         codex_models_to_try = [model] + [m for m in models_mod.CODEX_FALLBACK_MODELS if m != model]
         instructions_text = CODEX_INSTRUCTIONS + "\n\n" + input_text
         last_error = None
@@ -323,14 +339,7 @@ def search_reddit(
     for current_model in models_to_try:
         payload = {
             "model": current_model,
-            "tools": [
-                {
-                    "type": "web_search",
-                    "filters": {
-                        "allowed_domains": ["reddit.com"]
-                    }
-                }
-            ],
+            "tools": [{"type": "web_search", "filters": {"allowed_domains": ["reddit.com"]}}],
             "include": ["web_search_call.action.sources"],
             "input": input_text,
         }
@@ -356,12 +365,12 @@ def search_reddit(
 
 
 def search_subreddits(
-    subreddits: List[str],
+    subreddits: list[str],
     topic: str,
     from_date: str,
     to_date: str,
     count_per: int = 5,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Search specific subreddits via Reddit's free JSON endpoint.
 
     No API key needed. Uses reddit.com/r/{sub}/search/.json endpoint.
@@ -405,7 +414,7 @@ def search_subreddits(
                     continue
 
                 item = {
-                    "id": f"RS{len(all_items)+1}",
+                    "id": f"RS{len(all_items) + 1}",
                     "title": str(post.get("title", "")).strip(),
                     "url": f"https://www.reddit.com{permalink}",
                     "subreddit": str(post.get("subreddit", sub)).strip(),
@@ -418,6 +427,7 @@ def search_subreddits(
                 created_utc = post.get("created_utc")
                 if created_utc:
                     from . import dates as dates_mod
+
                     item["date"] = dates_mod.timestamp_to_date(created_utc)
 
                 all_items.append(item)
@@ -436,10 +446,11 @@ def search_subreddits(
 def _url_encode(text: str) -> str:
     """Simple URL encoding for query parameters."""
     import urllib.parse
+
     return urllib.parse.quote_plus(text)
 
 
-def parse_reddit_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
+def parse_reddit_response(response: dict[str, Any]) -> list[dict[str, Any]]:
     """Parse OpenAI response to extract Reddit items.
 
     Args:
@@ -489,7 +500,10 @@ def parse_reddit_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
                 break
 
     if not output_text:
-        print(f"[REDDIT WARNING] No output text found in OpenAI response. Keys present: {list(response.keys())}", flush=True)
+        print(
+            f"[REDDIT WARNING] No output text found in OpenAI response. Keys present: {list(response.keys())}",
+            flush=True,
+        )
         return items
 
     # Extract JSON from the response
@@ -512,7 +526,7 @@ def parse_reddit_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
             continue
 
         clean_item = {
-            "id": f"R{i+1}",
+            "id": f"R{i + 1}",
             "title": str(item.get("title", "")).strip(),
             "url": url,
             "subreddit": str(item.get("subreddit", "")).strip().lstrip("r/"),
@@ -523,7 +537,7 @@ def parse_reddit_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
 
         # Validate date format
         if clean_item["date"]:
-            if not re.match(r'^\d{4}-\d{2}-\d{2}$', str(clean_item["date"])):
+            if not re.match(r"^\d{4}-\d{2}-\d{2}$", str(clean_item["date"])):
                 clean_item["date"] = None
 
         clean_items.append(clean_item)

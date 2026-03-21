@@ -1,22 +1,25 @@
 from enum import Enum
+
 from src.core.domain import Aggregate
 from src.modules.orders.messages import OrderCreated, OrderShipped
 
 
 class OrderState(Enum):
     """Enumerate representing the possible states of an Order."""
+
     PENDING = "PENDING"
     SHIPPED = "SHIPPED"
 
 
 class DomainError(Exception):
     """Base exception for domain logic errors in the Orders module."""
+
     pass
 
 
 class Order(Aggregate):
     """Order Aggregate Root.
-    
+
     Represents a customer order within the system. Handles the business
     logic for state transitions and emits domain events.
 

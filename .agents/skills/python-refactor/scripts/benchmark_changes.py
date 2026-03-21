@@ -10,11 +10,12 @@ Usage:
 
 import argparse
 import importlib.util
+import json
 import sys
 import timeit
+from collections.abc import Callable
 from pathlib import Path
-from typing import Dict, Any, Callable, List
-import json
+from typing import Any
 
 
 def load_module_from_file(file_path: Path, module_name: str):
@@ -29,7 +30,7 @@ def load_module_from_file(file_path: Path, module_name: str):
     return module
 
 
-def discover_benchmarkable_functions(module) -> List[tuple[str, Callable]]:
+def discover_benchmarkable_functions(module) -> list[tuple[str, Callable]]:
     """Discover public functions in a module that can be benchmarked.
 
     Returns list of (name, function) tuples.
@@ -37,11 +38,11 @@ def discover_benchmarkable_functions(module) -> List[tuple[str, Callable]]:
     functions = []
 
     for name in dir(module):
-        if name.startswith('_'):
+        if name.startswith("_"):
             continue
 
         obj = getattr(module, name)
-        if callable(obj) and hasattr(obj, '__module__') and obj.__module__ == module.__name__:
+        if callable(obj) and hasattr(obj, "__module__") and obj.__module__ == module.__name__:
             functions.append((name, obj))
 
     return functions
@@ -79,7 +80,7 @@ def create_benchmark_wrapper(func: Callable, test_module) -> Callable:
         return lambda: func()
 
 
-def benchmark_function(func: Callable, number: int = 1000, repeat: int = 5) -> Dict[str, float]:
+def benchmark_function(func: Callable, number: int = 1000, repeat: int = 5) -> dict[str, float]:
     """Benchmark a function and return timing statistics.
 
     Args:
@@ -101,10 +102,10 @@ def benchmark_function(func: Callable, number: int = 1000, repeat: int = 5) -> D
         times = [t / number for t in times]
 
         return {
-            'min': min(times),
-            'max': max(times),
-            'mean': sum(times) / len(times),
-            'median': sorted(times)[len(times) // 2]
+            "min": min(times),
+            "max": max(times),
+            "mean": sum(times) / len(times),
+            "median": sorted(times)[len(times) // 2],
         }
 
     except Exception as e:
@@ -113,10 +114,8 @@ def benchmark_function(func: Callable, number: int = 1000, repeat: int = 5) -> D
 
 
 def compare_benchmarks(
-    before_results: Dict[str, float],
-    after_results: Dict[str, float],
-    threshold_pct: float = 10.0
-) -> Dict[str, Any]:
+    before_results: dict[str, float], after_results: dict[str, float], threshold_pct: float = 10.0
+) -> dict[str, Any]:
     """Compare benchmark results and determine if there's significant regression.
 
     Args:
@@ -128,14 +127,11 @@ def compare_benchmarks(
         Dict with comparison data and regression status
     """
     if before_results is None or after_results is None:
-        return {
-            'regression': None,
-            'error': 'Benchmark failed'
-        }
+        return {"regression": None, "error": "Benchmark failed"}
 
     # Use median time for comparison (more stable than mean)
-    before_time = before_results['median']
-    after_time = after_results['median']
+    before_time = before_results["median"]
+    after_time = after_results["median"]
 
     # Calculate percentage change
     if before_time > 0:
@@ -147,81 +143,63 @@ def compare_benchmarks(
     has_regression = pct_change > threshold_pct
 
     return {
-        'before_median': before_time,
-        'after_median': after_time,
-        'pct_change': round(pct_change, 2),
-        'threshold_pct': threshold_pct,
-        'regression': has_regression,
-        'faster': pct_change < 0
+        "before_median": before_time,
+        "after_median": after_time,
+        "pct_change": round(pct_change, 2),
+        "threshold_pct": threshold_pct,
+        "regression": has_regression,
+        "faster": pct_change < 0,
     }
 
 
 def print_benchmark_results(
-    func_name: str,
-    before_results: Dict[str, float],
-    after_results: Dict[str, float],
-    comparison: Dict[str, Any]
+    func_name: str, before_results: dict[str, float], after_results: dict[str, float], comparison: dict[str, Any]
 ):
     """Print benchmark results for a single function."""
     print(f"\n  Function: {func_name}")
-    print(f"  {'─'*66}")
+    print(f"  {'─' * 66}")
 
-    if comparison.get('error'):
+    if comparison.get("error"):
         print(f"  ✗ {comparison['error']}")
         return
 
-    before_time = comparison['before_median']
-    after_time = comparison['after_median']
-    pct_change = comparison['pct_change']
-    threshold = comparison['threshold_pct']
+    before_time = comparison["before_median"]
+    after_time = comparison["after_median"]
+    pct_change = comparison["pct_change"]
+    threshold = comparison["threshold_pct"]
 
     # Format times nicely
     def format_time(t):
         if t < 1e-6:
-            return f"{t*1e9:.2f} ns"
+            return f"{t * 1e9:.2f} ns"
         elif t < 1e-3:
-            return f"{t*1e6:.2f} µs"
+            return f"{t * 1e6:.2f} µs"
         elif t < 1:
-            return f"{t*1e3:.2f} ms"
+            return f"{t * 1e3:.2f} ms"
         else:
             return f"{t:.2f} s"
 
     print(f"  Before: {format_time(before_time)} (median)")
     print(f"  After:  {format_time(after_time)} (median)")
 
-    if comparison['faster']:
+    if comparison["faster"]:
         print(f"  Change: {pct_change:+.1f}% ✓ FASTER")
-    elif comparison['regression']:
+    elif comparison["regression"]:
         print(f"  Change: {pct_change:+.1f}% ✗ REGRESSION (threshold: {threshold}%)")
     else:
         print(f"  Change: {pct_change:+.1f}% ✓ Within threshold")
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Benchmark performance changes between code versions"
-    )
+    parser = argparse.ArgumentParser(description="Benchmark performance changes between code versions")
     parser.add_argument("before_file", type=Path, help="Path to file before refactoring")
     parser.add_argument("after_file", type=Path, help="Path to file after refactoring")
     parser.add_argument("test_module", type=Path, help="Path to test/benchmark data module")
     parser.add_argument(
-        "--threshold",
-        type=float,
-        default=10.0,
-        help="Performance regression threshold in percent (default: 10)"
+        "--threshold", type=float, default=10.0, help="Performance regression threshold in percent (default: 10)"
     )
-    parser.add_argument(
-        "--number",
-        type=int,
-        default=1000,
-        help="Number of executions per timing (default: 1000)"
-    )
-    parser.add_argument(
-        "--repeat",
-        type=int,
-        default=5,
-        help="Number of times to repeat timing (default: 5)"
-    )
+    parser.add_argument("--number", type=int, default=1000, help="Number of executions per timing (default: 1000)")
+    parser.add_argument("--repeat", type=int, default=5, help="Number of times to repeat timing (default: 5)")
     parser.add_argument("--json", action="store_true", help="Output JSON format")
 
     args = parser.parse_args()
@@ -231,7 +209,7 @@ def main():
         if not file_path.exists():
             print(f"Error: File not found: {file_path}", file=sys.stderr)
             sys.exit(1)
-        if not file_path.suffix == '.py':
+        if not file_path.suffix == ".py":
             print(f"Error: File must be a Python file (.py): {file_path}", file=sys.stderr)
             sys.exit(1)
 
@@ -262,9 +240,9 @@ def main():
     regressions_found = False
 
     if not args.json:
-        print(f"\n{'='*70}")
-        print(f"Performance Benchmark Comparison")
-        print(f"{'='*70}")
+        print(f"\n{'=' * 70}")
+        print("Performance Benchmark Comparison")
+        print(f"{'=' * 70}")
         print(f"\nBenchmarking {len(common_names)} function(s)...")
 
     for func_name in sorted(common_names):
@@ -287,27 +265,23 @@ def main():
         # Compare
         comparison = compare_benchmarks(before_results, after_results, args.threshold)
 
-        results[func_name] = {
-            'before': before_results,
-            'after': after_results,
-            'comparison': comparison
-        }
+        results[func_name] = {"before": before_results, "after": after_results, "comparison": comparison}
 
         if not args.json:
             print_benchmark_results(func_name, before_results, after_results, comparison)
 
-        if comparison.get('regression'):
+        if comparison.get("regression"):
             regressions_found = True
 
     # Summary
     if not args.json:
-        print(f"\n{'='*70}")
-        print(f"Summary:")
-        print(f"{'='*70}")
+        print(f"\n{'=' * 70}")
+        print("Summary:")
+        print(f"{'=' * 70}")
 
         total = len(results)
-        faster = sum(1 for r in results.values() if r['comparison'].get('faster'))
-        regressed = sum(1 for r in results.values() if r['comparison'].get('regression'))
+        faster = sum(1 for r in results.values() if r["comparison"].get("faster"))
+        regressed = sum(1 for r in results.values() if r["comparison"].get("regression"))
         within_threshold = total - faster - regressed
 
         print(f"  Total functions: {total}")
@@ -316,10 +290,10 @@ def main():
         print(f"  Regressions: {regressed}")
 
         if regressions_found:
-            print(f"\n✗ Performance regressions detected!")
+            print("\n✗ Performance regressions detected!")
             sys.exit(1)
         else:
-            print(f"\n✓ No significant performance regressions")
+            print("\n✓ No significant performance regressions")
 
     else:
         print(json.dumps(results, indent=2))

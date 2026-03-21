@@ -1,8 +1,10 @@
-from typing import Callable, Type
+from collections.abc import Callable
+
 from sqlalchemy.orm import Session
-from src.core.unit_of_work import AbstractUnitOfWork
+
 from src.adapters.repository import SqlAlchemyRepository
 from src.core.domain import Aggregate
+from src.core.unit_of_work import AbstractUnitOfWork
 
 
 class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
@@ -18,9 +20,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         repository: The repository instance associated with the session.
     """
 
-    def __init__(
-        self, session_factory: Callable[[], Session], model_class: Type[Aggregate]
-    ):
+    def __init__(self, session_factory: Callable[[], Session], model_class: type[Aggregate]):
         """Initializes the Unit of Work with a session factory.
 
         Args:

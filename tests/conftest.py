@@ -1,7 +1,11 @@
-from typing import Dict, Optional
+import sys
+import asyncio
+from src.core.domain import Aggregate
 from src.core.repository import AbstractRepository
 from src.core.unit_of_work import AbstractUnitOfWork
-from src.core.domain import Aggregate
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 class FakeAggregate(Aggregate):
@@ -18,12 +22,12 @@ class FakeRepository(AbstractRepository[FakeAggregate]):
 
     def __init__(self):
         super().__init__()
-        self._aggregates: Dict[str, FakeAggregate] = {}
+        self._aggregates: dict[str, FakeAggregate] = {}
 
     def _add(self, aggregate: FakeAggregate) -> None:
         self._aggregates[aggregate.ref] = aggregate
 
-    def _get(self, reference: str) -> Optional[FakeAggregate]:
+    def _get(self, reference: str) -> FakeAggregate | None:
         return self._aggregates.get(reference)
 
 

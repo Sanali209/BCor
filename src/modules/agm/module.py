@@ -1,29 +1,30 @@
+from dishka import AsyncContainer, Provider, Scope, provide
 from pydantic_settings import BaseSettings
-from dishka import Provider, Scope, provide, AsyncContainer
-from src.core.module import BaseModule
+
 from src.core.messagebus import MessageBus
+from src.core.module import BaseModule
+from src.modules.agm.handlers import handle_stored_field_recalc
 from src.modules.agm.mapper import AGMMapper
 from src.modules.agm.messages import StoredFieldRecalculationRequested
-from src.modules.agm.handlers import handle_stored_field_recalc
 
 
 class AGMSettings(BaseSettings):
     """Configuration settings for the Agentic Grid Management (AGM) module."""
+
     pass
 
 
 class AGMProvider(Provider):
     """Dishka Provider for AGM-specific dependencies.
-    
-    Provides the AGMMapper, ensuring it has access to the application 
+
+    Provides the AGMMapper, ensuring it has access to the application
     container for live field resolution.
     """
+
     scope = Scope.REQUEST
 
     @provide
-    def provide_agm_mapper(
-        self, container: AsyncContainer, message_bus: MessageBus
-    ) -> AGMMapper:
+    def provide_agm_mapper(self, container: AsyncContainer, message_bus: MessageBus) -> AGMMapper:
         """Provides a request-scoped AGMMapper instance.
 
         Args:
@@ -38,11 +39,12 @@ class AGMProvider(Provider):
 
 class AGMModule(BaseModule):
     """Module for Agentic Grid Management (AGM).
-    
-    AGM provides a Graph-Object Mapping (GOM) layer for Neo4j, 
-    supporting polymorphic loading, live hydration of fields via DI, 
+
+    AGM provides a Graph-Object Mapping (GOM) layer for Neo4j,
+    supporting polymorphic loading, live hydration of fields via DI,
     and background recalculation of stored fields via TaskIQ.
     """
+
     settings_class = AGMSettings
 
     def __init__(self):
@@ -52,6 +54,4 @@ class AGMModule(BaseModule):
         self.provider = AGMProvider()
 
         # Register event handlers for TaskIQ triggers
-        self.event_handlers = {
-            StoredFieldRecalculationRequested: [handle_stored_field_recalc]
-        }
+        self.event_handlers = {StoredFieldRecalculationRequested: [handle_stored_field_recalc]}

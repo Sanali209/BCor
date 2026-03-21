@@ -9,8 +9,8 @@ import math
 import re
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Dict, List, Optional
-from urllib.parse import quote_plus, urlencode
+from typing import Any
+from urllib.parse import urlencode
 
 from . import http
 
@@ -57,7 +57,7 @@ def _extract_core_subject(topic: str) -> str:
     return topic.strip()
 
 
-def _expand_queries(topic: str) -> List[str]:
+def _expand_queries(topic: str) -> list[str]:
     """Generate search queries to cast a wider net.
 
     Strategy:
@@ -94,7 +94,7 @@ def _expand_queries(topic: str) -> List[str]:
 _GENERIC_TAGS = frozenset({"sports", "politics", "crypto", "science", "culture", "pop culture"})
 
 
-def _extract_domain_queries(topic: str, events: List[Dict]) -> List[str]:
+def _extract_domain_queries(topic: str, events: list[dict]) -> list[str]:
     """Extract domain-indicator search terms from first-pass event tags.
 
     Uses structured tag metadata from Gamma API events to discover broader
@@ -104,7 +104,7 @@ def _extract_domain_queries(topic: str, events: List[Dict]) -> List[str]:
     query_words = set(_extract_core_subject(topic).lower().split())
 
     # Collect tag labels from all first-pass events, count occurrences
-    tag_counts: Dict[str, int] = {}
+    tag_counts: dict[str, int] = {}
     for event in events:
         tags = event.get("tags") or []
         for tag in tags:
@@ -120,15 +120,12 @@ def _extract_domain_queries(topic: str, events: List[Dict]) -> List[str]:
             tag_counts[label] = tag_counts.get(label, 0) + 1
 
     # Sort by frequency, take top 2 that appear in 2+ events
-    domain_queries = [
-        label for label, count in sorted(tag_counts.items(), key=lambda x: -x[1])
-        if count >= 2
-    ][:2]
+    domain_queries = [label for label, count in sorted(tag_counts.items(), key=lambda x: -x[1]) if count >= 2][:2]
 
     return domain_queries
 
 
-def _search_single_query(query: str, page: int = 1) -> Dict[str, Any]:
+def _search_single_query(query: str, page: int = 1) -> dict[str, Any]:
     """Run a single search query against Gamma API."""
     params = {"q": query, "page": str(page)}
     url = f"{GAMMA_SEARCH_URL}?{urlencode(params)}"
@@ -145,7 +142,11 @@ def _search_single_query(query: str, page: int = 1) -> Dict[str, Any]:
 
 
 def _run_queries_parallel(
-    queries: List[str], pages: int, all_events: Dict, errors: List, start_idx: int = 0,
+    queries: list[str],
+    pages: int,
+    all_events: dict,
+    errors: list,
+    start_idx: int = 0,
 ) -> None:
     """Run (query, page) combinations in parallel, merging into all_events."""
     with ThreadPoolExecutor(max_workers=min(8, len(queries) * pages)) as executor:
@@ -180,7 +181,7 @@ def search_polymarket(
     from_date: str,
     to_date: str,
     depth: str = "default",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Search Polymarket via Gamma API with two-pass query expansion.
 
     Pass 1: Run expanded queries in parallel, merge and dedupe by event ID.
@@ -202,8 +203,8 @@ def search_polymarket(
     _log(f"Searching for '{topic}' with queries: {queries} (pages={pages})")
 
     # Pass 1: run expanded queries in parallel
-    all_events: Dict[str, tuple] = {}
-    errors: List[str] = []
+    all_events: dict[str, tuple] = {}
+    errors: list[str] = []
     _run_queries_parallel(queries, pages, all_events, errors)
 
     # Pass 2: extract domain-indicator terms from first-pass titles and search
@@ -227,7 +228,7 @@ def search_polymarket(
     return result
 
 
-def _format_price_movement(market: Dict[str, Any]) -> Optional[str]:
+def _format_price_movement(market: dict[str, Any]) -> str | None:
     """Pick the most significant price change and format it.
 
     Returns string like 'down 11.7% this month' or None if no significant change.
@@ -251,7 +252,7 @@ def _format_price_movement(market: Dict[str, Any]) -> Optional[str]:
     return f"{direction} {pct:.1f}% {period}"
 
 
-def _parse_outcome_prices(market: Dict[str, Any]) -> List[tuple]:
+def _parse_outcome_prices(market: dict[str, Any]) -> list[tuple]:
     """Parse outcomePrices JSON string into list of (outcome_name, price) tuples."""
     outcomes_raw = market.get("outcomes") or []
     prices_raw = market.get("outcomePrices")
@@ -282,7 +283,7 @@ def _parse_outcome_prices(market: Dict[str, Any]) -> List[tuple]:
             p = float(price)
         except (ValueError, TypeError):
             continue
-        name = outcomes[i] if i < len(outcomes) else f"Outcome {i+1}"
+        name = outcomes[i] if i < len(outcomes) else f"Outcome {i + 1}"
         result.append((name, p))
 
     return result
@@ -296,7 +297,11 @@ def _shorten_question(question: str) -> str:
     """
     q = question.strip().rstrip("?")
     # Common patterns: "Will X win/be/...", "X wins/loses..."
-    m = re.match(r"^Will\s+(.+?)\s+(?:win|be|make|reach|have|lose|qualify|advance|strike|agree|pass|sign|get|become|remain|stay|leave|survive|next)\b", q, re.IGNORECASE)
+    m = re.match(
+        r"^Will\s+(.+?)\s+(?:win|be|make|reach|have|lose|qualify|advance|strike|agree|pass|sign|get|become|remain|stay|leave|survive|next)\b",
+        q,
+        re.IGNORECASE,
+    )
     if m:
         return m.group(1).strip()
     m = re.match(r"^Will\s+(.+?)\s+", q, re.IGNORECASE)
@@ -306,7 +311,7 @@ def _shorten_question(question: str) -> str:
     return question[:40] if len(question) > 40 else question
 
 
-def _compute_text_similarity(topic: str, title: str, outcomes: List[str] = None) -> float:
+def _compute_text_similarity(topic: str, title: str, outcomes: list[str] = None) -> float:
     """Score how well the event title (or outcome names) match the search topic.
 
     Returns 0.0-1.0. Title substring match gets 1.0, outcome match gets 0.85/0.7,
@@ -352,7 +357,7 @@ def _safe_float(val, default=0.0) -> float:
         return default
 
 
-def parse_polymarket_response(response: Dict[str, Any], topic: str = "") -> List[Dict[str, Any]]:
+def parse_polymarket_response(response: dict[str, Any], topic: str = "") -> list[dict[str, Any]]:
     """Parse Gamma API response into normalized item dicts.
 
     Each event becomes one item showing its title and top markets.
@@ -407,6 +412,7 @@ def parse_polymarket_response(response: Dict[str, Any], topic: str = "") -> List
                 return float(m.get("volume", 0) or 0)
             except (ValueError, TypeError):
                 return 0
+
         active_markets.sort(key=market_volume, reverse=True)
 
         # Take top market for the event
@@ -430,10 +436,7 @@ def parse_polymarket_response(response: Dict[str, Any], topic: str = "") -> List
         # sub-markets, synthesize from market questions to show actual
         # team/entity probabilities instead of a single market's Yes/No
         outcome_prices = _parse_outcome_prices(top_market)
-        top_outcomes_are_binary = (
-            len(outcome_prices) == 2
-            and {n.lower() for n, _ in outcome_prices} == {"yes", "no"}
-        )
+        top_outcomes_are_binary = len(outcome_prices) == 2 and {n.lower() for n, _ in outcome_prices} == {"yes", "no"}
         if top_outcomes_are_binary and len(active_markets) > 1:
             synth_outcomes = []
             for m in active_markets:
@@ -499,13 +502,16 @@ def parse_polymarket_response(response: Dict[str, Any], topic: str = "") -> List
         # Competitive bonus: markets near 50/50 are more interesting
         competitive_score = event_competitive
 
-        relevance = min(1.0, (
-            0.30 * text_score +
-            0.30 * vol_score +
-            0.15 * liq_score +
-            0.15 * movement_score +
-            0.10 * competitive_score
-        ))
+        relevance = min(
+            1.0,
+            (
+                0.30 * text_score
+                + 0.30 * vol_score
+                + 0.15 * liq_score
+                + 0.15 * movement_score
+                + 0.10 * competitive_score
+            ),
+        )
 
         # Surface the topic-matching outcome to the front before truncating
         if topic and outcome_prices:
@@ -517,8 +523,11 @@ def parse_polymarket_response(response: Dict[str, Any], topic: str = "") -> List
                 name_lower = pair[0].lower()
                 # Match if full core is substring, or name is substring of core,
                 # or any core token appears in the name (handles long question strings)
-                if (core in name_lower or name_lower in core
-                        or any(tok in name_lower for tok in core_tokens if len(tok) > 2)):
+                if (
+                    core in name_lower
+                    or name_lower in core
+                    or any(tok in name_lower for tok in core_tokens if len(tok) > 2)
+                ):
                     reordered.append(pair)
                 else:
                     rest.append(pair)
@@ -531,22 +540,24 @@ def parse_polymarket_response(response: Dict[str, Any], topic: str = "") -> List
         if remaining < 0:
             remaining = 0
 
-        items.append({
-            "event_id": event_id,
-            "title": title,
-            "question": top_market.get("question", title),
-            "url": url,
-            "outcome_prices": top_outcomes,
-            "outcomes_remaining": remaining,
-            "price_movement": price_movement,
-            "volume24hr": volume24hr,
-            "volume1mo": event_volume1mo,
-            "liquidity": liquidity,
-            "date": date_str,
-            "end_date": end_date,
-            "relevance": round(relevance, 2),
-            "why_relevant": f"Prediction market: {title[:60]}",
-        })
+        items.append(
+            {
+                "event_id": event_id,
+                "title": title,
+                "question": top_market.get("question", title),
+                "url": url,
+                "outcome_prices": top_outcomes,
+                "outcomes_remaining": remaining,
+                "price_movement": price_movement,
+                "volume24hr": volume24hr,
+                "volume1mo": event_volume1mo,
+                "liquidity": liquidity,
+                "date": date_str,
+                "end_date": end_date,
+                "relevance": round(relevance, 2),
+                "why_relevant": f"Prediction market: {title[:60]}",
+            }
+        )
 
     # Sort by relevance (quality-signal ranked) and apply cap
     items.sort(key=lambda x: x["relevance"], reverse=True)

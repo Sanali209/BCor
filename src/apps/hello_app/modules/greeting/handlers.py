@@ -1,15 +1,18 @@
 import loguru
-from src.apps.hello_app.modules.greeting.messages import SayHelloCommand, HelloSaidEvent
+
+from src.apps.hello_app.modules.greeting.messages import HelloSaidEvent, SayHelloCommand
+
 
 async def handle_say_hello(cmd: SayHelloCommand, uow):
     """Command Handler for SayHelloCommand."""
     message = uow.greeter.generate_greeting(cmd.name)
-    
+
     # We use the MessageBus (uow.bus if present, or we can just return events)
     # Since BCor typical handlers return lists of events to be published,
     # or attach them to aggregate roots. For our simple console app:
     uow.events.append(HelloSaidEvent(message=message))
     return message
+
 
 async def on_hello_said(event: HelloSaidEvent, uow):
     """Event Handler (Observability Test)."""

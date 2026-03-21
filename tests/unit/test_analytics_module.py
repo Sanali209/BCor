@@ -1,18 +1,17 @@
-import pytest
 import asyncio
 
-from tests.conftest import FakeUnitOfWork
+import pytest
 from dishka import Provider, Scope, provide
 
-from src.core.system import System
 from src.core.messagebus import MessageBus
+from src.core.system import System
 from src.core.unit_of_work import AbstractUnitOfWork
-
 from src.modules.analytics.domain import (
     AnalyticsModule,
     GenerateReportCommand,
     build_heavy_report_task,
 )
+from tests.conftest import FakeUnitOfWork
 
 
 class MockUoWProvider(Provider):

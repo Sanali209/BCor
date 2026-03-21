@@ -66,13 +66,48 @@
 └── README.md             # Этот файл
 ```
 
-## Документация (Ddocks)
+## Документация (Documentation)
 Подробное описание компонентов и руководства доступны в директории `Ddocks/`:
+
+### Архитектура и дизайн
+*   [ARCHITECTURE.md](ARCHITECTURE.md) — Полная документация архитектуры системы.
 *   [Roadmap](Ddocks/Roadmap.md) — Текущий статус и план разработки.
 *   [Concept Doc](Ddocks/Conceptdock.md) — Общее архитектурное видение.
-*   [Orders Module](Ddocks/orders_dock.md) [NEW] — Описание эталонного бизнес-модуля.
+*   [Design Document](Ddocks/Dizdok.md) — Дизайн-документ ядра и структуры монорепозитория.
+*   [Specification](Ddocks/Specification.md) — Развернутая спецификация архитектурного ядра.
+*   [Technical Task](Ddocks/Tech%20tasck.md) — Техническое задание на разработку ядра.
+
+### ADR (Architecture Decision Records)
+*   [ADR 0001: Strangler Fig](Ddocks/Design_docks/ADR/0001-strangler-fig-bcor-integration.md) — Паттерн "Душитель" для миграции.
+*   [ADR 0002: Domain Core](Ddocks/Design_docks/ADR/0002-domain-core-design.md) — Проектирование Domain Core.
+*   [ADR 0003: Infrastructure Adapters](Ddocks/Design_docks/ADR/0003-infrastructure-adapters.md) — Реализация адаптеров.
+*   [ADR 0004: Code Layering](Ddocks/Design_docks/ADR/0004-code-layering-strategy.md) — Стратегия разделения уровней.
+*   [ADR 0005: UV Package Management](Ddocks/Design_docks/ADR/0005-uv-package-management.md) — Управление пакетами.
+*   [ADR 0006: Python 3.12](Ddocks/Design_docks/ADR/0006-python-3.12-syntax.md) — Синтаксис Python 3.12.
+*   [ADR 0007: Legacy Migration ACL](Ddocks/Design_docks/ADR/0007-legacy-migration-acl-strategy.md) — Стратегия миграции легаси.
+
+### Модули
+*   [Orders Module](Ddocks/orders_dock.md) — Описание эталонного бизнес-модуля.
 *   [AGM Module](Ddocks/agm_dock.md) — Детали графового маппера.
-*   [How-to: Add New Module](Ddocks/How-tos/Add_New_Module.md) [NEW] — Гид для разработчиков.
+*   [ECS Module](Ddocks/ecs_dock.md) — Entity Component System.
+*   [VFS Module](Ddocks/vfs_dock.md) — Virtual File System.
+*   [Analytics Module](src/modules/analytics/README.md) — Модуль аналитики.
+*   [LLM Module](src/modules/llm/README.md) — Модуль LLM и NLP.
+*   [Search Module](src/modules/search/README.md) — Модуль поиска.
+
+### Руководства
+*   [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) — Полное руководство разработчика.
+*   [How-to: Add New Module](Ddocks/How-tos/Add_New_Module.md) — Гид для создания новых модулей.
+*   [First Steps](firststeps.md) — Как начать работу с репозиторием.
+
+### Русскоязычные версии
+*   [ARCHITECTURE_ru.md](ARCHITECTURE_ru.md) — Документация архитектуры на русском языке.
+*   [DEVELOPER_GUIDE_ru.md](DEVELOPER_GUIDE_ru.md) — Руководство разработчика на русском языке.
+
+### Спецификации
+*   [Linting Strategy](Ddocks/Design_docks/specs/2026-03-19-linting-strategy.md) — Стратегия линтинга (Ruff + Mypy).
+*   [Legacy Import Map](Ddocks/Design_docks/specs/2026-03-19-legacy-import-map.md) — Карта импортов легаси кода.
+*   [Class Map](Ddocks/Design_docks/Class%20map.md) — Карта классов и их расположения.
 
 ## Разработка
 Все новые фичи разрабатываются через **TDD (Test-Driven Development)** с использованием `pytest`.

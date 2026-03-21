@@ -16,7 +16,7 @@ import sqlite3
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 DB_DIR = Path.home() / ".local" / "share" / "last30days"
 DB_PATH = DB_DIR / "research.db"
@@ -128,12 +128,12 @@ INSERT OR IGNORE INTO settings (key, value) VALUES ('default_schedule', '0 8 * *
 """
 
 # Future migrations keyed by version number
-MIGRATIONS: Dict[int, str] = {
+MIGRATIONS: dict[int, str] = {
     # 2: "ALTER TABLE findings ADD COLUMN tags TEXT DEFAULT '[]';",
 }
 
 
-def _connect(db_path: Optional[Path] = None) -> sqlite3.Connection:
+def _connect(db_path: Path | None = None) -> sqlite3.Connection:
     """Open a connection with WAL mode and row factory."""
     path = db_path or _get_db_path()
     conn = sqlite3.connect(str(path))
@@ -144,7 +144,7 @@ def _connect(db_path: Optional[Path] = None) -> sqlite3.Connection:
     return conn
 
 
-def init_db(db_path: Optional[Path] = None) -> Path:
+def init_db(db_path: Path | None = None) -> Path:
     """Create database and tables if they don't exist. Returns the DB path."""
     path = db_path or _get_db_path()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -163,16 +163,12 @@ def init_db(db_path: Optional[Path] = None) -> Path:
 
 def _run_migrations(conn: sqlite3.Connection):
     """Apply pending schema migrations."""
-    current = conn.execute(
-        "SELECT MAX(version) FROM schema_version"
-    ).fetchone()[0] or 0
+    current = conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] or 0
 
     for version in sorted(MIGRATIONS.keys()):
         if version > current:
             conn.executescript(MIGRATIONS[version])
-            conn.execute(
-                "INSERT INTO schema_version (version) VALUES (?)", (version,)
-            )
+            conn.execute("INSERT INTO schema_version (version) VALUES (?)", (version,))
 
 
 # --- Topics ---
@@ -180,9 +176,9 @@ def _run_migrations(conn: sqlite3.Connection):
 
 def add_topic(
     name: str,
-    search_queries: Optional[List[str]] = None,
+    search_queries: list[str] | None = None,
     schedule: str = "0 8 * * *",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Add a topic to the watchlist. Returns the topic dict."""
     init_db()
     conn = _connect()
@@ -198,9 +194,7 @@ def add_topic(
             (name, queries_json, schedule),
         )
         conn.commit()
-        row = conn.execute(
-            "SELECT * FROM topics WHERE name = ?", (name,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM topics WHERE name = ?", (name,)).fetchone()
         return dict(row)
     finally:
         conn.close()
@@ -211,9 +205,7 @@ def remove_topic(name: str) -> bool:
     init_db()
     conn = _connect()
     try:
-        row = conn.execute(
-            "SELECT id FROM topics WHERE name = ?", (name,)
-        ).fetchone()
+        row = conn.execute("SELECT id FROM topics WHERE name = ?", (name,)).fetchone()
         if not row:
             return False
         topic_id = row["id"]
@@ -227,7 +219,7 @@ def remove_topic(name: str) -> bool:
         conn.close()
 
 
-def list_topics() -> List[Dict[str, Any]]:
+def list_topics() -> list[dict[str, Any]]:
     """List all topics with stats."""
     init_db()
     conn = _connect()
@@ -246,14 +238,12 @@ def list_topics() -> List[Dict[str, Any]]:
         conn.close()
 
 
-def get_topic(name: str) -> Optional[Dict[str, Any]]:
+def get_topic(name: str) -> dict[str, Any] | None:
     """Get a topic by name."""
     init_db()
     conn = _connect()
     try:
-        row = conn.execute(
-            "SELECT * FROM topics WHERE name = ?", (name,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM topics WHERE name = ?", (name,)).fetchone()
         return dict(row) if row else None
     finally:
         conn.close()
@@ -266,7 +256,7 @@ def record_run(
     topic_id: int,
     source_mode: str = "both",
     status: str = "completed",
-    error_message: Optional[str] = None,
+    error_message: str | None = None,
     duration_seconds: float = 0,
     prompt_tokens: int = 0,
     completion_tokens: int = 0,
@@ -281,8 +271,14 @@ def record_run(
                 duration_seconds, prompt_tokens, completion_tokens, token_cost)
                VALUES (?, datetime('now'), ?, ?, ?, ?, ?, ?, ?)""",
             (
-                topic_id, source_mode, status, error_message,
-                duration_seconds, prompt_tokens, completion_tokens, token_cost,
+                topic_id,
+                source_mode,
+                status,
+                error_message,
+                duration_seconds,
+                prompt_tokens,
+                completion_tokens,
+                token_cost,
             ),
         )
         conn.commit()
@@ -309,8 +305,8 @@ def update_run(run_id: int, **kwargs):
 def store_findings(
     run_id: int,
     topic_id: int,
-    findings: List[Dict[str, Any]],
-) -> Dict[str, int]:
+    findings: list[dict[str, Any]],
+) -> dict[str, int]:
     """Store findings with URL-based dedup. Returns counts of new/updated."""
     conn = _connect()
     new_count = 0
@@ -380,8 +376,8 @@ def store_findings(
 
 def get_new_findings(
     topic_id: int,
-    since: Optional[str] = None,
-) -> List[Dict[str, Any]]:
+    since: str | None = None,
+) -> list[dict[str, Any]]:
     """Get findings for a topic, optionally since a date."""
     conn = _connect()
     try:
@@ -404,7 +400,7 @@ def get_new_findings(
         conn.close()
 
 
-def search_findings(query: str, limit: int = 20) -> List[Dict[str, Any]]:
+def search_findings(query: str, limit: int = 20) -> list[dict[str, Any]]:
     """FTS5 search across all findings with BM25 ranking."""
     conn = _connect()
     try:
@@ -453,7 +449,7 @@ def dismiss_finding(finding_id: int):
 # --- Cost Tracking ---
 
 
-def get_daily_cost(date: Optional[str] = None) -> float:
+def get_daily_cost(date: str | None = None) -> float:
     """Get total token cost for a given day (default: today)."""
     conn = _connect()
     try:
@@ -473,14 +469,12 @@ def get_daily_cost(date: Optional[str] = None) -> float:
 # --- Settings ---
 
 
-def get_setting(key: str, default: Optional[str] = None) -> Optional[str]:
+def get_setting(key: str, default: str | None = None) -> str | None:
     """Get a setting value."""
     init_db()
     conn = _connect()
     try:
-        row = conn.execute(
-            "SELECT value FROM settings WHERE key = ?", (key,)
-        ).fetchone()
+        row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
         return row["value"] if row else default
     finally:
         conn.close()
@@ -507,7 +501,7 @@ def set_setting(key: str, value: str):
 # --- Stats ---
 
 
-def get_stats() -> Dict[str, Any]:
+def get_stats() -> dict[str, Any]:
     """Get overall database stats."""
     conn = _connect()
     try:
@@ -515,9 +509,7 @@ def get_stats() -> Dict[str, Any]:
         finding_count = conn.execute("SELECT COUNT(*) FROM findings").fetchone()[0]
 
         week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-        runs_7d = conn.execute(
-            "SELECT COUNT(*) FROM research_runs WHERE run_date >= ?", (week_ago,)
-        ).fetchone()[0]
+        runs_7d = conn.execute("SELECT COUNT(*) FROM research_runs WHERE run_date >= ?", (week_ago,)).fetchone()[0]
         successful_7d = conn.execute(
             "SELECT COUNT(*) FROM research_runs WHERE run_date >= ? AND status = 'completed'",
             (week_ago,),
@@ -533,9 +525,7 @@ def get_stats() -> Dict[str, Any]:
 
         # Source breakdown
         sources = {}
-        for row in conn.execute(
-            "SELECT source, COUNT(*) as cnt FROM findings GROUP BY source"
-        ).fetchall():
+        for row in conn.execute("SELECT source, COUNT(*) as cnt FROM findings GROUP BY source").fetchall():
             sources[row["source"]] = row["cnt"]
 
         db_path = _get_db_path()
@@ -556,7 +546,7 @@ def get_stats() -> Dict[str, Any]:
         conn.close()
 
 
-def get_trending(days: int = 7) -> List[Dict[str, Any]]:
+def get_trending(days: int = 7) -> list[dict[str, Any]]:
     """Get topics ranked by recent finding activity."""
     conn = _connect()
     try:

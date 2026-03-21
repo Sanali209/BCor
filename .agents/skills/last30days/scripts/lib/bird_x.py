@@ -6,13 +6,13 @@ via Twitter's GraphQL API. No external `bird` CLI binary needed - just Node.js 2
 
 import json
 import os
-import signal
 import shutil
+import signal
 import subprocess
 import sys
-from pathlib import Path
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Any
 
 # Path to the vendored bird-search wrapper
 _BIRD_SEARCH_MJS = Path(__file__).parent / "vendor" / "bird-search" / "bird-search.mjs"
@@ -25,18 +25,18 @@ DEPTH_CONFIG = {
 }
 
 # Module-level credentials injected from .env config
-_credentials: Dict[str, str] = {}
+_credentials: dict[str, str] = {}
 
 
-def set_credentials(auth_token: Optional[str], ct0: Optional[str]):
+def set_credentials(auth_token: str | None, ct0: str | None):
     """Inject AUTH_TOKEN/CT0 from .env config so Node subprocesses can use them."""
     if auth_token:
-        _credentials['AUTH_TOKEN'] = auth_token
+        _credentials["AUTH_TOKEN"] = auth_token
     if ct0:
-        _credentials['CT0'] = ct0
+        _credentials["CT0"] = ct0
 
 
-def _subprocess_env() -> Dict[str, str]:
+def _subprocess_env() -> dict[str, str]:
     """Build env dict for Node subprocesses, merging injected credentials."""
     env = os.environ.copy()
     env.update(_credentials)
@@ -60,50 +60,117 @@ def _extract_core_subject(topic: str) -> str:
 
     # Phase 1: Strip multi-word prefixes (longest first)
     prefixes = [
-        'what are the best', 'what is the best', 'what are the latest',
-        'what are people saying about', 'what do people think about',
-        'how do i use', 'how to use', 'how to',
-        'what are', 'what is', 'tips for', 'best practices for',
+        "what are the best",
+        "what is the best",
+        "what are the latest",
+        "what are people saying about",
+        "what do people think about",
+        "how do i use",
+        "how to use",
+        "how to",
+        "what are",
+        "what is",
+        "tips for",
+        "best practices for",
     ]
     for p in prefixes:
-        if text.startswith(p + ' '):
-            text = text[len(p):].strip()
+        if text.startswith(p + " "):
+            text = text[len(p) :].strip()
             break
 
     # Phase 2: Strip multi-word suffixes
     suffixes = [
-        'best practices', 'use cases', 'prompt techniques',
-        'prompting techniques', 'prompting tips',
+        "best practices",
+        "use cases",
+        "prompt techniques",
+        "prompting techniques",
+        "prompting tips",
     ]
     for s in suffixes:
-        if text.endswith(' ' + s):
-            text = text[:-len(s)].strip()
+        if text.endswith(" " + s):
+            text = text[: -len(s)].strip()
             break
 
     # Phase 3: Filter individual noise words
     _noise = {
         # Question/filler words
-        'a', 'an', 'the', 'is', 'are', 'was', 'were', 'and', 'or',
-        'of', 'in', 'on', 'for', 'with', 'about', 'to',
-        'people', 'saying', 'think', 'said', 'lately',
+        "a",
+        "an",
+        "the",
+        "is",
+        "are",
+        "was",
+        "were",
+        "and",
+        "or",
+        "of",
+        "in",
+        "on",
+        "for",
+        "with",
+        "about",
+        "to",
+        "people",
+        "saying",
+        "think",
+        "said",
+        "lately",
         # Research/meta descriptors
-        'best', 'top', 'good', 'great', 'awesome', 'killer',
-        'latest', 'new', 'news', 'update', 'updates',
-        'trendiest', 'trending', 'hottest', 'hot', 'popular', 'viral',
-        'practices', 'features', 'guide', 'tutorial',
-        'recommendations', 'advice', 'review', 'reviews',
-        'usecases', 'examples', 'comparison', 'versus', 'vs',
-        'plugin', 'plugins', 'skill', 'skills', 'tool', 'tools',
+        "best",
+        "top",
+        "good",
+        "great",
+        "awesome",
+        "killer",
+        "latest",
+        "new",
+        "news",
+        "update",
+        "updates",
+        "trendiest",
+        "trending",
+        "hottest",
+        "hot",
+        "popular",
+        "viral",
+        "practices",
+        "features",
+        "guide",
+        "tutorial",
+        "recommendations",
+        "advice",
+        "review",
+        "reviews",
+        "usecases",
+        "examples",
+        "comparison",
+        "versus",
+        "vs",
+        "plugin",
+        "plugins",
+        "skill",
+        "skills",
+        "tool",
+        "tools",
         # Prompting meta words
-        'prompt', 'prompts', 'prompting', 'techniques', 'tips',
-        'tricks', 'methods', 'strategies', 'approaches',
+        "prompt",
+        "prompts",
+        "prompting",
+        "techniques",
+        "tips",
+        "tricks",
+        "methods",
+        "strategies",
+        "approaches",
         # Action words
-        'using', 'uses', 'use',
+        "using",
+        "uses",
+        "use",
     }
     words = text.split()
     result = [w for w in words if w not in _noise]
 
-    return ' '.join(result[:3]) or topic.lower().strip()  # Max 3 words
+    return " ".join(result[:3]) or topic.lower().strip()  # Max 3 words
 
 
 def is_bird_installed() -> bool:
@@ -117,7 +184,7 @@ def is_bird_installed() -> bool:
     return shutil.which("node") is not None
 
 
-def is_bird_authenticated() -> Optional[str]:
+def is_bird_authenticated() -> str | None:
     """Check if X credentials are available (env vars or browser cookies).
 
     Returns:
@@ -135,7 +202,7 @@ def is_bird_authenticated() -> Optional[str]:
             env=_subprocess_env(),
         )
         if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip().split('\n')[0]
+            return result.stdout.strip().split("\n")[0]
         return None
     except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
         return None
@@ -150,7 +217,7 @@ def check_npm_available() -> bool:
     return shutil.which("npm") is not None
 
 
-def install_bird() -> Tuple[bool, str]:
+def install_bird() -> tuple[bool, str]:
     """No-op - Bird search is vendored in v2.1, no installation needed.
 
     Returns:
@@ -163,7 +230,7 @@ def install_bird() -> Tuple[bool, str]:
     return False, f"Vendored bird-search.mjs not found at {_BIRD_SEARCH_MJS}"
 
 
-def get_bird_status() -> Dict[str, Any]:
+def get_bird_status() -> dict[str, Any]:
     """Get comprehensive Bird search status.
 
     Returns:
@@ -180,7 +247,7 @@ def get_bird_status() -> Dict[str, Any]:
     }
 
 
-def _run_bird_search(query: str, count: int, timeout: int) -> Dict[str, Any]:
+def _run_bird_search(query: str, count: int, timeout: int) -> dict[str, Any]:
     """Run a search using the vendored bird-search.mjs module.
 
     Args:
@@ -192,14 +259,16 @@ def _run_bird_search(query: str, count: int, timeout: int) -> Dict[str, Any]:
         Raw Bird JSON response or error dict.
     """
     cmd = [
-        "node", str(_BIRD_SEARCH_MJS),
+        "node",
+        str(_BIRD_SEARCH_MJS),
         query,
-        "--count", str(count),
+        "--count",
+        str(count),
         "--json",
     ]
 
     # Use process groups for clean cleanup on timeout/kill
-    preexec = os.setsid if hasattr(os, 'setsid') else None
+    preexec = os.setsid if hasattr(os, "setsid") else None
 
     try:
         proc = subprocess.Popen(
@@ -214,6 +283,7 @@ def _run_bird_search(query: str, count: int, timeout: int) -> Dict[str, Any]:
         # Register for cleanup tracking (if available)
         try:
             from last30days import register_child_pid, unregister_child_pid
+
             register_child_pid(proc.pid)
         except ImportError:
             pass
@@ -231,6 +301,7 @@ def _run_bird_search(query: str, count: int, timeout: int) -> Dict[str, Any]:
         finally:
             try:
                 from last30days import unregister_child_pid
+
                 unregister_child_pid(proc.pid)
             except (ImportError, Exception):
                 pass
@@ -256,7 +327,7 @@ def search_x(
     from_date: str,
     to_date: str,
     depth: str = "default",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Search X using Bird CLI with automatic retry on 0 results.
 
     Args:
@@ -284,7 +355,7 @@ def search_x(
     # Retry with fewer keywords if 0 results and query has 3+ words
     core_words = core_topic.split()
     if not items and len(core_words) > 2:
-        shorter = ' '.join(core_words[:2])
+        shorter = " ".join(core_words[:2])
         _log(f"0 results for '{core_topic}', retrying with '{shorter}'")
         query = f"{shorter} since:{from_date}"
         response = _run_bird_search(query, count, timeout)
@@ -293,9 +364,22 @@ def search_x(
     # Last-chance retry: use strongest remaining token (often the product name)
     if not items and core_words:
         low_signal = {
-            'trendiest', 'trending', 'hottest', 'hot', 'popular', 'viral',
-            'best', 'top', 'latest', 'new', 'plugin', 'plugins',
-            'skill', 'skills', 'tool', 'tools',
+            "trendiest",
+            "trending",
+            "hottest",
+            "hot",
+            "popular",
+            "viral",
+            "best",
+            "top",
+            "latest",
+            "new",
+            "plugin",
+            "plugins",
+            "skill",
+            "skills",
+            "tool",
+            "tools",
         }
         candidates = [w for w in core_words if w not in low_signal]
         if candidates:
@@ -308,11 +392,11 @@ def search_x(
 
 
 def search_handles(
-    handles: List[str],
-    topic: Optional[str],
+    handles: list[str],
+    topic: str | None,
     from_date: str,
     count_per: int = 5,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Search specific X handles for topic-related content.
 
     Runs targeted Bird searches using `from:handle topic` syntax.
@@ -338,13 +422,15 @@ def search_handles(
             query = f"from:{handle} since:{from_date}"
 
         cmd = [
-            "node", str(_BIRD_SEARCH_MJS),
+            "node",
+            str(_BIRD_SEARCH_MJS),
             query,
-            "--count", str(count_per),
+            "--count",
+            str(count_per),
             "--json",
         ]
 
-        preexec = os.setsid if hasattr(os, 'setsid') else None
+        preexec = os.setsid if hasattr(os, "setsid") else None
 
         try:
             proc = subprocess.Popen(
@@ -386,7 +472,7 @@ def search_handles(
     return all_items
 
 
-def parse_bird_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
+def parse_bird_response(response: dict[str, Any]) -> list[dict[str, Any]]:
     """Parse Bird response to match xai_x output format.
 
     Args:
@@ -461,7 +547,7 @@ def parse_bird_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
 
         # Build normalized item
         item = {
-            "id": f"X{i+1}",
+            "id": f"X{i + 1}",
             "text": str(tweet.get("text", tweet.get("full_text", ""))).strip()[:500],
             "url": url,
             "author_handle": author_handle.lstrip("@"),

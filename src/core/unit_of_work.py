@@ -1,16 +1,18 @@
 import abc
-from typing import Generator
+from collections.abc import Generator
+from typing import Any
 
+from src.core.domain import Aggregate
 from src.core.messages import Event
 from src.core.repository import AbstractRepository
 
 
 class AbstractUnitOfWork(abc.ABC):
     """Abstract base class for the Unit of Work pattern.
-    
-    The Unit of Work coordinates the writing of changes and the 
-    dispatching of events. It ensures that all operations within a 
-    business transaction are atomic and that domain events are 
+
+    The Unit of Work coordinates the writing of changes and the
+    dispatching of events. It ensures that all operations within a
+    business transaction are atomic and that domain events are
     collected for later publishing.
     """
 
@@ -22,21 +24,19 @@ class AbstractUnitOfWork(abc.ABC):
         """
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Finalizes the transaction.
-
-        If an exception occurred, the transaction is rolled back. 
-        Note that commit() must be called explicitly for success; 
-        otherwise, a rollback is performed for safety.
-
-        Args:
-            exc_type: The type of exception raised, if any.
-            exc_val: The exception instance, if any.
-            exc_tb: The traceback, if any.
-        """
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any | None) -> None:  # noqa: ANN401
+        """Finalizes the transaction."""
         self.rollback()
 
-    def commit(self):
+    async def __aenter__(self) -> "AbstractUnitOfWork":
+        """Starts a new atomic transaction (async)."""
+        return self
+
+    async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any | None) -> None:  # noqa: ANN401
+        """Finalizes the transaction (async)."""
+        self.rollback()
+
+    def commit(self) -> None:
         """Commits the active transaction to the database."""
         self._commit()
 
@@ -51,16 +51,16 @@ class AbstractUnitOfWork(abc.ABC):
                 yield aggregate.events.pop(0)
 
     @abc.abstractmethod
-    def _commit(self):
+    def _commit(self) -> None:
         """Concrete implementation for committing the transaction."""
         raise NotImplementedError
 
     @abc.abstractmethod
-    def rollback(self):
+    def rollback(self) -> None:
         """Rolls back the active transaction."""
         raise NotImplementedError
 
-    def _get_all_seen_aggregates(self):
+    def _get_all_seen_aggregates(self) -> list[Aggregate]:
         """Finds all aggregates loaded in any repository within this UoW.
 
         Returns:
@@ -71,4 +71,4 @@ class AbstractUnitOfWork(abc.ABC):
             attr = getattr(self, attr_name)
             if isinstance(attr, AbstractRepository):
                 aggregates.update(attr.seen)
-        return aggregates
+        return list(aggregates)

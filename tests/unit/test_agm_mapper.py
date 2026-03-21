@@ -1,12 +1,14 @@
-import pytest
 import asyncio
-from typing import Annotated, NewType
 from dataclasses import dataclass
-from dishka import make_async_container, Provider, Scope, provide
+from typing import Annotated, NewType
+
+import pytest
+from dishka import Provider, Scope, make_async_container, provide
+
+from src.core.messagebus import MessageBus
 from src.modules.agm.mapper import AGMMapper
 from src.modules.agm.messages import StoredFieldRecalculationRequested
-from src.modules.agm.metadata import Stored, Live
-from src.core.messagebus import MessageBus
+from src.modules.agm.metadata import Live, Stored
 
 FetchLiveStatus = NewType("FetchLiveStatus", str)
 

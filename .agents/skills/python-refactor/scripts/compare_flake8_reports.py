@@ -12,10 +12,10 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 
-def load_report(file_path: Path) -> Dict[str, Any]:
+def load_report(file_path: Path) -> dict[str, Any]:
     """Load flake8 report from JSON file.
 
     Args:
@@ -25,14 +25,14 @@ def load_report(file_path: Path) -> Dict[str, Any]:
         Parsed report dictionary
     """
     try:
-        with open(file_path, 'r') as f:
+        with open(file_path) as f:
             return json.load(f)
     except Exception as e:
         print(f"Error loading report {file_path}: {e}", file=sys.stderr)
         sys.exit(1)
 
 
-def compare_reports(before: Dict[str, Any], after: Dict[str, Any]) -> Dict[str, Any]:
+def compare_reports(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
     """Compare two flake8 reports and calculate improvements.
 
     Args:
@@ -43,61 +43,61 @@ def compare_reports(before: Dict[str, Any], after: Dict[str, Any]) -> Dict[str, 
         Comparison results with improvements/regressions
     """
     # Overall metrics
-    total_before = before['total_issues']
-    total_after = after['total_issues']
+    total_before = before["total_issues"]
+    total_after = after["total_issues"]
     total_change = total_after - total_before
     total_pct = ((total_before - total_after) / total_before * 100) if total_before > 0 else 0
 
     # By severity
     severity_comparison = {}
-    for severity in ['high', 'medium', 'low']:
-        before_count = before['by_severity'].get(severity, 0)
-        after_count = after['by_severity'].get(severity, 0)
+    for severity in ["high", "medium", "low"]:
+        before_count = before["by_severity"].get(severity, 0)
+        after_count = after["by_severity"].get(severity, 0)
         change = after_count - before_count
         pct = ((before_count - after_count) / before_count * 100) if before_count > 0 else 0
 
         severity_comparison[severity] = {
-            'before': before_count,
-            'after': after_count,
-            'change': change,
-            'pct_improvement': pct,
-            'improved': change <= 0
+            "before": before_count,
+            "after": after_count,
+            "change": change,
+            "pct_improvement": pct,
+            "improved": change <= 0,
         }
 
     # By category
-    all_categories = set(before['by_category'].keys()) | set(after['by_category'].keys())
+    all_categories = set(before["by_category"].keys()) | set(after["by_category"].keys())
     category_comparison = {}
 
     for category in all_categories:
-        before_count = before['by_category'].get(category, 0)
-        after_count = after['by_category'].get(category, 0)
+        before_count = before["by_category"].get(category, 0)
+        after_count = after["by_category"].get(category, 0)
         change = after_count - before_count
         pct = ((before_count - after_count) / before_count * 100) if before_count > 0 else 0
 
         category_comparison[category] = {
-            'before': before_count,
-            'after': after_count,
-            'change': change,
-            'pct_improvement': pct,
-            'improved': change <= 0
+            "before": before_count,
+            "after": after_count,
+            "change": change,
+            "pct_improvement": pct,
+            "improved": change <= 0,
         }
 
     # By error code
-    all_codes = set(before['statistics'].keys()) | set(after['statistics'].keys())
+    all_codes = set(before["statistics"].keys()) | set(after["statistics"].keys())
     code_comparison = {}
 
     for code in all_codes:
-        before_count = before['statistics'].get(code, 0)
-        after_count = after['statistics'].get(code, 0)
+        before_count = before["statistics"].get(code, 0)
+        after_count = after["statistics"].get(code, 0)
         change = after_count - before_count
         pct = ((before_count - after_count) / before_count * 100) if before_count > 0 else 0
 
         code_comparison[code] = {
-            'before': before_count,
-            'after': after_count,
-            'change': change,
-            'pct_improvement': pct,
-            'improved': change <= 0
+            "before": before_count,
+            "after": after_count,
+            "change": change,
+            "pct_improvement": pct,
+            "improved": change <= 0,
         }
 
     # Issues fixed vs new issues
@@ -105,63 +105,57 @@ def compare_reports(before: Dict[str, Any], after: Dict[str, Any]) -> Dict[str, 
     new_issues = []
 
     # Create signature for each issue
-    before_sigs = {
-        f"{i['file']}:{i['line']}:{i['code']}"
-        for i in before.get('issues', [])
-    }
-    after_sigs = {
-        f"{i['file']}:{i['line']}:{i['code']}"
-        for i in after.get('issues', [])
-    }
+    before_sigs = {f"{i['file']}:{i['line']}:{i['code']}" for i in before.get("issues", [])}
+    after_sigs = {f"{i['file']}:{i['line']}:{i['code']}" for i in after.get("issues", [])}
 
     # Find fixed issues
-    for issue in before.get('issues', []):
+    for issue in before.get("issues", []):
         sig = f"{issue['file']}:{issue['line']}:{issue['code']}"
         if sig not in after_sigs:
             fixed_issues.append(issue)
 
     # Find new issues
-    for issue in after.get('issues', []):
+    for issue in after.get("issues", []):
         sig = f"{issue['file']}:{issue['line']}:{issue['code']}"
         if sig not in before_sigs:
             new_issues.append(issue)
 
     # Status assessment
-    passed_before = before.get('passed', False)
-    passed_after = after.get('passed', False)
+    passed_before = before.get("passed", False)
+    passed_after = after.get("passed", False)
 
     if not passed_before and passed_after:
-        status = 'IMPROVED - Now Passing'
+        status = "IMPROVED - Now Passing"
     elif passed_before and not passed_after:
-        status = 'REGRESSED - Now Failing'
+        status = "REGRESSED - Now Failing"
     elif passed_after:
-        status = 'PASSING - Maintained'
+        status = "PASSING - Maintained"
     else:
-        status = 'FAILING - Needs Work'
+        status = "FAILING - Needs Work"
 
     return {
-        'status': status,
-        'passed_before': passed_before,
-        'passed_after': passed_after,
-        'overall': {
-            'before': total_before,
-            'after': total_after,
-            'change': total_change,
-            'pct_improvement': total_pct,
-            'improved': total_change <= 0
+        "status": status,
+        "passed_before": passed_before,
+        "passed_after": passed_after,
+        "overall": {
+            "before": total_before,
+            "after": total_after,
+            "change": total_change,
+            "pct_improvement": total_pct,
+            "improved": total_change <= 0,
         },
-        'by_severity': severity_comparison,
-        'by_category': category_comparison,
-        'by_code': code_comparison,
-        'fixed_issues': fixed_issues,
-        'new_issues': new_issues,
-        'fixed_count': len(fixed_issues),
-        'new_count': len(new_issues),
-        'net_improvement': len(fixed_issues) - len(new_issues)
+        "by_severity": severity_comparison,
+        "by_category": category_comparison,
+        "by_code": code_comparison,
+        "fixed_issues": fixed_issues,
+        "new_issues": new_issues,
+        "fixed_count": len(fixed_issues),
+        "new_count": len(new_issues),
+        "net_improvement": len(fixed_issues) - len(new_issues),
     }
 
 
-def generate_text_report(comparison: Dict[str, Any]) -> str:
+def generate_text_report(comparison: dict[str, Any]) -> str:
     """Generate human-readable comparison report.
 
     Args:
@@ -182,8 +176,8 @@ def generate_text_report(comparison: Dict[str, Any]) -> str:
     lines.append("")
 
     # Overall metrics
-    overall = comparison['overall']
-    symbol = "✓" if overall['improved'] else "✗"
+    overall = comparison["overall"]
+    symbol = "✓" if overall["improved"] else "✗"
     lines.append("Overall Metrics:")
     lines.append("-" * 70)
     lines.append(f"  Total Issues Before: {overall['before']}")
@@ -202,9 +196,9 @@ def generate_text_report(comparison: Dict[str, Any]) -> str:
     # By severity
     lines.append("Issues by Severity:")
     lines.append("-" * 70)
-    for severity in ['high', 'medium', 'low']:
-        data = comparison['by_severity'][severity]
-        symbol = "✓" if data['improved'] else "✗"
+    for severity in ["high", "medium", "low"]:
+        data = comparison["by_severity"][severity]
+        symbol = "✓" if data["improved"] else "✗"
         lines.append(
             f"  {severity.upper()}: {data['before']} → {data['after']} "
             f"({data['change']:+d}, {data['pct_improvement']:+.1f}%) {symbol}"
@@ -216,38 +210,28 @@ def generate_text_report(comparison: Dict[str, Any]) -> str:
     lines.append("-" * 70)
 
     improvements = [
-        (cat, data)
-        for cat, data in comparison['by_category'].items()
-        if data['improved'] and data['change'] < 0
+        (cat, data) for cat, data in comparison["by_category"].items() if data["improved"] and data["change"] < 0
     ]
-    improvements.sort(key=lambda x: x[1]['pct_improvement'], reverse=True)
+    improvements.sort(key=lambda x: x[1]["pct_improvement"], reverse=True)
 
     if improvements:
         for category, data in improvements[:10]:
             lines.append(
-                f"  {category}: {data['before']} → {data['after']} "
-                f"({data['pct_improvement']:+.1f}% improvement) ✓"
+                f"  {category}: {data['before']} → {data['after']} ({data['pct_improvement']:+.1f}% improvement) ✓"
             )
     else:
         lines.append("  No improvements")
     lines.append("")
 
     # Regressions
-    regressions = [
-        (cat, data)
-        for cat, data in comparison['by_category'].items()
-        if not data['improved']
-    ]
-    regressions.sort(key=lambda x: x[1]['change'], reverse=True)
+    regressions = [(cat, data) for cat, data in comparison["by_category"].items() if not data["improved"]]
+    regressions.sort(key=lambda x: x[1]["change"], reverse=True)
 
     if regressions:
         lines.append("Regressions by Category:")
         lines.append("-" * 70)
         for category, data in regressions:
-            lines.append(
-                f"  {category}: {data['before']} → {data['after']} "
-                f"({data['change']:+d}) ✗"
-            )
+            lines.append(f"  {category}: {data['before']} → {data['after']} ({data['change']:+d}) ✗")
         lines.append("")
 
     # Top code improvements
@@ -255,45 +239,38 @@ def generate_text_report(comparison: Dict[str, Any]) -> str:
     lines.append("-" * 70)
 
     code_improvements = [
-        (code, data)
-        for code, data in comparison['by_code'].items()
-        if data['improved'] and data['change'] < 0
+        (code, data) for code, data in comparison["by_code"].items() if data["improved"] and data["change"] < 0
     ]
-    code_improvements.sort(key=lambda x: abs(x[1]['change']), reverse=True)
+    code_improvements.sort(key=lambda x: abs(x[1]["change"]), reverse=True)
 
     if code_improvements:
         for code, data in code_improvements[:10]:
-            lines.append(
-                f"  {code}: {data['before']} → {data['after']} "
-                f"({data['change']:+d}) ✓"
-            )
+            lines.append(f"  {code}: {data['before']} → {data['after']} ({data['change']:+d}) ✓")
     else:
         lines.append("  No improvements")
     lines.append("")
 
     # Sample fixed issues
-    if comparison['fixed_issues']:
+    if comparison["fixed_issues"]:
         lines.append("Sample Fixed Issues:")
         lines.append("-" * 70)
-        for issue in comparison['fixed_issues'][:10]:
+        for issue in comparison["fixed_issues"][:10]:
             lines.append(
-                f"  ✓ {issue['file']}:{issue['line']} {issue['code']} "
-                f"[{issue['severity']}] - {issue['message']}"
+                f"  ✓ {issue['file']}:{issue['line']} {issue['code']} [{issue['severity']}] - {issue['message']}"
             )
-        if len(comparison['fixed_issues']) > 10:
+        if len(comparison["fixed_issues"]) > 10:
             lines.append(f"  ... and {len(comparison['fixed_issues']) - 10} more")
         lines.append("")
 
     # New issues (warnings)
-    if comparison['new_issues']:
+    if comparison["new_issues"]:
         lines.append("New Issues Introduced:")
         lines.append("-" * 70)
-        for issue in comparison['new_issues'][:10]:
+        for issue in comparison["new_issues"][:10]:
             lines.append(
-                f"  ✗ {issue['file']}:{issue['line']} {issue['code']} "
-                f"[{issue['severity']}] - {issue['message']}"
+                f"  ✗ {issue['file']}:{issue['line']} {issue['code']} [{issue['severity']}] - {issue['message']}"
             )
-        if len(comparison['new_issues']) > 10:
+        if len(comparison["new_issues"]) > 10:
             lines.append(f"  ... and {len(comparison['new_issues']) - 10} more")
         lines.append("")
 
@@ -302,14 +279,14 @@ def generate_text_report(comparison: Dict[str, Any]) -> str:
     lines.append("Summary:")
     lines.append("-" * 70)
 
-    if comparison['net_improvement'] > 0:
+    if comparison["net_improvement"] > 0:
         lines.append(f"✓ Net improvement of {comparison['net_improvement']} issues")
-    elif comparison['net_improvement'] < 0:
+    elif comparison["net_improvement"] < 0:
         lines.append(f"✗ Net regression of {abs(comparison['net_improvement'])} issues")
     else:
         lines.append("= No net change in issue count")
 
-    if comparison['overall']['improved']:
+    if comparison["overall"]["improved"]:
         lines.append(f"✓ Total issues reduced by {comparison['overall']['pct_improvement']:.1f}%")
     else:
         lines.append("✗ Total issues increased")
@@ -317,10 +294,10 @@ def generate_text_report(comparison: Dict[str, Any]) -> str:
     lines.append("")
     lines.append("=" * 70)
 
-    return '\n'.join(lines)
+    return "\n".join(lines)
 
 
-def generate_html_report(comparison: Dict[str, Any]) -> str:
+def generate_html_report(comparison: dict[str, Any]) -> str:
     """Generate HTML comparison report.
 
     Args:
@@ -329,12 +306,12 @@ def generate_html_report(comparison: Dict[str, Any]) -> str:
     Returns:
         HTML report string
     """
-    improved_color = '#27ae60'
-    regressed_color = '#e74c3c'
-    neutral_color = '#95a5a6'
+    improved_color = "#27ae60"
+    regressed_color = "#e74c3c"
+    neutral_color = "#95a5a6"
 
-    overall = comparison['overall']
-    status_color = improved_color if overall['improved'] else regressed_color
+    overall = comparison["overall"]
+    status_color = improved_color if overall["improved"] else regressed_color
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -454,22 +431,22 @@ def generate_html_report(comparison: Dict[str, Any]) -> str:
     <div class="container">
         <h1>Flake8 Comparison: Before vs After Refactoring</h1>
 
-        <div class="status">{comparison['status']}</div>
+        <div class="status">{comparison["status"]}</div>
 
         <div class="metrics">
-            <div class="metric-card {'improved' if overall['improved'] else 'regressed'}">
+            <div class="metric-card {"improved" if overall["improved"] else "regressed"}">
                 <h3>Total Issues</h3>
-                <div class="metric-value">{overall['before']} → {overall['after']}</div>
-                <div class="metric-change {'positive' if overall['improved'] else 'negative'}">
-                    {overall['change']:+d} ({overall['pct_improvement']:+.1f}%)
+                <div class="metric-value">{overall["before"]} → {overall["after"]}</div>
+                <div class="metric-change {"positive" if overall["improved"] else "negative"}">
+                    {overall["change"]:+d} ({overall["pct_improvement"]:+.1f}%)
                 </div>
             </div>
 
-            <div class="metric-card {'improved' if comparison['net_improvement'] > 0 else 'regressed' if comparison['net_improvement'] < 0 else ''}">
+            <div class="metric-card {"improved" if comparison["net_improvement"] > 0 else "regressed" if comparison["net_improvement"] < 0 else ""}">
                 <h3>Net Improvement</h3>
-                <div class="metric-value">{comparison['net_improvement']:+d}</div>
+                <div class="metric-value">{comparison["net_improvement"]:+d}</div>
                 <div style="margin-top: 5px; font-size: 14px;">
-                    Fixed: {comparison['fixed_count']} | New: {comparison['new_count']}
+                    Fixed: {comparison["fixed_count"]} | New: {comparison["new_count"]}
                 </div>
             </div>
         </div>
@@ -485,25 +462,27 @@ def generate_html_report(comparison: Dict[str, Any]) -> str:
             </tr>
 """
 
-    for severity in ['high', 'medium', 'low']:
-        data = comparison['by_severity'][severity]
-        row_class = 'improved-row' if data['improved'] else 'regressed-row' if data['change'] > 0 else ''
-        symbol = '✓' if data['improved'] else '✗'
+    for severity in ["high", "medium", "low"]:
+        data = comparison["by_severity"][severity]
+        row_class = "improved-row" if data["improved"] else "regressed-row" if data["change"] > 0 else ""
+        symbol = "✓" if data["improved"] else "✗"
         html += f"""
             <tr class="{row_class}">
                 <td><span class="severity-badge severity-{severity}">{severity.upper()}</span></td>
-                <td>{data['before']}</td>
-                <td>{data['after']}</td>
-                <td>{data['change']:+d}</td>
-                <td>{data['pct_improvement']:+.1f}% {symbol}</td>
+                <td>{data["before"]}</td>
+                <td>{data["after"]}</td>
+                <td>{data["change"]:+d}</td>
+                <td>{data["pct_improvement"]:+.1f}% {symbol}</td>
             </tr>
 """
 
     html += "</table>"
 
     # Category improvements
-    improvements = [(cat, data) for cat, data in comparison['by_category'].items() if data['improved'] and data['change'] < 0]
-    improvements.sort(key=lambda x: abs(x[1]['change']), reverse=True)
+    improvements = [
+        (cat, data) for cat, data in comparison["by_category"].items() if data["improved"] and data["change"] < 0
+    ]
+    improvements.sort(key=lambda x: abs(x[1]["change"]), reverse=True)
 
     if improvements:
         html += "<h2>Top Category Improvements</h2><table>"
@@ -512,45 +491,45 @@ def generate_html_report(comparison: Dict[str, Any]) -> str:
             html += f"""
                 <tr class="improved-row">
                     <td>{category}</td>
-                    <td>{data['before']}</td>
-                    <td>{data['after']}</td>
-                    <td>{data['change']:+d}</td>
-                    <td>{data['pct_improvement']:+.1f}% ✓</td>
+                    <td>{data["before"]}</td>
+                    <td>{data["after"]}</td>
+                    <td>{data["change"]:+d}</td>
+                    <td>{data["pct_improvement"]:+.1f}% ✓</td>
                 </tr>
             """
         html += "</table>"
 
     # Fixed issues
-    if comparison['fixed_issues']:
+    if comparison["fixed_issues"]:
         html += f"<h2>Fixed Issues ({len(comparison['fixed_issues'])})</h2>"
         html += '<div class="issue-list">'
-        for issue in comparison['fixed_issues'][:30]:
+        for issue in comparison["fixed_issues"][:30]:
             html += f"""
                 <div class="issue fixed">
-                    ✓ <strong>{issue['code']}</strong>
-                    <span class="severity-badge severity-{issue['severity']}">{issue['severity']}</span>
-                    {issue['file']}:{issue['line']} - {issue['message']}
+                    ✓ <strong>{issue["code"]}</strong>
+                    <span class="severity-badge severity-{issue["severity"]}">{issue["severity"]}</span>
+                    {issue["file"]}:{issue["line"]} - {issue["message"]}
                 </div>
             """
-        if len(comparison['fixed_issues']) > 30:
-            html += f'<p>... and {len(comparison["fixed_issues"]) - 30} more fixed issues</p>'
-        html += '</div>'
+        if len(comparison["fixed_issues"]) > 30:
+            html += f"<p>... and {len(comparison['fixed_issues']) - 30} more fixed issues</p>"
+        html += "</div>"
 
     # New issues
-    if comparison['new_issues']:
+    if comparison["new_issues"]:
         html += f"<h2>New Issues ({len(comparison['new_issues'])})</h2>"
         html += '<div class="issue-list">'
-        for issue in comparison['new_issues'][:30]:
+        for issue in comparison["new_issues"][:30]:
             html += f"""
                 <div class="issue new">
-                    ✗ <strong>{issue['code']}</strong>
-                    <span class="severity-badge severity-{issue['severity']}">{issue['severity']}</span>
-                    {issue['file']}:{issue['line']} - {issue['message']}
+                    ✗ <strong>{issue["code"]}</strong>
+                    <span class="severity-badge severity-{issue["severity"]}">{issue["severity"]}</span>
+                    {issue["file"]}:{issue["line"]} - {issue["message"]}
                 </div>
             """
-        if len(comparison['new_issues']) > 30:
-            html += f'<p>... and {len(comparison["new_issues"]) - 30} more new issues</p>'
-        html += '</div>'
+        if len(comparison["new_issues"]) > 30:
+            html += f"<p>... and {len(comparison['new_issues']) - 30} more new issues</p>"
+        html += "</div>"
 
     html += """
     </div>
@@ -562,29 +541,11 @@ def generate_html_report(comparison: Dict[str, Any]) -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Compare flake8 reports before and after refactoring"
-    )
-    parser.add_argument(
-        "before_report",
-        type=Path,
-        help="JSON report from before refactoring"
-    )
-    parser.add_argument(
-        "after_report",
-        type=Path,
-        help="JSON report from after refactoring"
-    )
-    parser.add_argument(
-        "--html",
-        type=Path,
-        help="Output HTML comparison report"
-    )
-    parser.add_argument(
-        "--json",
-        type=Path,
-        help="Output JSON comparison data"
-    )
+    parser = argparse.ArgumentParser(description="Compare flake8 reports before and after refactoring")
+    parser.add_argument("before_report", type=Path, help="JSON report from before refactoring")
+    parser.add_argument("after_report", type=Path, help="JSON report from after refactoring")
+    parser.add_argument("--html", type=Path, help="Output HTML comparison report")
+    parser.add_argument("--json", type=Path, help="Output JSON comparison data")
 
     args = parser.parse_args()
 
@@ -602,18 +563,18 @@ def main():
     # Save HTML if requested
     if args.html:
         html_report = generate_html_report(comparison)
-        with open(args.html, 'w', encoding='utf-8') as f:
+        with open(args.html, "w", encoding="utf-8") as f:
             f.write(html_report)
         print(f"\nHTML report saved to: {args.html}")
 
     # Save JSON if requested
     if args.json:
-        with open(args.json, 'w') as f:
+        with open(args.json, "w") as f:
             json.dump(comparison, f, indent=2)
         print(f"JSON comparison saved to: {args.json}")
 
     # Exit code based on whether we improved
-    sys.exit(0 if comparison['overall']['improved'] else 1)
+    sys.exit(0 if comparison["overall"]["improved"] else 1)
 
 
 if __name__ == "__main__":

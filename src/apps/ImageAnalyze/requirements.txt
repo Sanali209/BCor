@@ -1,0 +1,6 @@
+PySide6>=6.6.0
+pillow-simd>=9.0.0; sys_platform == "linux"
+Pillow>=10.0.0; sys_platform == "win32" # pillow-simd is complex on Windows, falling back to Pillow if not pre-installed, but user request noted.
+matplotlib>=3.8.0
+numpy>=1.24.0
+plotly>=5.18.0

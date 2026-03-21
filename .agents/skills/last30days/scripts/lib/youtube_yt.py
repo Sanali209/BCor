@@ -7,17 +7,16 @@ Inspired by Peter Steinberger's toolchain approach (yt-dlp + summarize CLI).
 """
 
 import json
-import math
 import os
 import re
-import signal
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 # Depth configurations: how many videos to search / transcribe
 DEPTH_CONFIG = {
@@ -36,40 +35,81 @@ TRANSCRIPT_LIMITS = {
 TRANSCRIPT_MAX_WORDS = 500
 
 # Stopwords for relevance computation (common English words that dilute token overlap)
-STOPWORDS = frozenset({
-    'the', 'a', 'an', 'to', 'for', 'how', 'is', 'in', 'of', 'on',
-    'and', 'with', 'from', 'by', 'at', 'this', 'that', 'it', 'my',
-    'your', 'i', 'me', 'we', 'you', 'what', 'are', 'do', 'can',
-    'its', 'be', 'or', 'not', 'no', 'so', 'if', 'but', 'about',
-    'all', 'just', 'get', 'has', 'have', 'was', 'will',
-})
+STOPWORDS = frozenset(
+    {
+        "the",
+        "a",
+        "an",
+        "to",
+        "for",
+        "how",
+        "is",
+        "in",
+        "of",
+        "on",
+        "and",
+        "with",
+        "from",
+        "by",
+        "at",
+        "this",
+        "that",
+        "it",
+        "my",
+        "your",
+        "i",
+        "me",
+        "we",
+        "you",
+        "what",
+        "are",
+        "do",
+        "can",
+        "its",
+        "be",
+        "or",
+        "not",
+        "no",
+        "so",
+        "if",
+        "but",
+        "about",
+        "all",
+        "just",
+        "get",
+        "has",
+        "have",
+        "was",
+        "will",
+    }
+)
 
 
 # Synonym groups for relevance scoring (bidirectional expansion)
 SYNONYMS = {
-    'hip': {'rap', 'hiphop'},
-    'hop': {'rap', 'hiphop'},
-    'rap': {'hip', 'hop', 'hiphop'},
-    'hiphop': {'rap', 'hip', 'hop'},
-    'js': {'javascript'},
-    'javascript': {'js'},
-    'ts': {'typescript'},
-    'typescript': {'ts'},
-    'ai': {'artificial', 'intelligence'},
-    'ml': {'machine', 'learning'},
-    'react': {'reactjs'},
-    'reactjs': {'react'},
-    'svelte': {'sveltejs'},
-    'sveltejs': {'svelte'},
-    'vue': {'vuejs'},
-    'vuejs': {'vue'},
+    "hip": {"rap", "hiphop"},
+    "hop": {"rap", "hiphop"},
+    "rap": {"hip", "hop", "hiphop"},
+    "hiphop": {"rap", "hip", "hop"},
+    "js": {"javascript"},
+    "javascript": {"js"},
+    "ts": {"typescript"},
+    "typescript": {"ts"},
+    "ai": {"artificial", "intelligence"},
+    "ml": {"machine", "learning"},
+    "react": {"reactjs"},
+    "reactjs": {"react"},
+    "svelte": {"sveltejs"},
+    "sveltejs": {"svelte"},
+    "vue": {"vuejs"},
+    "vuejs": {"vue"},
 }
 
 
-def _tokenize(text: str) -> Set[str]:
+def _tokenize(text: str) -> set[str]:
     """Lowercase, strip punctuation, remove stopwords, drop single-char tokens.
     Expands tokens with synonyms for better cross-domain matching."""
-    words = re.sub(r'[^\w\s]', ' ', text.lower()).split()
+    words = re.sub(r"[^\w\s]", " ", text.lower()).split()
     tokens = {w for w in words if w not in STOPWORDS and len(w) > 1}
     # Expand synonyms
     expanded = set(tokens)
@@ -117,32 +157,58 @@ def _extract_core_subject(topic: str) -> str:
 
     # Strip multi-word prefixes
     prefixes = [
-        'what are the best', 'what is the best', 'what are the latest',
-        'what are people saying about', 'what do people think about',
-        'how do i use', 'how to use', 'how to',
-        'what are', 'what is', 'tips for', 'best practices for',
+        "what are the best",
+        "what is the best",
+        "what are the latest",
+        "what are people saying about",
+        "what do people think about",
+        "how do i use",
+        "how to use",
+        "how to",
+        "what are",
+        "what is",
+        "tips for",
+        "best practices for",
     ]
     for p in prefixes:
-        if text.startswith(p + ' '):
-            text = text[len(p):].strip()
+        if text.startswith(p + " "):
+            text = text[len(p) :].strip()
 
     # Strip individual noise words
     # NOTE: 'tips', 'tricks', 'tutorial', 'guide', 'review', 'reviews'
     # are intentionally KEPT — they're YouTube content types that improve search
     noise = {
-        'best', 'top', 'good', 'great', 'awesome', 'killer',
-        'latest', 'new', 'news', 'update', 'updates',
-        'trending', 'hottest', 'popular', 'viral',
-        'practices', 'features',
-        'recommendations', 'advice',
-        'prompt', 'prompts', 'prompting',
-        'methods', 'strategies', 'approaches',
+        "best",
+        "top",
+        "good",
+        "great",
+        "awesome",
+        "killer",
+        "latest",
+        "new",
+        "news",
+        "update",
+        "updates",
+        "trending",
+        "hottest",
+        "popular",
+        "viral",
+        "practices",
+        "features",
+        "recommendations",
+        "advice",
+        "prompt",
+        "prompts",
+        "prompting",
+        "methods",
+        "strategies",
+        "approaches",
     }
     words = text.split()
     filtered = [w for w in words if w not in noise]
 
-    result = ' '.join(filtered) if filtered else text
-    return result.rstrip('?!.')
+    result = " ".join(filtered) if filtered else text
+    return result.rstrip("?!.")
 
 
 def search_youtube(
@@ -150,7 +216,7 @@ def search_youtube(
     from_date: str,
     to_date: str,
     depth: str = "default",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Search YouTube via yt-dlp. No API key needed.
 
     Args:
@@ -182,7 +248,7 @@ def search_youtube(
         "--no-download",
     ]
 
-    preexec = os.setsid if hasattr(os, 'setsid') else None
+    preexec = os.setsid if hasattr(os, "setsid") else None
 
     try:
         proc = subprocess.Popen(
@@ -231,21 +297,23 @@ def search_youtube(
         if upload_date and len(upload_date) == 8:
             date_str = f"{upload_date[:4]}-{upload_date[4:6]}-{upload_date[6:8]}"
 
-        items.append({
-            "video_id": video_id,
-            "title": video.get("title", ""),
-            "url": f"https://www.youtube.com/watch?v={video_id}",
-            "channel_name": video.get("channel", video.get("uploader", "")),
-            "date": date_str,
-            "engagement": {
-                "views": view_count,
-                "likes": like_count,
-                "comments": comment_count,
-            },
-            "duration": video.get("duration"),
-            "relevance": _compute_relevance(core_topic, video.get("title", "")),
-            "why_relevant": f"YouTube: {video.get('title', core_topic)[:60]}",
-        })
+        items.append(
+            {
+                "video_id": video_id,
+                "title": video.get("title", ""),
+                "url": f"https://www.youtube.com/watch?v={video_id}",
+                "channel_name": video.get("channel", video.get("uploader", "")),
+                "date": date_str,
+                "engagement": {
+                    "views": view_count,
+                    "likes": like_count,
+                    "comments": comment_count,
+                },
+                "duration": video.get("duration"),
+                "relevance": _compute_relevance(core_topic, video.get("title", "")),
+                "why_relevant": f"YouTube: {video.get('title', core_topic)[:60]}",
+            }
+        )
 
     # Soft date filter: prefer recent items but fall back to all if too few
     recent = [i for i in items if i["date"] and i["date"] >= from_date]
@@ -264,15 +332,15 @@ def search_youtube(
 def _clean_vtt(vtt_text: str) -> str:
     """Convert VTT subtitle format to clean plaintext."""
     # Strip VTT header
-    text = re.sub(r'^WEBVTT.*?\n\n', '', vtt_text, flags=re.DOTALL)
+    text = re.sub(r"^WEBVTT.*?\n\n", "", vtt_text, flags=re.DOTALL)
     # Strip timestamps
-    text = re.sub(r'\d{2}:\d{2}:\d{2}\.\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}\.\d{3}.*\n', '', text)
+    text = re.sub(r"\d{2}:\d{2}:\d{2}\.\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}\.\d{3}.*\n", "", text)
     # Strip position/alignment tags
-    text = re.sub(r'<[^>]+>', '', text)
+    text = re.sub(r"<[^>]+>", "", text)
     # Strip cue numbers
-    text = re.sub(r'^\d+\s*$', '', text, flags=re.MULTILINE)
+    text = re.sub(r"^\d+\s*$", "", text, flags=re.MULTILINE)
     # Deduplicate overlapping lines
-    lines = text.strip().split('\n')
+    lines = text.strip().split("\n")
     seen = set()
     unique = []
     for line in lines:
@@ -280,10 +348,10 @@ def _clean_vtt(vtt_text: str) -> str:
         if stripped and stripped not in seen:
             seen.add(stripped)
             unique.append(stripped)
-    return re.sub(r'\s+', ' ', ' '.join(unique)).strip()
+    return re.sub(r"\s+", " ", " ".join(unique)).strip()
 
 
-def fetch_transcript(video_id: str, temp_dir: str) -> Optional[str]:
+def fetch_transcript(video_id: str, temp_dir: str) -> str | None:
     """Fetch auto-generated transcript for a YouTube video.
 
     Args:
@@ -296,15 +364,18 @@ def fetch_transcript(video_id: str, temp_dir: str) -> Optional[str]:
     cmd = [
         "yt-dlp",
         "--write-auto-subs",
-        "--sub-lang", "en",
-        "--sub-format", "vtt",
+        "--sub-lang",
+        "en",
+        "--sub-format",
+        "vtt",
         "--skip-download",
         "--no-warnings",
-        "-o", f"{temp_dir}/%(id)s",
+        "-o",
+        f"{temp_dir}/%(id)s",
         f"https://www.youtube.com/watch?v={video_id}",
     ]
 
-    preexec = os.setsid if hasattr(os, 'setsid') else None
+    preexec = os.setsid if hasattr(os, "setsid") else None
 
     try:
         proc = subprocess.Popen(
@@ -346,15 +417,15 @@ def fetch_transcript(video_id: str, temp_dir: str) -> Optional[str]:
     # Truncate to max words
     words = transcript.split()
     if len(words) > TRANSCRIPT_MAX_WORDS:
-        transcript = ' '.join(words[:TRANSCRIPT_MAX_WORDS]) + '...'
+        transcript = " ".join(words[:TRANSCRIPT_MAX_WORDS]) + "..."
 
     return transcript if transcript else None
 
 
 def fetch_transcripts_parallel(
-    video_ids: List[str],
+    video_ids: list[str],
     max_workers: int = 5,
-) -> Dict[str, Optional[str]]:
+) -> dict[str, str | None]:
     """Fetch transcripts for multiple videos in parallel.
 
     Args:
@@ -372,10 +443,7 @@ def fetch_transcripts_parallel(
     results = {}
     with tempfile.TemporaryDirectory() as temp_dir:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {
-                executor.submit(fetch_transcript, vid, temp_dir): vid
-                for vid in video_ids
-            }
+            futures = {executor.submit(fetch_transcript, vid, temp_dir): vid for vid in video_ids}
             for future in as_completed(futures):
                 vid = futures[future]
                 try:
@@ -393,7 +461,7 @@ def search_and_transcribe(
     from_date: str,
     to_date: str,
     depth: str = "default",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Full YouTube search: find videos, then fetch transcripts for top results.
 
     Args:
@@ -426,7 +494,7 @@ def search_and_transcribe(
     return {"items": items}
 
 
-def parse_youtube_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
+def parse_youtube_response(response: dict[str, Any]) -> list[dict[str, Any]]:
     """Parse YouTube search response to normalized format.
 
     Returns:

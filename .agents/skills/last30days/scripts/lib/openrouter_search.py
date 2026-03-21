@@ -10,7 +10,7 @@ Model: perplexity/sonar-pro
 
 import re
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 from . import http
@@ -20,8 +20,13 @@ MODEL = "perplexity/sonar-pro"
 
 # Domains to exclude (handled by Reddit/X search)
 EXCLUDED_DOMAINS = {
-    "reddit.com", "www.reddit.com", "old.reddit.com",
-    "twitter.com", "www.twitter.com", "x.com", "www.x.com",
+    "reddit.com",
+    "www.reddit.com",
+    "old.reddit.com",
+    "twitter.com",
+    "www.twitter.com",
+    "x.com",
+    "www.x.com",
 }
 
 
@@ -31,7 +36,7 @@ def search_web(
     to_date: str,
     api_key: str,
     depth: str = "default",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Search the web via Perplexity Sonar Pro on OpenRouter.
 
     Args:
@@ -80,7 +85,7 @@ def search_web(
     return _normalize_results(response)
 
 
-def _normalize_results(response: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _normalize_results(response: dict[str, Any]) -> list[dict[str, Any]]:
     """Convert Sonar Pro response to websearch item schema.
 
     Sonar Pro returns:
@@ -110,7 +115,7 @@ def _normalize_results(response: Dict[str, Any]) -> List[Dict[str, Any]]:
     return items
 
 
-def _parse_search_results(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _parse_search_results(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Parse the search_results array from Sonar Pro."""
     items = []
 
@@ -140,22 +145,24 @@ def _parse_search_results(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]
         date = result.get("date")
         date_confidence = "med" if date else "low"
 
-        items.append({
-            "id": f"W{i+1}",
-            "title": title[:200],
-            "url": url,
-            "source_domain": domain,
-            "snippet": str(result.get("snippet", result.get("description", ""))).strip()[:500],
-            "date": date,
-            "date_confidence": date_confidence,
-            "relevance": 0.7,  # Sonar Pro results are generally high quality
-            "why_relevant": "",
-        })
+        items.append(
+            {
+                "id": f"W{i + 1}",
+                "title": title[:200],
+                "url": url,
+                "source_domain": domain,
+                "snippet": str(result.get("snippet", result.get("description", ""))).strip()[:500],
+                "date": date,
+                "date_confidence": date_confidence,
+                "relevance": 0.7,  # Sonar Pro results are generally high quality
+                "why_relevant": "",
+            }
+        )
 
     return items
 
 
-def _parse_citations(citations: List[str], content: str) -> List[Dict[str, Any]]:
+def _parse_citations(citations: list[str], content: str) -> list[dict[str, Any]]:
     """Parse the flat citations array, enriching with content context."""
     items = []
 
@@ -176,22 +183,24 @@ def _parse_citations(citations: List[str], content: str) -> List[Dict[str, Any]]
         # Try to extract title from content references like [1] Title...
         title = _extract_title_for_citation(content, i + 1) or domain
 
-        items.append({
-            "id": f"W{i+1}",
-            "title": title[:200],
-            "url": url,
-            "source_domain": domain,
-            "snippet": "",
-            "date": None,
-            "date_confidence": "low",
-            "relevance": 0.6,
-            "why_relevant": "",
-        })
+        items.append(
+            {
+                "id": f"W{i + 1}",
+                "title": title[:200],
+                "url": url,
+                "source_domain": domain,
+                "snippet": "",
+                "date": None,
+                "date_confidence": "low",
+                "relevance": 0.6,
+                "why_relevant": "",
+            }
+        )
 
     return items
 
 
-def _get_content(response: Dict[str, Any]) -> str:
+def _get_content(response: dict[str, Any]) -> str:
     """Extract the text content from the chat completion response."""
     try:
         return response["choices"][0]["message"]["content"]
@@ -199,18 +208,18 @@ def _get_content(response: Dict[str, Any]) -> str:
         return ""
 
 
-def _extract_title_for_citation(content: str, index: int) -> Optional[str]:
+def _extract_title_for_citation(content: str, index: int) -> str | None:
     """Try to extract a title near a citation reference [N] in the content."""
     if not content:
         return None
 
     # Look for patterns like [1] Title or [1](url) Title
-    pattern = rf'\[{index}\][)\s]*([^\[\n]{{5,80}})'
+    pattern = rf"\[{index}\][)\s]*([^\[\n]{{5,80}})"
     match = re.search(pattern, content)
     if match:
-        title = match.group(1).strip().rstrip('.')
+        title = match.group(1).strip().rstrip(".")
         # Clean up markdown artifacts
-        title = re.sub(r'[*_`]', '', title)
+        title = re.sub(r"[*_`]", "", title)
         return title if len(title) > 3 else None
 
     return None

@@ -1,0 +1,1 @@
+- [TODO] integrate pyexiv2 for xmp metadata

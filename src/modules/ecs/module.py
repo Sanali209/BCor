@@ -1,6 +1,6 @@
 from src.core.module import BaseModule
-from src.modules.ecs.messages import TickEvent, MoveEntityCommand
-from src.modules.ecs.handlers import physics_system_handler, handle_move_entity_command
+from src.modules.ecs.handlers import handle_move_entity, handle_tick
+from src.modules.ecs.messages import MoveEntityCommand, TickEvent
 
 
 class EcsModule(BaseModule):
@@ -10,6 +10,6 @@ class EcsModule(BaseModule):
     """
 
     # Declarative routing map for systems
-    command_handlers = {MoveEntityCommand: handle_move_entity_command}
+    command_handlers = {MoveEntityCommand: handle_move_entity}
 
-    event_handlers = {TickEvent: [physics_system_handler]}
+    event_handlers = {TickEvent: [handle_tick]}

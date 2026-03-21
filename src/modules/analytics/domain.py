@@ -3,11 +3,11 @@ import logging
 
 from pydantic_settings import BaseSettings
 
+from src.adapters.taskiq_broker import broker
+from src.common.monads import BusinessResult, success
 from src.core.messages import Command, Event
-from src.core.monads import BusinessResult, success
 from src.core.module import BaseModule
 from src.core.unit_of_work import AbstractUnitOfWork
-from src.adapters.taskiq_broker import broker
 
 logger = logging.getLogger(__name__)
 
@@ -19,27 +19,30 @@ class AnalyticsSettings(BaseSettings):
     Attributes:
         report_timeout: Maximum time in seconds to wait for report generation.
     """
+
     report_timeout: int = 600
 
 
 # --- 2. Define Commands and Events ---
 class GenerateReportCommand(Command):
     """Command to initiate a heavy report generation process.
-    
+
     Attributes:
         report_type: The category of report (e.g., 'PDF', 'CSV').
         user_id: The identifier of the user requesting the report.
     """
+
     report_type: str
     user_id: str
 
 
 class ReportGenerationStartedEvent(Event):
     """Event emitted when a report generation task has been dispatched.
-    
+
     Attributes:
         report_id: The unique task ID of the background job.
     """
+
     report_id: str
 
 
@@ -48,7 +51,7 @@ class ReportGenerationStartedEvent(Event):
 async def build_heavy_report_task(report_type: str, user_id: str) -> dict:
     """Background worker task for generating reports.
 
-    This function is executed by a TaskIQ worker, isolated from the 
+    This function is executed by a TaskIQ worker, isolated from the
     main application event loop.
 
     Args:
@@ -58,9 +61,7 @@ async def build_heavy_report_task(report_type: str, user_id: str) -> dict:
     Returns:
         A dictionary containing the status and result URL.
     """
-    logger.info(
-        f"Generating {report_type} report for user {user_id} in background via NATS..."
-    )
+    logger.info(f"Generating {report_type} report for user {user_id} in background via NATS...")
     # Simulate heavy DB query / PDF generation
     await asyncio.sleep(2)
     return {"status": "success", "file_url": f"https://s3.local/reports/{user_id}.pdf"}
@@ -69,10 +70,11 @@ async def build_heavy_report_task(report_type: str, user_id: str) -> dict:
 # --- 4. Define the Domain Module ---
 class AnalyticsModule(BaseModule):
     """Domain module for handling heavy analytical background tasks.
-    
-    Demonstrates the integration between MessageBus command handling 
+
+    Demonstrates the integration between MessageBus command handling
     and TaskIQ background worker delegation.
     """
+
     settings_class = AnalyticsSettings
 
     def __init__(self):
@@ -82,9 +84,7 @@ class AnalyticsModule(BaseModule):
         # Declarative CQRS Routing
         self.command_handlers = {GenerateReportCommand: self.handle_generate_report}
 
-    async def handle_generate_report(
-        self, cmd: GenerateReportCommand, uow: AbstractUnitOfWork
-    ) -> BusinessResult:
+    async def handle_generate_report(self, cmd: GenerateReportCommand, uow: AbstractUnitOfWork) -> BusinessResult:
         """Handles the GenerateReportCommand by dispatching to TaskIQ.
 
         Args:

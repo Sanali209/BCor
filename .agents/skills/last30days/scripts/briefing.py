@@ -36,7 +36,7 @@ def generate_daily(since: str = None) -> dict:
     if not topics:
         return {
             "status": "no_topics",
-            "message": "No watchlist topics yet. Add one with: last30days watch add \"your topic\"",
+            "message": 'No watchlist topics yet. Add one with: last30days watch add "your topic"',
         }
 
     enabled = [t for t in topics if t["enabled"]]
@@ -119,14 +119,14 @@ def generate_daily(since: str = None) -> dict:
             "title": top_overall.get("source_title", ""),
             "topic": top_overall.get("_topic", ""),
             "engagement": top_overall.get("engagement_score", 0),
-        } if top_overall else None,
+        }
+        if top_overall
+        else None,
         "cost": {
             "daily": daily_cost,
             "budget": budget,
         },
-        "failed_topics": [
-            t["name"] for t in briefing_topics if t["last_status"] == "failed"
-        ],
+        "failed_topics": [t["name"] for t in briefing_topics if t["last_status"] == "failed"],
     }
 
     # Save briefing data
@@ -177,15 +177,17 @@ def generate_weekly() -> dict:
         else:
             engagement_change = 100 if this_engagement > 0 else 0
 
-        weekly_topics.append({
-            "name": topic["name"],
-            "this_week_count": len(this_week),
-            "last_week_count": len(last_week),
-            "this_week_engagement": this_engagement,
-            "last_week_engagement": last_engagement,
-            "engagement_change_pct": round(engagement_change, 1),
-            "top_findings": this_week[:5],  # Top 5 by engagement (already sorted)
-        })
+        weekly_topics.append(
+            {
+                "name": topic["name"],
+                "this_week_count": len(this_week),
+                "last_week_count": len(last_week),
+                "this_week_engagement": this_engagement,
+                "last_week_engagement": last_engagement,
+                "engagement_change_pct": round(engagement_change, 1),
+                "top_findings": this_week[:5],  # Top 5 by engagement (already sorted)
+            }
+        )
 
     result = {
         "status": "ok",

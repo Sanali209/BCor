@@ -1,19 +1,20 @@
-import tomllib
 import importlib
+import tomllib
 from pathlib import Path
-from typing import List
+
 from src.core.module import BaseModule
+
 
 class ModuleDiscovery:
     """Helper to discover and instantiate modules from a manifest file.
-    
+
     This class provides static methods to scan a manifest (TOML) for enabled
     modules and dynamically import and instantiate them if they subclass
     BaseModule.
     """
 
     @staticmethod
-    def load_from_manifest(manifest_path: str | Path) -> List[BaseModule]:
+    def load_from_manifest(manifest_path: str | Path) -> list[BaseModule]:
         """Loads enabled modules defined in a manifest file.
 
         Args:
@@ -43,7 +44,7 @@ class ModuleDiscovery:
         return instances
 
     @staticmethod
-    def _import_module(name: str, search_paths: List[str]) -> BaseModule:
+    def _import_module(name: str, search_paths: list[str]) -> BaseModule:
         """Finds and instantiates any BaseModule subclass in the target module.
 
         Searches across the provided paths for a `module.py` file containing
@@ -65,15 +66,16 @@ class ModuleDiscovery:
                 mod = importlib.import_module(module_path)
                 for attr_name in dir(mod):
                     attr = getattr(mod, attr_name)
-                    if (
-                        isinstance(attr, type)
-                        and issubclass(attr, BaseModule)
-                        and attr is not BaseModule
-                    ):
+                    if isinstance(attr, type) and issubclass(attr, BaseModule) and attr is not BaseModule:
                         return attr()
-            except ImportError:
-                continue # Try the next path
+            except ImportError as e:
+                # If the error is about the module_path itself, we continue searching
+                # If it's a sub-import failing, we should raise it to reveal the real issue
+                if e.name and e.name in module_path:
+                    continue
+                # If e.name is None (e.g. from a compiled extension), we check the message
+                if not e.name and module_path in str(e):
+                    continue
+                raise
 
-        raise ImportError(
-            f"Could not load module '{name}' from any of the provided paths: {search_paths}."
-        )
+        raise ImportError(f"Could not load module '{name}' from any of the provided paths: {search_paths}.")

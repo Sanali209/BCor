@@ -3,7 +3,7 @@
 import json
 import re
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from . import http
 
@@ -12,6 +12,7 @@ def _log_error(msg: str):
     """Log error to stderr."""
     sys.stderr.write(f"[X ERROR] {msg}\n")
     sys.stderr.flush()
+
 
 # xAI uses responses endpoint with Agent Tools API
 XAI_RESPONSES_URL = "https://api.x.ai/v1/responses"
@@ -62,8 +63,8 @@ def search_x(
     from_date: str,
     to_date: str,
     depth: str = "default",
-    mock_response: Optional[Dict] = None,
-) -> Dict[str, Any]:
+    mock_response: dict | None = None,
+) -> dict[str, Any]:
     """Search X for relevant posts using xAI API with live search.
 
     Args:
@@ -94,9 +95,7 @@ def search_x(
     # Use Agent Tools API with x_search tool
     payload = {
         "model": model,
-        "tools": [
-            {"type": "x_search"}
-        ],
+        "tools": [{"type": "x_search"}],
         "input": [
             {
                 "role": "user",
@@ -114,7 +113,7 @@ def search_x(
     return http.post(XAI_RESPONSES_URL, payload, headers=headers, timeout=timeout)
 
 
-def parse_x_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
+def parse_x_response(response: dict[str, Any]) -> list[dict[str, Any]]:
     """Parse xAI response to extract X items.
 
     Args:
@@ -197,7 +196,7 @@ def parse_x_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
             }
 
         clean_item = {
-            "id": f"X{i+1}",
+            "id": f"X{i + 1}",
             "text": str(item.get("text", "")).strip()[:500],  # Truncate long text
             "url": url,
             "author_handle": str(item.get("author_handle", "")).strip().lstrip("@"),
@@ -209,7 +208,7 @@ def parse_x_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
 
         # Validate date format
         if clean_item["date"]:
-            if not re.match(r'^\d{4}-\d{2}-\d{2}$', str(clean_item["date"])):
+            if not re.match(r"^\d{4}-\d{2}-\d{2}$", str(clean_item["date"])):
                 clean_item["date"] = None
 
         clean_items.append(clean_item)

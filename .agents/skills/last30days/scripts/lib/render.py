@@ -4,7 +4,6 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 from . import schema
 
@@ -13,23 +12,23 @@ OUTPUT_DIR = Path.home() / ".local" / "share" / "last30days" / "out"
 
 def _xref_tag(item) -> str:
     """Return ' [also on: Reddit, HN]' string if item has cross_refs, else ''."""
-    refs = getattr(item, 'cross_refs', None)
+    refs = getattr(item, "cross_refs", None)
     if not refs:
         return ""
     source_names = set()
     for ref_id in refs:
-        if ref_id.startswith('R'):
-            source_names.add('Reddit')
-        elif ref_id.startswith('X'):
-            source_names.add('X')
-        elif ref_id.startswith('YT'):
-            source_names.add('YouTube')
-        elif ref_id.startswith('HN'):
-            source_names.add('HN')
-        elif ref_id.startswith('PM'):
-            source_names.add('Polymarket')
-        elif ref_id.startswith('W'):
-            source_names.add('Web')
+        if ref_id.startswith("R"):
+            source_names.add("Reddit")
+        elif ref_id.startswith("X"):
+            source_names.add("X")
+        elif ref_id.startswith("YT"):
+            source_names.add("YouTube")
+        elif ref_id.startswith("HN"):
+            source_names.add("HN")
+        elif ref_id.startswith("PM"):
+            source_names.add("Polymarket")
+        elif ref_id.startswith("W"):
+            source_names.add("Web")
     if source_names:
         return f" [also on: {', '.join(sorted(source_names))}]"
     return ""
@@ -92,7 +91,9 @@ def render_compact(report: schema.Report, limit: int = 15, missing_keys: str = "
     freshness = _assess_data_freshness(report)
     if freshness["is_sparse"]:
         lines.append("**⚠️ LIMITED RECENT DATA** - Few discussions from the last 30 days.")
-        lines.append(f"Only {freshness['total_recent']} item(s) confirmed from {report.range_from} to {report.range_to}.")
+        lines.append(
+            f"Only {freshness['total_recent']} item(s) confirmed from {report.range_from} to {report.range_to}."
+        )
         lines.append("Results below may include older/evergreen content. Be transparent with the user about this.")
         lines.append("")
 
@@ -130,7 +131,9 @@ def render_compact(report: schema.Report, limit: int = 15, missing_keys: str = "
         lines.append("*💡 Tip: Add an xAI key (`XAI_API_KEY`) for X/Twitter data and better triangulation.*")
         lines.append("")
     elif report.mode == "x-only" and missing_keys in ("reddit", "none"):
-        lines.append("*💡 Tip: Add OPENAI_API_KEY or run `codex login` for Reddit data and better triangulation. If already signed in, re-run `codex login`.*")
+        lines.append(
+            "*💡 Tip: Add OPENAI_API_KEY or run `codex login` for Reddit data and better triangulation. If already signed in, re-run `codex login`.*"
+        )
         lines.append("")
 
     # Reddit items
@@ -162,7 +165,9 @@ def render_compact(report: schema.Report, limit: int = 15, missing_keys: str = "
             date_str = f" ({item.date})" if item.date else " (date unknown)"
             conf_str = f" [date:{item.date_confidence}]" if item.date_confidence != "high" else ""
 
-            lines.append(f"**{item.id}** (score:{item.score}) r/{item.subreddit}{date_str}{conf_str}{eng_str}{_xref_tag(item)}")
+            lines.append(
+                f"**{item.id}** (score:{item.score}) r/{item.subreddit}{date_str}{conf_str}{eng_str}{_xref_tag(item)}"
+            )
             lines.append(f"  {item.title}")
             lines.append(f"  {item.url}")
             lines.append(f"  *{item.why_relevant}*")
@@ -204,7 +209,9 @@ def render_compact(report: schema.Report, limit: int = 15, missing_keys: str = "
             date_str = f" ({item.date})" if item.date else " (date unknown)"
             conf_str = f" [date:{item.date_confidence}]" if item.date_confidence != "high" else ""
 
-            lines.append(f"**{item.id}** (score:{item.score}) @{item.author_handle}{date_str}{conf_str}{eng_str}{_xref_tag(item)}")
+            lines.append(
+                f"**{item.id}** (score:{item.score}) @{item.author_handle}{date_str}{conf_str}{eng_str}{_xref_tag(item)}"
+            )
             lines.append(f"  {item.text[:200]}...")
             lines.append(f"  {item.url}")
             lines.append(f"  *{item.why_relevant}*")
@@ -274,7 +281,7 @@ def render_compact(report: schema.Report, limit: int = 15, missing_keys: str = "
 
             # Comment insights
             if item.comment_insights:
-                lines.append(f"  Insights:")
+                lines.append("  Insights:")
                 for insight in item.comment_insights[:3]:
                     lines.append(f"    - {insight}")
 
@@ -296,16 +303,16 @@ def render_compact(report: schema.Report, limit: int = 15, missing_keys: str = "
                 parts = []
                 if eng.volume is not None:
                     if eng.volume >= 1_000_000:
-                        parts.append(f"${eng.volume/1_000_000:.1f}M volume")
+                        parts.append(f"${eng.volume / 1_000_000:.1f}M volume")
                     elif eng.volume >= 1_000:
-                        parts.append(f"${eng.volume/1_000:.0f}K volume")
+                        parts.append(f"${eng.volume / 1_000:.0f}K volume")
                     else:
                         parts.append(f"${eng.volume:.0f} volume")
                 if eng.liquidity is not None:
                     if eng.liquidity >= 1_000_000:
-                        parts.append(f"${eng.liquidity/1_000_000:.1f}M liquidity")
+                        parts.append(f"${eng.liquidity / 1_000_000:.1f}M liquidity")
                     elif eng.liquidity >= 1_000:
-                        parts.append(f"${eng.liquidity/1_000:.0f}K liquidity")
+                        parts.append(f"${eng.liquidity / 1_000:.0f}K liquidity")
                     else:
                         parts.append(f"${eng.liquidity:.0f} liquidity")
                 if parts:
@@ -346,7 +353,9 @@ def render_compact(report: schema.Report, limit: int = 15, missing_keys: str = "
             date_str = f" ({item.date})" if item.date else " (date unknown)"
             conf_str = f" [date:{item.date_confidence}]" if item.date_confidence != "high" else ""
 
-            lines.append(f"**{item.id}** [WEB] (score:{item.score}) {item.source_domain}{date_str}{conf_str}{_xref_tag(item)}")
+            lines.append(
+                f"**{item.id}** [WEB] (score:{item.score}) {item.source_domain}{date_str}{conf_str}{_xref_tag(item)}"
+            )
             lines.append(f"  {item.title}")
             lines.append(f"  {item.url}")
             lines.append(f"  {item.snippet[:150]}...")
@@ -403,7 +412,7 @@ def render_source_status(report: schema.Report, source_info: dict = None) -> str
     if report.youtube_error:
         lines.append(f"  ❌ YouTube: error — {report.youtube_error}")
     elif report.youtube:
-        with_transcripts = sum(1 for v in report.youtube if getattr(v, 'transcript_snippet', None))
+        with_transcripts = sum(1 for v in report.youtube if getattr(v, "transcript_snippet", None))
         lines.append(f"  ✅ YouTube: {len(report.youtube)} videos ({with_transcripts} with transcripts)")
     # Hide when zero results (no skip reason line needed)
 
@@ -591,7 +600,7 @@ def render_full_report(report: schema.Report) -> str:
             lines.append(f"- **Score:** {item.score}/100")
 
             if item.outcome_prices:
-                outcomes = [f"{name}: {price*100:.0f}%" for name, price in item.outcome_prices]
+                outcomes = [f"{name}: {price * 100:.0f}%" for name, price in item.outcome_prices]
                 lines.append(f"- **Outcomes:** {' | '.join(outcomes)}")
             if item.price_movement:
                 lines.append(f"- **Trend:** {item.price_movement}")
@@ -631,13 +640,11 @@ def render_full_report(report: schema.Report) -> str:
     return "\n".join(lines)
 
 
-
-
 def write_outputs(
     report: schema.Report,
-    raw_openai: Optional[dict] = None,
-    raw_xai: Optional[dict] = None,
-    raw_reddit_enriched: Optional[list] = None,
+    raw_openai: dict | None = None,
+    raw_xai: dict | None = None,
+    raw_reddit_enriched: list | None = None,
 ):
     """Write all output files.
 
@@ -650,28 +657,28 @@ def write_outputs(
     ensure_output_dir()
 
     # report.json
-    with open(OUTPUT_DIR / "report.json", 'w') as f:
+    with open(OUTPUT_DIR / "report.json", "w") as f:
         json.dump(report.to_dict(), f, indent=2)
 
     # report.md
-    with open(OUTPUT_DIR / "report.md", 'w') as f:
+    with open(OUTPUT_DIR / "report.md", "w") as f:
         f.write(render_full_report(report))
 
     # last30days.context.md
-    with open(OUTPUT_DIR / "last30days.context.md", 'w') as f:
+    with open(OUTPUT_DIR / "last30days.context.md", "w") as f:
         f.write(render_context_snippet(report))
 
     # Raw responses
     if raw_openai:
-        with open(OUTPUT_DIR / "raw_openai.json", 'w') as f:
+        with open(OUTPUT_DIR / "raw_openai.json", "w") as f:
             json.dump(raw_openai, f, indent=2)
 
     if raw_xai:
-        with open(OUTPUT_DIR / "raw_xai.json", 'w') as f:
+        with open(OUTPUT_DIR / "raw_xai.json", "w") as f:
             json.dump(raw_xai, f, indent=2)
 
     if raw_reddit_enriched:
-        with open(OUTPUT_DIR / "raw_reddit_threads_enriched.json", 'w') as f:
+        with open(OUTPUT_DIR / "raw_reddit_threads_enriched.json", "w") as f:
             json.dump(raw_reddit_enriched, f, indent=2)
 
 

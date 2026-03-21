@@ -6,7 +6,7 @@ Uses Tavily Search API to find recent web content (blogs, docs, news, tutorials)
 import re
 import sys
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 from . import http
@@ -15,8 +15,13 @@ ENDPOINT = "https://api.tavily.com/search"
 
 # Domains to exclude (handled by Reddit/X search)
 EXCLUDED_DOMAINS = {
-    "reddit.com", "www.reddit.com", "old.reddit.com",
-    "twitter.com", "www.twitter.com", "x.com", "www.x.com",
+    "reddit.com",
+    "www.reddit.com",
+    "old.reddit.com",
+    "twitter.com",
+    "www.twitter.com",
+    "x.com",
+    "www.x.com",
 }
 
 
@@ -26,7 +31,7 @@ def search_web(
     to_date: str,
     api_key: str,
     depth: str = "default",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Search the web via Tavily API."""
     max_results = {"quick": 8, "default": 15, "deep": 25}.get(depth, 15)
     search_depth = "basic" if depth == "quick" else "advanced"
@@ -51,9 +56,9 @@ def search_web(
     return _normalize_results(response)
 
 
-def _normalize_results(response: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _normalize_results(response: dict[str, Any]) -> list[dict[str, Any]]:
     """Convert Tavily response to websearch item schema."""
-    items: List[Dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
     results = response.get("results", [])
     if not isinstance(results, list):
         return items
@@ -87,17 +92,19 @@ def _normalize_results(response: Dict[str, Any]) -> List[Dict[str, Any]]:
         except (TypeError, ValueError):
             relevance = 0.6
 
-        items.append({
-            "id": f"W{i+1}",
-            "title": title[:200],
-            "url": url,
-            "source_domain": domain,
-            "snippet": snippet[:500],
-            "date": date,
-            "date_confidence": date_confidence,
-            "relevance": relevance,
-            "why_relevant": "",
-        })
+        items.append(
+            {
+                "id": f"W{i + 1}",
+                "title": title[:200],
+                "url": url,
+                "source_domain": domain,
+                "snippet": snippet[:500],
+                "date": date,
+                "date_confidence": date_confidence,
+                "relevance": relevance,
+                "why_relevant": "",
+            }
+        )
 
     sys.stderr.write(f"[Web] Tavily: {len(items)} results\n")
     sys.stderr.flush()
@@ -114,7 +121,7 @@ def _extract_domain(url: str) -> str:
         return ""
 
 
-def _parse_date(value: Any) -> Optional[str]:
+def _parse_date(value: Any) -> str | None:
     """Parse date to YYYY-MM-DD when possible."""
     if not value:
         return None

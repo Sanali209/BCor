@@ -1,19 +1,18 @@
-import pytest
 import asyncio
 
+import pytest
 from dishka import Provider, Scope, provide
 
-from src.core.system import System
 from src.core.messagebus import MessageBus
+from src.core.system import System
 from src.core.unit_of_work import AbstractUnitOfWork
-
-from src.modules.ecs.module import EcsModule
-from src.modules.ecs.messages import (
-    TickEvent,
-    MoveEntityCommand,
-    CollisionDetectedEvent,
-)
 from src.modules.ecs.domain import EcsWorld, PositionComponent, VelocityComponent
+from src.modules.ecs.messages import (
+    CollisionDetectedEvent,
+    MoveEntityCommand,
+    TickEvent,
+)
+from src.modules.ecs.module import EcsModule
 from src.modules.ecs.ports import AbstractEcsRepository, EcsUnitOfWork
 
 
@@ -132,8 +131,6 @@ async def test_move_entity_command_fail_fast(system):
 
         # Now that MessageBus.dispatch raises error immediately
         with pytest.raises(ValueError, match="Entity ghost missing PositionComponent"):
-            await bus.dispatch(
-                MoveEntityCommand(entity_id="ghost", target_x=100.0, target_y=100.0)
-            )
-        
+            await bus.dispatch(MoveEntityCommand(entity_id="ghost", target_x=100.0, target_y=100.0))
+
         bus.bus._is_running = False

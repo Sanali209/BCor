@@ -1,19 +1,22 @@
-import sys
 import logging
-from PySide6.QtWidgets import QApplication
+import sys
+
 from gui.main_window import MainWindow
+from PySide6.QtWidgets import QApplication
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
 
 def main():
     app = QApplication(sys.argv)
-    app.setStyle("Fusion") # Good cross-platform base
-    
+    app.setStyle("Fusion")  # Good cross-platform base
+
     window = MainWindow()
     window.show()
-    
+
     sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     main()

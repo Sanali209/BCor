@@ -1,12 +1,10 @@
-from src.core.monads import BusinessResult, success, failure
+from src.common.monads import BusinessResult, failure, success
 from src.core.unit_of_work import AbstractUnitOfWork
+from src.modules.orders.domain import DomainError, Order
 from src.modules.orders.messages import CreateOrderCommand, ShipOrderCommand
-from src.modules.orders.domain import Order, DomainError
 
 
-async def handle_create_order(
-    cmd: CreateOrderCommand, uow: AbstractUnitOfWork
-) -> BusinessResult:
+async def handle_create_order(cmd: CreateOrderCommand, uow: AbstractUnitOfWork) -> BusinessResult:
     """Handles the creation of a new order.
 
     This handler manages the atomicity of order creation, ensuring that
@@ -17,7 +15,7 @@ async def handle_create_order(
         uow: The active Unit of Work for database interaction.
 
     Returns:
-        A BusinessResult containing the order reference on success, 
+        A BusinessResult containing the order reference on success,
         or a failure message if a conflict occurs.
     """
     with uow:
@@ -37,12 +35,10 @@ async def handle_create_order(
     return success(order.ref)
 
 
-async def handle_ship_order(
-    cmd: ShipOrderCommand, uow: AbstractUnitOfWork
-) -> BusinessResult:
+async def handle_ship_order(cmd: ShipOrderCommand, uow: AbstractUnitOfWork) -> BusinessResult:
     """Handles order shipping transitions.
 
-    Retrieves the order, transitions its state via domain methods, 
+    Retrieves the order, transitions its state via domain methods,
     and commits the changes.
 
     Args:

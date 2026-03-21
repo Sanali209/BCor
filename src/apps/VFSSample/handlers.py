@@ -1,7 +1,9 @@
-from loguru import logger
 from fs.base import FS
-from src.core.monads import BusinessResult, success, failure
-from src.apps.VFSSample.messages import WriteFileCommand, ReadFileCommand, ListDirCommand, FileWrittenEvent
+from loguru import logger
+
+from src.apps.VFSSample.messages import ListDirCommand, ReadFileCommand, WriteFileCommand
+from src.common.monads import BusinessResult, failure, success
+
 
 async def handle_write_file(cmd: WriteFileCommand, vfs: FS) -> BusinessResult:
     """Writes content to a VFS file and returns success."""
@@ -13,6 +15,7 @@ async def handle_write_file(cmd: WriteFileCommand, vfs: FS) -> BusinessResult:
         logger.error(f"VFS Write Error: {e}")
         return failure(str(e))
 
+
 async def handle_read_file(cmd: ReadFileCommand, vfs: FS) -> BusinessResult:
     """Reads content from a VFS file."""
     try:
@@ -22,6 +25,7 @@ async def handle_read_file(cmd: ReadFileCommand, vfs: FS) -> BusinessResult:
         return success(content)
     except Exception as e:
         return failure(str(e))
+
 
 async def handle_list_dir(cmd: ListDirCommand, vfs: FS) -> BusinessResult:
     """Lists contents of a VFS directory."""

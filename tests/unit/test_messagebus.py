@@ -1,18 +1,15 @@
 import pytest
-import asyncio
-
-from src.core.messages import Command, Event
-from src.core.messagebus import MessageBus
-from tests.conftest import FakeUnitOfWork, FakeAggregate
-from src.core.monads import success, BusinessResult
+from dishka import Provider, Scope, provide
 from pydantic import ValidationError
 from pydantic_settings import BaseSettings
 
-from dishka import Provider, Scope, provide
+from src.core.messagebus import MessageBus
+from src.core.messages import Command, Event
 from src.core.module import BaseModule
+from src.core.monads import BusinessResult, success
 from src.core.system import System
 from src.core.unit_of_work import AbstractUnitOfWork
-
+from tests.conftest import FakeAggregate, FakeUnitOfWork
 
 
 class CreateDummyCommand(Command):
@@ -56,13 +53,9 @@ class DummyModule(BaseModule):
             FlakyCommand: self.handle_flaky,
             FailingCommand: self.handle_failing,
         }
-        self.event_handlers = {
-            DummyCreatedEvent: [self.handle_event, self.handler1, self.handler2]
-        }
+        self.event_handlers = {DummyCreatedEvent: [self.handle_event, self.handler1, self.handler2]}
 
-    async def handle_create(
-        self, cmd: CreateDummyCommand, uow: FakeUnitOfWork
-    ) -> BusinessResult:
+    async def handle_create(self, cmd: CreateDummyCommand, uow: FakeUnitOfWork) -> BusinessResult:
         self.handled_cmd = cmd
         with uow:
             agg = FakeAggregate(cmd.id)
@@ -71,17 +64,13 @@ class DummyModule(BaseModule):
             uow.commit()
         return success(cmd.id)
 
-    async def handle_flaky(
-        self, cmd: FlakyCommand, uow: FakeUnitOfWork
-    ) -> BusinessResult:
+    async def handle_flaky(self, cmd: FlakyCommand, uow: FakeUnitOfWork) -> BusinessResult:
         self.flaky_attempts += 1
         if self.flaky_attempts < 3:
             raise Exception("Temporary Failure")
         return success(cmd.id)
 
-    async def handle_failing(
-        self, cmd: FailingCommand, uow: FakeUnitOfWork
-    ) -> BusinessResult:
+    async def handle_failing(self, cmd: FailingCommand, uow: FakeUnitOfWork) -> BusinessResult:
         self.fail_attempts += 1
         raise Exception("Permanent Failure")
 
@@ -139,7 +128,7 @@ async def test_system_bootstrap_and_command_handling(system, dummy_module):
 
         assert uow.repo.get("123") is not None
         assert uow.committed is True
-        
+
         await bus.bus.stop(clear=True)
 
 
@@ -155,7 +144,7 @@ async def test_event_handling_multiple_subscribers_and_isolation(system, dummy_m
 
         assert dummy_module.handler1_called is True
         assert dummy_module.handler2_called is True
-        
+
         await bus.bus.stop(clear=True)
 
 
@@ -176,7 +165,7 @@ async def test_flaky_command_retries(system, dummy_module):
 
         # Handler should have been called exactly 3 times (fails twice, succeeds on third)
         assert dummy_module.flaky_attempts == 3
-        
+
         await bus.bus.stop(clear=True)
 
 
@@ -194,32 +183,36 @@ async def test_failing_command_exhausts_retries(system, dummy_module):
 
         # Handler should have been called 3 times and then given up
         assert dummy_module.fail_attempts == 3
-        
+
         await bus.bus.stop(clear=True)
+
 
 class LoopAEvent(Event):
     id: str
 
+
 class LoopBEvent(Event):
     id: str
+
 
 @pytest.mark.asyncio
 async def test_messagebus_infinite_loop_prevention(system):
     """Test that the message bus stops execution when trace stack goes too deep."""
+
     class LoopModule(BaseModule):
         settings_class = DummySettings
+
         def __init__(self):
             super().__init__()
-            self.event_handlers = {
-                LoopAEvent: [self.handle_a],
-                LoopBEvent: [self.handle_b]
-            }
+            self.event_handlers = {LoopAEvent: [self.handle_a], LoopBEvent: [self.handle_b]}
+
         async def handle_a(self, evt: LoopAEvent, uow: FakeUnitOfWork):
             with uow:
                 agg = FakeAggregate(evt.id)
                 agg.add_event(LoopBEvent(id=evt.id))
                 uow.repo.add(agg)
-                uow.commit() # This will trigger collect_new_events in event_wrapper
+                uow.commit()  # This will trigger collect_new_events in event_wrapper
+
         async def handle_b(self, evt: LoopBEvent, uow: FakeUnitOfWork):
             with uow:
                 agg = FakeAggregate(evt.id)
@@ -230,32 +223,33 @@ async def test_messagebus_infinite_loop_prevention(system):
     sys2 = System(modules=[LoopModule()])
     sys2.providers.append(MockUoWProvider())
     sys2._bootstrap()
-    
+
     async with sys2.container() as request_container:
         bus = await request_container.get(MessageBus)
         bus.max_trace_depth = 5  # Small depth for quick test
-        
+
         # Root event triggers the loop
         evt = LoopAEvent(id="loop_123")
-        
+
         # It should trigger RuntimeError infinite loop
         with pytest.raises(RuntimeError, match="Infinite loop detected"):
             await bus.dispatch(evt)
-        
+
         await bus.bus.stop(clear=True)
+
 
 @pytest.mark.asyncio
 async def test_messagebus_trace_stack_propagation(system, dummy_module):
     """Test that parents propagate trace_stack and correlation_id to children."""
     async with system.container() as request_container:
         bus = await request_container.get(MessageBus)
-        
+
         cmd = CreateDummyCommand(id="prop_456")
         await bus.dispatch(cmd)
-        
+
         # Check that the event received in handle_event has the propagated context
         assert dummy_module.received_event is not None
         assert dummy_module.received_event.correlation_id == cmd.correlation_id
         assert "CreateDummyCommand" in dummy_module.received_event.trace_stack[-1]
-        
+
         await bus.bus.stop(clear=True)

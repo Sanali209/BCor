@@ -1,6 +1,7 @@
 from src.core.system import System
-from src.modules.orders.module import OrdersModule
 from src.modules.agm.module import AGMModule
+from src.modules.orders.module import OrdersModule
+
 
 def test_system_discovery_from_manifest(tmp_path):
     # Setup: Create a temporary app.toml
@@ -21,13 +22,18 @@ enabled = ["orders", "agm"]
     assert any(isinstance(m, OrdersModule) for m in system.modules)
     assert any(isinstance(m, AGMModule) for m in system.modules)
 
+
 def test_system_bootstrap_with_discovery(tmp_path):
     from dishka import Provider, Scope, provide
+
     from src.core.unit_of_work import AbstractUnitOfWork
 
     class FakeUoW(AbstractUnitOfWork):
-        async def commit(self): pass
-        async def rollback(self): pass
+        async def commit(self):
+            pass
+
+        async def rollback(self):
+            pass
 
     class TestProvider(Provider):
         @provide(scope=Scope.REQUEST)

@@ -7,9 +7,8 @@ No API key needed - just HTTP calls via stdlib urllib.
 import html
 import math
 import sys
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from . import http
 
@@ -41,25 +40,27 @@ def _date_to_unix(date_str: str) -> int:
     """Convert YYYY-MM-DD to Unix timestamp (start of day UTC)."""
     parts = date_str.split("-")
     year, month, day = int(parts[0]), int(parts[1]), int(parts[2])
-    import calendar
     import datetime
-    dt = datetime.datetime(year, month, day, tzinfo=datetime.timezone.utc)
+
+    dt = datetime.datetime(year, month, day, tzinfo=datetime.UTC)
     return int(dt.timestamp())
 
 
 def _unix_to_date(ts: int) -> str:
     """Convert Unix timestamp to YYYY-MM-DD."""
     import datetime
-    dt = datetime.datetime.fromtimestamp(ts, tz=datetime.timezone.utc)
+
+    dt = datetime.datetime.fromtimestamp(ts, tz=datetime.UTC)
     return dt.strftime("%Y-%m-%d")
 
 
 def _strip_html(text: str) -> str:
     """Strip HTML tags and decode entities from HN comment text."""
     import re
+
     text = html.unescape(text)
-    text = re.sub(r'<p>', '\n', text)
-    text = re.sub(r'<[^>]+>', '', text)
+    text = re.sub(r"<p>", "\n", text)
+    text = re.sub(r"<[^>]+>", "", text)
     return text.strip()
 
 
@@ -68,7 +69,7 @@ def search_hackernews(
     from_date: str,
     to_date: str,
     depth: str = "default",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Search Hacker News via Algolia API.
 
     Args:
@@ -95,6 +96,7 @@ def search_hackernews(
     }
 
     from urllib.parse import urlencode
+
     url = f"{ALGOLIA_SEARCH_URL}?{urlencode(params)}"
 
     try:
@@ -111,7 +113,7 @@ def search_hackernews(
     return response
 
 
-def parse_hackernews_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
+def parse_hackernews_response(response: dict[str, Any]) -> list[dict[str, Any]]:
     """Parse Algolia response into normalized item dicts.
 
     Returns:
@@ -140,25 +142,27 @@ def parse_hackernews_response(response: Dict[str, Any]) -> List[Dict[str, Any]]:
         engagement_boost = min(0.2, math.log1p(points) / 40)
         relevance = min(1.0, rank_score * 0.7 + engagement_boost + 0.1)
 
-        items.append({
-            "object_id": object_id,
-            "title": hit.get("title", ""),
-            "url": article_url,
-            "hn_url": hn_url,
-            "author": hit.get("author", ""),
-            "date": date_str,
-            "engagement": {
-                "points": points,
-                "num_comments": num_comments,
-            },
-            "relevance": round(relevance, 2),
-            "why_relevant": f"HN story about {hit.get('title', 'topic')[:60]}",
-        })
+        items.append(
+            {
+                "object_id": object_id,
+                "title": hit.get("title", ""),
+                "url": article_url,
+                "hn_url": hn_url,
+                "author": hit.get("author", ""),
+                "date": date_str,
+                "engagement": {
+                    "points": points,
+                    "num_comments": num_comments,
+                },
+                "relevance": round(relevance, 2),
+                "why_relevant": f"HN story about {hit.get('title', 'topic')[:60]}",
+            }
+        )
 
     return items
 
 
-def _fetch_item_comments(object_id: str, max_comments: int = 5) -> Dict[str, Any]:
+def _fetch_item_comments(object_id: str, max_comments: int = 5) -> dict[str, Any]:
     """Fetch top-level comments for a story from Algolia items endpoint.
 
     Args:
@@ -179,10 +183,7 @@ def _fetch_item_comments(object_id: str, max_comments: int = 5) -> Dict[str, Any
     children = data.get("children", [])
 
     # Sort by points (highest first), filter to actual comments
-    real_comments = [
-        c for c in children
-        if c.get("text") and c.get("author")
-    ]
+    real_comments = [c for c in children if c.get("text") and c.get("author")]
     real_comments.sort(key=lambda c: c.get("points") or 0, reverse=True)
 
     comments = []
@@ -190,11 +191,13 @@ def _fetch_item_comments(object_id: str, max_comments: int = 5) -> Dict[str, Any
     for c in real_comments[:max_comments]:
         text = _strip_html(c.get("text", ""))
         excerpt = text[:300] + "..." if len(text) > 300 else text
-        comments.append({
-            "author": c.get("author", ""),
-            "text": excerpt,
-            "points": c.get("points") or 0,
-        })
+        comments.append(
+            {
+                "author": c.get("author", ""),
+                "text": excerpt,
+                "points": c.get("points") or 0,
+            }
+        )
         # First sentence as insight
         first_sentence = text.split(". ")[0].split("\n")[0][:200]
         if first_sentence:
@@ -204,9 +207,9 @@ def _fetch_item_comments(object_id: str, max_comments: int = 5) -> Dict[str, Any
 
 
 def enrich_top_stories(
-    items: List[Dict[str, Any]],
+    items: list[dict[str, Any]],
     depth: str = "default",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Fetch comments for top N stories by points.
 
     Args:

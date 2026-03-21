@@ -8,6 +8,7 @@ Since we can't call the Anthropic API directly (no SDK installed),
 this script formats the evaluation prompts for manual evaluation
 and provides a framework for scoring.
 """
+
 import random
 from pathlib import Path
 
@@ -16,13 +17,13 @@ EVAL_DIR = Path(__file__).parent.parent / "docs" / "comparison-results" / "evalu
 EVAL_DIR.mkdir(parents=True, exist_ok=True)
 
 TOPICS = [
-    (1, 'claude-code', 'Claude Code skills and MCP servers', 'GENERAL'),
-    (2, 'seedance', 'Seedance AI video generation', 'NEWS'),
-    (3, 'macbook', 'M4 MacBook Pro review', 'RECOMMENDATIONS'),
-    (4, 'rap', 'best rap songs 2026', 'RECOMMENDATIONS'),
-    (5, 'react-svelte', 'React vs Svelte 2026', 'GENERAL'),
+    (1, "claude-code", "Claude Code skills and MCP servers", "GENERAL"),
+    (2, "seedance", "Seedance AI video generation", "NEWS"),
+    (3, "macbook", "M4 MacBook Pro review", "RECOMMENDATIONS"),
+    (4, "rap", "best rap songs 2026", "RECOMMENDATIONS"),
+    (5, "react-svelte", "React vs Svelte 2026", "GENERAL"),
 ]
-VERSIONS = ['base', 'hn', 'cross']
+VERSIONS = ["base", "hn", "cross"]
 
 RUBRIC = """## Evaluation Rubric
 
@@ -69,10 +70,10 @@ for num, slug, topic, qtype in TOPICS:
 
     lines = []
     lines.append(f"# Evaluation: {topic}")
-    lines.append(f"")
+    lines.append("")
     lines.append(f"**Query Type:** {qtype}")
     lines.append(f"**Label Map (REVEAL AFTER SCORING):** {reverse_map}")
-    lines.append(f"")
+    lines.append("")
     lines.append(RUBRIC)
     lines.append("")
 
@@ -84,11 +85,11 @@ for num, slug, topic, qtype in TOPICS:
         else:
             content = f"[FILE NOT FOUND: {synthesis_file}]"
 
-        lines.append(f"---")
+        lines.append("---")
         lines.append(f"## VERSION {label}")
-        lines.append(f"")
+        lines.append("")
         lines.append(content)
-        lines.append(f"")
+        lines.append("")
 
     lines.append("---")
     lines.append("## SCORES")
@@ -96,19 +97,19 @@ for num, slug, topic, qtype in TOPICS:
     for v in versions_shuffled:
         label = label_map[v]
         lines.append(f"### Version {label}")
-        lines.append(f"- Groundedness: /5")
-        lines.append(f"- Specificity: /5")
-        lines.append(f"- Coverage: /5")
-        lines.append(f"- Actionability: /5")
-        lines.append(f"- Format: /5")
-        lines.append(f"- **Weighted Total**: /5.0")
-        lines.append(f"- Best/worst aspect: ")
-        lines.append(f"")
+        lines.append("- Groundedness: /5")
+        lines.append("- Specificity: /5")
+        lines.append("- Coverage: /5")
+        lines.append("- Actionability: /5")
+        lines.append("- Format: /5")
+        lines.append("- **Weighted Total**: /5.0")
+        lines.append("- Best/worst aspect: ")
+        lines.append("")
 
     lines.append("## VERDICT")
     lines.append("")
     lines.append(f"**Winner for {topic}:** ")
-    lines.append(f"**Why:** ")
+    lines.append("**Why:** ")
     lines.append("")
     lines.append(f"**Reveal:** {reverse_map}")
 

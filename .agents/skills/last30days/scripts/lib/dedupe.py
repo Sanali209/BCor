@@ -1,18 +1,61 @@
 """Near-duplicate detection for last30days skill."""
 
 import re
-from typing import List, Set, Tuple, Union
+from typing import Union
 
 from . import schema
 
 # Stopwords for token-based Jaccard (cross-source linking)
-STOPWORDS = frozenset({
-    'the', 'a', 'an', 'to', 'for', 'how', 'is', 'in', 'of', 'on',
-    'and', 'with', 'from', 'by', 'at', 'this', 'that', 'it', 'my',
-    'your', 'i', 'me', 'we', 'you', 'what', 'are', 'do', 'can',
-    'its', 'be', 'or', 'not', 'no', 'so', 'if', 'but', 'about',
-    'all', 'just', 'get', 'has', 'have', 'was', 'will', 'show', 'hn',
-})
+STOPWORDS = frozenset(
+    {
+        "the",
+        "a",
+        "an",
+        "to",
+        "for",
+        "how",
+        "is",
+        "in",
+        "of",
+        "on",
+        "and",
+        "with",
+        "from",
+        "by",
+        "at",
+        "this",
+        "that",
+        "it",
+        "my",
+        "your",
+        "i",
+        "me",
+        "we",
+        "you",
+        "what",
+        "are",
+        "do",
+        "can",
+        "its",
+        "be",
+        "or",
+        "not",
+        "no",
+        "so",
+        "if",
+        "but",
+        "about",
+        "all",
+        "just",
+        "get",
+        "has",
+        "have",
+        "was",
+        "will",
+        "show",
+        "hn",
+    }
+)
 
 
 def normalize_text(text: str) -> str:
@@ -23,20 +66,20 @@ def normalize_text(text: str) -> str:
     - Collapse whitespace
     """
     text = text.lower()
-    text = re.sub(r'[^\w\s]', ' ', text)
-    text = re.sub(r'\s+', ' ', text)
+    text = re.sub(r"[^\w\s]", " ", text)
+    text = re.sub(r"\s+", " ", text)
     return text.strip()
 
 
-def get_ngrams(text: str, n: int = 3) -> Set[str]:
+def get_ngrams(text: str, n: int = 3) -> set[str]:
     """Get character n-grams from text."""
     text = normalize_text(text)
     if len(text) < n:
         return {text}
-    return {text[i:i+n] for i in range(len(text) - n + 1)}
+    return {text[i : i + n] for i in range(len(text) - n + 1)}
 
 
-def jaccard_similarity(set1: Set[str], set2: Set[str]) -> float:
+def jaccard_similarity(set1: set[str], set2: set[str]) -> float:
     """Compute Jaccard similarity between two sets."""
     if not set1 or not set2:
         return 0.0
@@ -45,8 +88,14 @@ def jaccard_similarity(set1: Set[str], set2: Set[str]) -> float:
     return intersection / union if union > 0 else 0.0
 
 
-AnyItem = Union[schema.RedditItem, schema.XItem, schema.YouTubeItem,
-                schema.HackerNewsItem, schema.PolymarketItem, schema.WebSearchItem]
+AnyItem = Union[
+    schema.RedditItem,
+    schema.XItem,
+    schema.YouTubeItem,
+    schema.HackerNewsItem,
+    schema.PolymarketItem,
+    schema.WebSearchItem,
+]
 
 
 def get_item_text(item: AnyItem) -> str:
@@ -86,9 +135,9 @@ def _get_cross_source_text(item: AnyItem) -> str:
     return get_item_text(item)
 
 
-def _tokenize_for_xref(text: str) -> Set[str]:
+def _tokenize_for_xref(text: str) -> set[str]:
     """Tokenize text for cross-source token Jaccard comparison."""
-    words = re.sub(r'[^\w\s]', ' ', text.lower()).split()
+    words = re.sub(r"[^\w\s]", " ", text.lower()).split()
     return {w for w in words if w not in STOPWORDS and len(w) > 1}
 
 
@@ -111,9 +160,9 @@ def _hybrid_similarity(text_a: str, text_b: str) -> float:
 
 
 def find_duplicates(
-    items: List[Union[schema.RedditItem, schema.XItem]],
+    items: list[schema.RedditItem | schema.XItem],
     threshold: float = 0.7,
-) -> List[Tuple[int, int]]:
+) -> list[tuple[int, int]]:
     """Find near-duplicate pairs in items.
 
     Args:
@@ -138,9 +187,9 @@ def find_duplicates(
 
 
 def dedupe_items(
-    items: List[Union[schema.RedditItem, schema.XItem]],
+    items: list[schema.RedditItem | schema.XItem],
     threshold: float = 0.7,
-) -> List[Union[schema.RedditItem, schema.XItem]]:
+) -> list[schema.RedditItem | schema.XItem]:
     """Remove near-duplicates, keeping highest-scored item.
 
     Args:
@@ -171,47 +220,47 @@ def dedupe_items(
 
 
 def dedupe_reddit(
-    items: List[schema.RedditItem],
+    items: list[schema.RedditItem],
     threshold: float = 0.7,
-) -> List[schema.RedditItem]:
+) -> list[schema.RedditItem]:
     """Dedupe Reddit items."""
     return dedupe_items(items, threshold)
 
 
 def dedupe_x(
-    items: List[schema.XItem],
+    items: list[schema.XItem],
     threshold: float = 0.7,
-) -> List[schema.XItem]:
+) -> list[schema.XItem]:
     """Dedupe X items."""
     return dedupe_items(items, threshold)
 
 
 def dedupe_youtube(
-    items: List[schema.YouTubeItem],
+    items: list[schema.YouTubeItem],
     threshold: float = 0.7,
-) -> List[schema.YouTubeItem]:
+) -> list[schema.YouTubeItem]:
     """Dedupe YouTube items."""
     return dedupe_items(items, threshold)
 
 
 def dedupe_hackernews(
-    items: List[schema.HackerNewsItem],
+    items: list[schema.HackerNewsItem],
     threshold: float = 0.7,
-) -> List[schema.HackerNewsItem]:
+) -> list[schema.HackerNewsItem]:
     """Dedupe Hacker News items."""
     return dedupe_items(items, threshold)
 
 
 def dedupe_polymarket(
-    items: List[schema.PolymarketItem],
+    items: list[schema.PolymarketItem],
     threshold: float = 0.7,
-) -> List[schema.PolymarketItem]:
+) -> list[schema.PolymarketItem]:
     """Dedupe Polymarket items."""
     return dedupe_items(items, threshold)
 
 
 def cross_source_link(
-    *source_lists: List[AnyItem],
+    *source_lists: list[AnyItem],
     threshold: float = 0.40,
 ) -> None:
     """Annotate items with cross-source references.

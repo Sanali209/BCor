@@ -1,10 +1,12 @@
 import asyncio
-from typing import Annotated, NewType
 from dataclasses import dataclass, field
-from src.modules.agm.metadata import Stored, Live, Rel
-from src.modules.agm.mapper import AGMMapper
+from typing import Annotated, NewType
+
+from dishka import Provider, Scope, make_async_container, provide
+
 from src.modules.agm.fluent import QueryBuilder
-from dishka import make_async_container, Provider, Scope, provide
+from src.modules.agm.mapper import AGMMapper
+from src.modules.agm.metadata import Live, Rel, Stored
 
 LiveStatusFetcher = NewType("LiveStatusFetcher", str)
 
@@ -18,13 +20,9 @@ class TargetNode:
 class AetherisBaseNode:
     id: str
     text_content: str
-    embedding: Annotated[list[float], Stored(source_field="text_content")] = field(
-        default_factory=list
-    )
+    embedding: Annotated[list[float], Stored(source_field="text_content")] = field(default_factory=list)
     current_status: Annotated[str, Live(handler=LiveStatusFetcher)] = "offline"
-    friends: Annotated[list[TargetNode], Rel(type="KNOWS", direction="OUTGOING")] = (
-        field(default_factory=list)
-    )
+    friends: Annotated[list[TargetNode], Rel(type="KNOWS", direction="OUTGOING")] = field(default_factory=list)
 
 
 class LiveDataProvider(Provider):
@@ -61,9 +59,7 @@ async def main():
         print(f"Error saving node: {e}")
 
     builder = QueryBuilder(mapper, AetherisBaseNode)
-    query = builder.vector_search(
-        "text_index", "find integration", top_k=3
-    ).resolve_live()
+    query = builder.vector_search("text_index", "find integration", top_k=3).resolve_live()
     print("\nSmart Projection Execution:")
     await query.execute(session=None)
 

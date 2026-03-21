@@ -1,25 +1,25 @@
 """Terminal UI utilities for last30days skill."""
 
-import sys
-import time
-import threading
 import random
-from typing import Optional
+import sys
+import threading
+import time
 
 # Check if we're in a real terminal (not captured by Claude Code)
 IS_TTY = sys.stderr.isatty()
 
+
 # ANSI color codes
 class Colors:
-    PURPLE = '\033[95m'
-    BLUE = '\033[94m'
-    CYAN = '\033[96m'
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    RED = '\033[91m'
-    BOLD = '\033[1m'
-    DIM = '\033[2m'
-    RESET = '\033[0m'
+    PURPLE = "\033[95m"
+    BLUE = "\033[94m"
+    CYAN = "\033[96m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    BOLD = "\033[1m"
+    DIM = "\033[2m"
+    RESET = "\033[0m"
 
 
 BANNER = f"""{Colors.PURPLE}{Colors.BOLD}
@@ -100,6 +100,7 @@ WEB_ONLY_MESSAGES = [
     "Discovering tutorials...",
 ]
 
+
 def _build_nux_message(diag: dict = None) -> str:
     """Build conversational NUX message with dynamic source status."""
     if diag:
@@ -128,6 +129,7 @@ Some examples of what you can do:
 Just start with "last30" and talk to me like normal.
 """
 
+
 # Shorter promo for single missing key
 PROMO_SINGLE_KEY = {
     "reddit": "\n💡 You can unlock Reddit with an OpenAI API key or by running `codex login` — just ask me how.\n",
@@ -152,8 +154,8 @@ To fix this:
 """
 
 # Spinner frames
-SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
-DOTS_FRAMES = ['   ', '.  ', '.. ', '...']
+SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+DOTS_FRAMES = ["   ", ".  ", ".. ", "..."]
 
 
 class Spinner:
@@ -163,7 +165,7 @@ class Spinner:
         self.message = message
         self.color = color
         self.running = False
-        self.thread: Optional[threading.Thread] = None
+        self.thread: threading.Thread | None = None
         self.frame_idx = 0
         self.shown_static = False
         self.quiet = quiet  # Suppress non-TTY start message (still shows ✓ completion)
@@ -213,7 +215,7 @@ class ProgressDisplay:
 
     def __init__(self, topic: str, show_banner: bool = True):
         self.topic = topic
-        self.spinner: Optional[Spinner] = None
+        self.spinner: Spinner | None = None
         self.start_time = time.time()
 
         if show_banner:
@@ -298,7 +300,9 @@ class ProgressDisplay:
         if self.spinner:
             self.spinner.stop()
 
-    def show_complete(self, reddit_count: int, x_count: int, youtube_count: int = 0, hn_count: int = 0, pm_count: int = 0):
+    def show_complete(
+        self, reddit_count: int, x_count: int, youtube_count: int = 0, hn_count: int = 0, pm_count: int = 0
+    ):
         elapsed = time.time() - self.start_time
         if IS_TTY:
             sys.stderr.write(f"\n{Colors.GREEN}{Colors.BOLD}✓ Research complete{Colors.RESET} ")
@@ -328,7 +332,9 @@ class ProgressDisplay:
             age_str = f" ({age_hours:.1f}h old)"
         else:
             age_str = ""
-        sys.stderr.write(f"{Colors.GREEN}⚡{Colors.RESET} {Colors.DIM}Using cached results{age_str} - use --refresh for fresh data{Colors.RESET}\n\n")
+        sys.stderr.write(
+            f"{Colors.GREEN}⚡{Colors.RESET} {Colors.DIM}Using cached results{age_str} - use --refresh for fresh data{Colors.RESET}\n\n"
+        )
         sys.stderr.flush()
 
     def show_error(self, message: str):
@@ -400,46 +406,80 @@ def show_diagnostic_banner(diag: dict):
 
     if IS_TTY:
         lines.append(f"{Colors.DIM}┌─────────────────────────────────────────────────────┐{Colors.RESET}")
-        lines.append(f"{Colors.DIM}│{Colors.RESET} {Colors.BOLD}/last30days v2.1 — Source Status{Colors.RESET}                    {Colors.DIM}│{Colors.RESET}")
-        lines.append(f"{Colors.DIM}│{Colors.RESET}                                                     {Colors.DIM}│{Colors.RESET}")
+        lines.append(
+            f"{Colors.DIM}│{Colors.RESET} {Colors.BOLD}/last30days v2.1 — Source Status{Colors.RESET}                    {Colors.DIM}│{Colors.RESET}"
+        )
+        lines.append(
+            f"{Colors.DIM}│{Colors.RESET}                                                     {Colors.DIM}│{Colors.RESET}"
+        )
 
         # Reddit
         if has_openai:
-            lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.GREEN}✅ Reddit{Colors.RESET}    — OPENAI_API_KEY found                {Colors.DIM}│{Colors.RESET}")
+            lines.append(
+                f"{Colors.DIM}│{Colors.RESET}  {Colors.GREEN}✅ Reddit{Colors.RESET}    — OPENAI_API_KEY found                {Colors.DIM}│{Colors.RESET}"
+            )
         else:
-            lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.RED}❌ Reddit{Colors.RESET}    — No OPENAI_API_KEY                    {Colors.DIM}│{Colors.RESET}")
-            lines.append(f"{Colors.DIM}│{Colors.RESET}     └─ Add to ~/.config/last30days/.env            {Colors.DIM}│{Colors.RESET}")
+            lines.append(
+                f"{Colors.DIM}│{Colors.RESET}  {Colors.RED}❌ Reddit{Colors.RESET}    — No OPENAI_API_KEY                    {Colors.DIM}│{Colors.RESET}"
+            )
+            lines.append(
+                f"{Colors.DIM}│{Colors.RESET}     └─ Add to ~/.config/last30days/.env            {Colors.DIM}│{Colors.RESET}"
+            )
 
         # X/Twitter
         if has_x:
             source = diag.get("x_source", "")
             username = diag.get("bird_username", "")
             label = f"Bird ({username})" if source == "bird" and username else source.upper()
-            lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.GREEN}✅ X/Twitter{Colors.RESET} — {label}                          {Colors.DIM}│{Colors.RESET}")
+            lines.append(
+                f"{Colors.DIM}│{Colors.RESET}  {Colors.GREEN}✅ X/Twitter{Colors.RESET} — {label}                          {Colors.DIM}│{Colors.RESET}"
+            )
         else:
-            lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.RED}❌ X/Twitter{Colors.RESET} — No Bird CLI or XAI_API_KEY          {Colors.DIM}│{Colors.RESET}")
+            lines.append(
+                f"{Colors.DIM}│{Colors.RESET}  {Colors.RED}❌ X/Twitter{Colors.RESET} — No Bird CLI or XAI_API_KEY          {Colors.DIM}│{Colors.RESET}"
+            )
             if diag.get("bird_installed"):
-                lines.append(f"{Colors.DIM}│{Colors.RESET}     └─ Bird installed but not authenticated         {Colors.DIM}│{Colors.RESET}")
-                lines.append(f"{Colors.DIM}│{Colors.RESET}     └─ Log into x.com in your browser, then retry   {Colors.DIM}│{Colors.RESET}")
+                lines.append(
+                    f"{Colors.DIM}│{Colors.RESET}     └─ Bird installed but not authenticated         {Colors.DIM}│{Colors.RESET}"
+                )
+                lines.append(
+                    f"{Colors.DIM}│{Colors.RESET}     └─ Log into x.com in your browser, then retry   {Colors.DIM}│{Colors.RESET}"
+                )
             else:
-                lines.append(f"{Colors.DIM}│{Colors.RESET}     └─ Needs Node.js 22+ (Bird is bundled)           {Colors.DIM}│{Colors.RESET}")
+                lines.append(
+                    f"{Colors.DIM}│{Colors.RESET}     └─ Needs Node.js 22+ (Bird is bundled)           {Colors.DIM}│{Colors.RESET}"
+                )
 
         # YouTube
         if has_youtube:
-            lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.GREEN}✅ YouTube{Colors.RESET}   — yt-dlp found                      {Colors.DIM}│{Colors.RESET}")
+            lines.append(
+                f"{Colors.DIM}│{Colors.RESET}  {Colors.GREEN}✅ YouTube{Colors.RESET}   — yt-dlp found                      {Colors.DIM}│{Colors.RESET}"
+            )
         else:
-            lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.RED}❌ YouTube{Colors.RESET}   — yt-dlp not installed                {Colors.DIM}│{Colors.RESET}")
-            lines.append(f"{Colors.DIM}│{Colors.RESET}     └─ Fix: brew install yt-dlp (free)                {Colors.DIM}│{Colors.RESET}")
+            lines.append(
+                f"{Colors.DIM}│{Colors.RESET}  {Colors.RED}❌ YouTube{Colors.RESET}   — yt-dlp not installed                {Colors.DIM}│{Colors.RESET}"
+            )
+            lines.append(
+                f"{Colors.DIM}│{Colors.RESET}     └─ Fix: brew install yt-dlp (free)                {Colors.DIM}│{Colors.RESET}"
+            )
 
         # Web
         if has_web:
             backend = diag.get("web_search_backend", "")
-            lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.GREEN}✅ Web{Colors.RESET}       — {backend} API                       {Colors.DIM}│{Colors.RESET}")
+            lines.append(
+                f"{Colors.DIM}│{Colors.RESET}  {Colors.GREEN}✅ Web{Colors.RESET}       — {backend} API                       {Colors.DIM}│{Colors.RESET}"
+            )
         else:
-            lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.YELLOW}⚡ Web{Colors.RESET}       — Using assistant's search tool       {Colors.DIM}│{Colors.RESET}")
+            lines.append(
+                f"{Colors.DIM}│{Colors.RESET}  {Colors.YELLOW}⚡ Web{Colors.RESET}       — Using assistant's search tool       {Colors.DIM}│{Colors.RESET}"
+            )
 
-        lines.append(f"{Colors.DIM}│{Colors.RESET}                                                     {Colors.DIM}│{Colors.RESET}")
-        lines.append(f"{Colors.DIM}│{Colors.RESET}  Config: {Colors.BOLD}~/.config/last30days/.env{Colors.RESET}                  {Colors.DIM}│{Colors.RESET}")
+        lines.append(
+            f"{Colors.DIM}│{Colors.RESET}                                                     {Colors.DIM}│{Colors.RESET}"
+        )
+        lines.append(
+            f"{Colors.DIM}│{Colors.RESET}  Config: {Colors.BOLD}~/.config/last30days/.env{Colors.RESET}                  {Colors.DIM}│{Colors.RESET}"
+        )
         lines.append(f"{Colors.DIM}└─────────────────────────────────────────────────────┘{Colors.RESET}")
     else:
         # Plain text for non-TTY (Claude Code / Codex)

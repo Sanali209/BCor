@@ -9,8 +9,8 @@ API docs: https://api-dashboard.search.brave.com/app/documentation/web-search/ge
 import html
 import re
 import sys
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from urllib.parse import urlencode, urlparse
 
 from . import http
@@ -22,8 +22,13 @@ FRESHNESS_MAP = {1: "pd", 7: "pw", 31: "pm"}
 
 # Domains to exclude (handled by Reddit/X search)
 EXCLUDED_DOMAINS = {
-    "reddit.com", "www.reddit.com", "old.reddit.com",
-    "twitter.com", "www.twitter.com", "x.com", "www.x.com",
+    "reddit.com",
+    "www.reddit.com",
+    "old.reddit.com",
+    "twitter.com",
+    "www.twitter.com",
+    "x.com",
+    "www.x.com",
 }
 
 
@@ -33,7 +38,7 @@ def search_web(
     to_date: str,
     api_key: str,
     depth: str = "default",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Search the web via Brave Search API.
 
     Args:
@@ -91,7 +96,7 @@ def _days_between(from_date: str, to_date: str) -> int:
         return 30
 
 
-def _brave_freshness(days: Optional[int]) -> Optional[str]:
+def _brave_freshness(days: int | None) -> str | None:
     """Convert days to Brave freshness parameter.
 
     Uses canned codes for <=31d, explicit date range for longer periods.
@@ -101,16 +106,16 @@ def _brave_freshness(days: Optional[int]) -> Optional[str]:
     code = next((v for d, v in sorted(FRESHNESS_MAP.items()) if days <= d), None)
     if code:
         return code
-    start = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
-    end = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    start = (datetime.now(UTC) - timedelta(days=days)).strftime("%Y-%m-%d")
+    end = datetime.now(UTC).strftime("%Y-%m-%d")
     return f"{start}to{end}"
 
 
 def _normalize_results(
-    response: Dict[str, Any],
+    response: dict[str, Any],
     from_date: str,
     to_date: str,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Convert Brave Search response to websearch item schema.
 
     Merges news + web results, cleans HTML entities, filters excluded domains.
@@ -118,10 +123,7 @@ def _normalize_results(
     items = []
 
     # Merge news results (tend to be more recent) with web results
-    raw_results = (
-        response.get("news", {}).get("results", []) +
-        response.get("web", {}).get("results", [])
-    )
+    raw_results = response.get("news", {}).get("results", []) + response.get("web", {}).get("results", [])
 
     for i, result in enumerate(raw_results):
         if not isinstance(result, dict):
@@ -151,17 +153,19 @@ def _normalize_results(
         date = _parse_brave_date(result.get("age"), result.get("page_age"))
         date_confidence = "med" if date else "low"
 
-        items.append({
-            "id": f"W{i+1}",
-            "title": title[:200],
-            "url": url,
-            "source_domain": domain,
-            "snippet": snippet[:500],
-            "date": date,
-            "date_confidence": date_confidence,
-            "relevance": 0.6,  # Brave doesn't provide relevance scores
-            "why_relevant": "",
-        })
+        items.append(
+            {
+                "id": f"W{i + 1}",
+                "title": title[:200],
+                "url": url,
+                "source_domain": domain,
+                "snippet": snippet[:500],
+                "date": date,
+                "date_confidence": date_confidence,
+                "relevance": 0.6,  # Brave doesn't provide relevance scores
+                "why_relevant": "",
+            }
+        )
 
     sys.stderr.write(f"[Web] Brave: {len(items)} results\n")
     sys.stderr.flush()
@@ -176,7 +180,7 @@ def _clean_html(text: str) -> str:
     return text
 
 
-def _parse_brave_date(age: Optional[str], page_age: Optional[str]) -> Optional[str]:
+def _parse_brave_date(age: str | None, page_age: str | None) -> str | None:
     """Parse Brave's age/page_age fields to YYYY-MM-DD.
 
     Brave returns dates like "3 hours ago", "2 days ago", "January 24, 2026".
@@ -189,24 +193,24 @@ def _parse_brave_date(age: Optional[str], page_age: Optional[str]) -> Optional[s
     now = datetime.now()
 
     # "X hours ago" -> today
-    if re.search(r'\d+\s*hours?\s*ago', text_lower):
+    if re.search(r"\d+\s*hours?\s*ago", text_lower):
         return now.strftime("%Y-%m-%d")
 
     # "X days ago"
-    match = re.search(r'(\d+)\s*days?\s*ago', text_lower)
+    match = re.search(r"(\d+)\s*days?\s*ago", text_lower)
     if match:
         days = int(match.group(1))
         if days <= 60:
             return (now - timedelta(days=days)).strftime("%Y-%m-%d")
 
     # "X weeks ago"
-    match = re.search(r'(\d+)\s*weeks?\s*ago', text_lower)
+    match = re.search(r"(\d+)\s*weeks?\s*ago", text_lower)
     if match:
         weeks = int(match.group(1))
         return (now - timedelta(weeks=weeks)).strftime("%Y-%m-%d")
 
     # ISO format: 2026-01-24T...
-    match = re.search(r'(\d{4}-\d{2}-\d{2})', text)
+    match = re.search(r"(\d{4}-\d{2}-\d{2})", text)
     if match:
         return match.group(1)
 

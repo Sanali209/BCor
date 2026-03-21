@@ -1,0 +1,6 @@
+adapters
+apps
+common
+core
+legacy_to_port
+modules

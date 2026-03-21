@@ -1,32 +1,32 @@
-from typing import Callable, Type, Optional, Any
 import asyncio
 import inspect
+import typing
+from collections.abc import Callable
+from typing import Any
 
-from dishka import AsyncContainer
 import bubus
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_exponential,
-    retry_if_exception_type,
-)
-
+import bubus.service
+from dishka import AsyncContainer
 from loguru import logger
 from opentelemetry import trace
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
-from src.core.messages import Message, Command, Event
+from src.core.messages import Command, Event, Message
 from src.core.unit_of_work import AbstractUnitOfWork
 
 tracer = trace.get_tracer(__name__)
 
 
-import bubus.service
-
-
-def _patch_bubus():
+# bubus patches
+def _patch_bubus() -> None:
     """Disable bubus built-in loop prevention to allow BCor's context-aware tracing."""
     if hasattr(bubus.service.EventBus, "_would_create_loop"):
-        # We disable bubus's internal 2-level recursion limit because BCor 
+        # We disable bubus's internal 2-level recursion limit because BCor
         # implements its own context-aware tracing with a configurable max_trace_depth.
         bubus.service.EventBus._would_create_loop = lambda self, event, handler: False
 
@@ -36,10 +36,10 @@ _patch_bubus()
 
 class MessageBus:
     """Central dispatcher for Commands and Events, powered by bubus.EventBus.
-    
-    The MessageBus acts as the mediator between the application layer and 
-    domain handlers. It supports strict 1-to-1 command routing and 
-    1-to-N event broadcasting. It also facilitates domain event collection 
+
+    The MessageBus acts as the mediator between the application layer and
+    domain handlers. It supports strict 1-to-1 command routing and
+    1-to-N event broadcasting. It also facilitates domain event collection
     from the Unit of Work.
 
     Attributes:
@@ -48,7 +48,12 @@ class MessageBus:
         bus: The underlying bubus.EventBus instance.
     """
 
-    def __init__(self, uow: AbstractUnitOfWork, container: Optional[AsyncContainer] = None, max_trace_depth: int = 20):
+    def __init__(
+        self,
+        uow: AbstractUnitOfWork,
+        container: AsyncContainer | None = None,
+        max_trace_depth: int = 20,
+    ) -> None:
         """Initializes the MessageBus with a Unit of Work and optional DI container.
 
         Args:
@@ -61,17 +66,18 @@ class MessageBus:
         self.max_trace_depth = max_trace_depth
         self.bus = bubus.EventBus()
 
-    def register_command(self, cmd_type: Type[Command], handler: Callable):
+    def register_command(
+        self, cmd_type: type[Command], handler: Callable[..., Any]
+    ) -> None:
         """Registers a strict 1-to-1 command handler.
 
-        Command handlers are wrapped with observability (tracing/logging) 
+        Command handlers are wrapped with observability (tracing/logging)
         and a retry policy (exponential backoff).
 
         Args:
             cmd_type: The class of the command to handle.
             handler: The handler function (sync or async).
         """
-        # Create a uniquely named wrapper for the handler to avoid bubus warnings
         wrapper_name = f"command_wrapper_for_{handler.__name__}"
 
         @retry(
@@ -80,40 +86,42 @@ class MessageBus:
             reraise=True,
             retry=retry_if_exception_type(Exception),
         )
-        async def command_wrapper(command: cmd_type):
-            with tracer.start_as_current_span(
-                f"Handle Command: {cmd_type.__name__}"
-            ) as span:
+        async def command_wrapper(command: Command) -> Any:  # noqa: ANN401
+            with tracer.start_as_current_span(f"Handle Command: {cmd_type.__name__}") as span:
                 logger.info(f"Handling command {cmd_type.__name__}: {command}")
                 span.set_attribute("command.type", cmd_type.__name__)
 
                 try:
                     # Resolve dependencies from container for parameters other than 'command'
                     sig = inspect.signature(handler)
+                    type_hints = typing.get_type_hints(handler)
                     kwargs = {}
                     for i, (param_name, param) in enumerate(sig.parameters.items()):
                         # Skip the first parameter (the command itself)
                         if i == 0:
                             continue
-                        
+
                         if param_name == "uow":
                             kwargs[param_name] = self.uow
                             continue
-                        
+
+                        # Resolve type hint (handles 'from __future__ import annotations')
+                        hint = type_hints.get(param_name, param.annotation)
+
                         # Try to resolve from container if available
-                        if self.container and param.annotation != inspect.Parameter.empty:
+                        if self.container and hint != inspect.Parameter.empty:
                             try:
-                                # We use the annotation as the key for DI
-                                kwargs[param_name] = await self.container.get(param.annotation)
+                                kwargs[param_name] = await self.container.get(hint)
                             except Exception as e:
-                                logger.debug(f"DI: Could not resolve {param_name} ({param.annotation}) from container: {e}")
+                                logger.debug(
+                                    f"DI: Could not resolve {param_name} ({hint}) from container: {e}"
+                                )
 
                     if asyncio.iscoroutinefunction(handler):
                         result = await handler(command, **kwargs)
                     else:
                         result = await asyncio.to_thread(handler, command, **kwargs)
 
-                    await self._publish_collected_events(command)
                     return result
                 except Exception as e:
                     span.record_exception(e)
@@ -123,7 +131,9 @@ class MessageBus:
         command_wrapper.__name__ = wrapper_name
         self.bus.on(cmd_type, command_wrapper)
 
-    def register_event(self, evt_type: Type[Event], handler: Callable):
+    def register_event(
+        self, evt_type: type[Event], handler: Callable[..., Any]
+    ) -> None:
         """Registers a 1-to-N event subscriber.
 
         Event handlers are wrapped with observability (tracing/logging).
@@ -135,13 +145,9 @@ class MessageBus:
         """
         wrapper_name = f"event_wrapper_for_{handler.__name__}"
 
-        async def event_wrapper(event: evt_type):
-            with tracer.start_as_current_span(
-                f"Handle Event: {evt_type.__name__}"
-            ) as span:
-                logger.info(
-                    f"Handling event {evt_type.__name__} with {handler.__name__}"
-                )
+        async def event_wrapper(event: Event) -> None:
+            with tracer.start_as_current_span(f"Handle Event: {evt_type.__name__}") as span:
+                logger.info(f"Handling event {evt_type.__name__} with {handler.__name__}")
                 span.set_attribute("event.type", evt_type.__name__)
                 span.set_attribute("handler.name", handler.__name__)
 
@@ -154,9 +160,7 @@ class MessageBus:
                     await self._publish_collected_events(event)
                 except Exception as e:
                     span.record_exception(e)
-                    logger.exception(
-                        f"Isolated failure in event handler {handler.__name__}: {e}"
-                    )
+                    logger.exception(f"Isolated failure in event handler {handler.__name__}: {e}")
                     if isinstance(e, RuntimeError) and "Infinite loop detected" in str(e):
                         raise
 
@@ -176,10 +180,11 @@ class MessageBus:
             The original message after processing.
         """
         await self.bus.dispatch(message)
+        await self._publish_collected_events(message)
         await message.event_result(raise_if_any=True, raise_if_none=False)
         return message
 
-    async def _publish_collected_events(self, parent_message: Message):
+    async def _publish_collected_events(self, parent_message: Message) -> None:
         """Publishes accumulated events from the UoW back into the bus.
 
         This method supports causality tracing and infinite loop detection

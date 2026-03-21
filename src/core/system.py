@@ -1,26 +1,33 @@
-from typing import List, Dict, Type, Callable, Union
+from collections.abc import Callable
 from pathlib import Path
-from dishka import Provider, make_async_container, Scope, provide, AsyncContainer
-from pydantic_settings import BaseSettings
-from loguru import logger
+from typing import Any
 
-from src.core.module import BaseModule
+from dishka import AsyncContainer, Provider, Scope, make_async_container, provide
+from loguru import logger
+from pydantic_settings import BaseSettings
+
+from src.core.decorators import _run_hooks, get_start_hooks, get_stop_hooks
 from src.core.messagebus import MessageBus
+from src.core.module import BaseModule
 from src.core.unit_of_work import AbstractUnitOfWork
-from src.core.decorators import get_start_hooks, get_stop_hooks, _run_hooks
 
 
 class CoreProvider(Provider):
     """Dishka Provider for core system components.
-    
+
     This provider manages the lifecycle and injection of global settings
     and the MessageBus, ensuring event and command handlers are correctly
     mapped from all enabled modules.
     """
 
-    def __init__(self, event_handlers: Dict[Type, List[Callable]], 
-                 command_handlers: Dict[Type, Callable], 
-                 settings: Dict[str, BaseSettings], *args, **kwargs):
+    def __init__(
+        self,
+        event_handlers: dict[type, list[Callable[..., Any]]],
+        command_handlers: dict[type, Callable[..., Any]],
+        settings: dict[str, BaseSettings],
+        *args: Any,  # noqa: ANN401
+        **kwargs: Any,  # noqa: ANN401
+    ) -> None:
         """Initializes the CoreProvider with handlers and settings.
 
         Args:
@@ -34,7 +41,7 @@ class CoreProvider(Provider):
         self.settings = settings
 
     @provide(scope=Scope.APP)
-    def provide_settings(self) -> Dict[str, BaseSettings]:
+    def provide_settings(self) -> dict[str, BaseSettings]:
         """Provides the global settings dictionary.
 
         Returns:
@@ -47,7 +54,7 @@ class CoreProvider(Provider):
         """Provides a request-scoped MessageBus instance with DI container access.
 
         The MessageBus is injected with the current Unit of Work and
-        the DI container, allowing automated dependency resolution for 
+        the DI container, allowing automated dependency resolution for
         command and event handlers.
 
         Args:
@@ -89,8 +96,9 @@ class System:
         Returns:
             An initialized System instance.
         """
-        from src.core.discovery import ModuleDiscovery
         import tomllib
+
+        from src.core.discovery import ModuleDiscovery
 
         path = Path(manifest_path)
         with path.open("rb") as f:
@@ -99,7 +107,7 @@ class System:
         modules = ModuleDiscovery.load_from_manifest(manifest_path)
         return cls(modules=modules, config=config_data)
 
-    def __init__(self, modules: List[BaseModule], config: dict = None):
+    def __init__(self, modules: list[BaseModule], config: dict[str, Any] | None = None) -> None:
         """Initializes the System with a list of modules and raw configuration.
 
         Args:
@@ -108,14 +116,15 @@ class System:
         """
         self.modules = modules
         self.config = config or {}
-        self.command_handlers: Dict[Type, Callable] = {}
-        self.event_handlers: Dict[Type, List[Callable]] = {}
-        self.providers: List[Provider] = []
-        self.settings: Dict[str, BaseSettings] = {}
+        self.container: AsyncContainer
+        self.command_handlers: dict[type, Callable[..., Any]] = {}
+        self.event_handlers: dict[type, list[Callable[..., Any]]] = {}
+        self.providers: list[Provider] = []
+        self.settings: dict[str, BaseSettings] = {}
         self._started = False
         self._initialized = False
 
-    def _bootstrap(self):
+    def _bootstrap(self) -> None:
         """Bootstraps the system by merging module configurations and providers.
 
         This method:
@@ -126,8 +135,9 @@ class System:
         """
         if self._initialized:
             return
-        
+
         for module in self.modules:
+            module.setup()
             self.command_handlers.update(module.command_handlers)
             for event_type, handlers in module.event_handlers.items():
                 self.event_handlers.setdefault(event_type, []).extend(handlers)
@@ -140,7 +150,7 @@ class System:
                 self.settings[module_name] = validated_settings
 
             if module.provider:
-                self.providers.append(module.provider)
+                self.providers.insert(0, module.provider)
 
         core_provider = CoreProvider(
             event_handlers=self.event_handlers,
@@ -153,7 +163,7 @@ class System:
         self.container = make_async_container(*self.providers)
         self._initialized = True
 
-    async def start(self):
+    async def start(self) -> None:
         """Starts the system and triggers registered @on_start hooks.
 
         Ensures the system is bootstrapped before running hooks.
@@ -163,14 +173,14 @@ class System:
             return
 
         self._bootstrap()
-        
+
         logger.info("System starting...")
         await _run_hooks(get_start_hooks())
-        
+
         self._started = True
         logger.info("System started")
 
-    async def stop(self):
+    async def stop(self) -> None:
         """Stops the system and triggers registered @on_stop hooks.
 
         Closes the DI container and marks the system as stopped.
@@ -182,6 +192,6 @@ class System:
         logger.info("System stopping...")
         await _run_hooks(get_stop_hooks())
         await self.container.close()
-        
+
         self._started = False
         logger.info("System stopped")

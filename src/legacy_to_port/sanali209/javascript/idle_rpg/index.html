@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Idle RPG</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Idle RPG</h1>
+
+    <div class="game-container">
+        <div class="player-stats">
+            <h2>Игрок</h2>
+            <p>Уровень: <span id="player-level">1</span></p>
+            <p>Здоровье: <span id="player-health">100</span> / <span id="player-max-health">100</span></p>
+            <p>Урон: <span id="player-damage">1</span></p>
+            <p>Золото: <span id="player-gold">0</span></p>
+            <p>Сталь: <span id="player-steel">0</span></p>
+            <p>Дерево: <span id="player-wood">0</span></p>
+            <button id="upgrade-damage-btn">Улучшить урон (Стоимость: <span id="upgrade-damage-cost">10</span> золота)</button>
+            <!-- Добавить другие кнопки улучшений позже -->
+        </div>
+
+        <div class="enemy-area">
+            <h2>Враг</h2>
+            <p>Уровень: <span id="enemy-level">1</span></p>
+            <p>Имя: <span id="enemy-name">Гоблин</span></p>
+            <p>Здоровье: <span id="enemy-health">10</span> / <span id="enemy-max-health">10</span></p>
+            <div class="enemy-health-bar-container">
+                <div id="enemy-health-bar" class="enemy-health-bar"></div>
+            </div>
+        </div>
+
+        <div class="inventory">
+            <h2>Инвентарь</h2>
+            <div class="equipment-slots">
+                <h3>Экипировка</h3>
+                <p>Оружие: <span id="slot-weapon">Пусто</span></p>
+                <p>Броня: <span id="slot-armor">Пусто</span></p>
+                <!-- Добавить другие слоты позже -->
+            </div>
+            <div class="backpack">
+                <h3>Рюкзак</h3>
+                <ul id="backpack-list">
+                    <li>Пусто</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="game-log">
+            <h2>Лог игры</h2>
+            <ul id="log-list">
+                <li>Игра началась!</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

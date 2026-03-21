@@ -1,9 +1,8 @@
 """Model auto-selection for last30days skill."""
 
 import re
-from typing import Dict, List, Optional, Tuple
 
-from . import cache, http, env
+from . import cache, env, http
 
 # OpenAI API
 OPENAI_MODELS_URL = "https://api.openai.com/v1/models"
@@ -18,7 +17,7 @@ XAI_ALIASES = {
 }
 
 
-def parse_version(model_id: str) -> Optional[Tuple[int, ...]]:
+def parse_version(model_id: str) -> tuple[int, ...] | None:
     """Parse semantic version from model ID.
 
     Examples:
@@ -26,9 +25,9 @@ def parse_version(model_id: str) -> Optional[Tuple[int, ...]]:
         gpt-5.2 -> (5, 2)
         gpt-5.2.1 -> (5, 2, 1)
     """
-    match = re.search(r'(\d+(?:\.\d+)*)', model_id)
+    match = re.search(r"(\d+(?:\.\d+)*)", model_id)
     if match:
-        return tuple(int(x) for x in match.group(1).split('.'))
+        return tuple(int(x) for x in match.group(1).split("."))
     return None
 
 
@@ -37,11 +36,11 @@ def is_mainline_openai_model(model_id: str) -> bool:
     model_lower = model_id.lower()
 
     # Must be gpt-4o, gpt-4.1+, or gpt-5+ series (mainline, not mini/nano/etc)
-    if not re.match(r'^gpt-(?:4o|4\.1|5)(\.\d+)*$', model_lower):
+    if not re.match(r"^gpt-(?:4o|4\.1|5)(\.\d+)*$", model_lower):
         return False
 
     # Exclude variants
-    excludes = ['mini', 'nano', 'chat', 'codex', 'pro', 'preview', 'turbo']
+    excludes = ["mini", "nano", "chat", "codex", "pro", "preview", "turbo"]
     for exc in excludes:
         if exc in model_lower:
             return False
@@ -52,8 +51,8 @@ def is_mainline_openai_model(model_id: str) -> bool:
 def select_openai_model(
     api_key: str,
     policy: str = "auto",
-    pin: Optional[str] = None,
-    mock_models: Optional[List[Dict]] = None,
+    pin: str | None = None,
+    mock_models: list[dict] | None = None,
 ) -> str:
     """Select the best OpenAI model based on policy.
 
@@ -111,8 +110,8 @@ def select_openai_model(
 def select_xai_model(
     api_key: str,
     policy: str = "latest",
-    pin: Optional[str] = None,
-    mock_models: Optional[List[Dict]] = None,
+    pin: str | None = None,
+    mock_models: list[dict] | None = None,
 ) -> str:
     """Select the best xAI model based on policy.
 
@@ -146,10 +145,10 @@ def select_xai_model(
 
 
 def get_models(
-    config: Dict,
-    mock_openai_models: Optional[List[Dict]] = None,
-    mock_xai_models: Optional[List[Dict]] = None,
-) -> Dict[str, Optional[str]]:
+    config: dict,
+    mock_openai_models: list[dict] | None = None,
+    mock_xai_models: list[dict] | None = None,
+) -> dict[str, str | None]:
     """Get selected models for both providers.
 
     Returns:

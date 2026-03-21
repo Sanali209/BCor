@@ -15,14 +15,15 @@ import argparse
 import ast
 import json
 import sys
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any
 
 
 @dataclass
 class FunctionMetrics:
     """Metrics for a single function."""
+
     name: str
     line_number: int
     complexity: int
@@ -34,6 +35,7 @@ class FunctionMetrics:
 @dataclass
 class FileMetrics:
     """Overall metrics for a file."""
+
     file_path: str
     total_functions: int
     avg_complexity: float
@@ -42,12 +44,12 @@ class FileMetrics:
     max_length: int
     avg_nesting: float
     max_nesting: int
-    functions: List[FunctionMetrics]
+    functions: list[FunctionMetrics]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         result = asdict(self)
-        result['functions'] = [asdict(f) for f in self.functions]
+        result["functions"] = [asdict(f) for f in self.functions]
         return result
 
 
@@ -130,19 +132,21 @@ def calculate_max_nesting(func_node: ast.FunctionDef) -> int:
 def calculate_function_length(func_node: ast.FunctionDef) -> int:
     """Calculate lines of code for a function (excluding docstring)."""
     # Get total lines
-    if hasattr(func_node, 'end_lineno') and func_node.end_lineno:
+    if hasattr(func_node, "end_lineno") and func_node.end_lineno:
         total_lines = func_node.end_lineno - func_node.lineno + 1
     else:
         # Fallback for older Python versions
         total_lines = 1
 
     # Subtract docstring lines if present
-    if (ast.get_docstring(func_node) and
-        func_node.body and
-        isinstance(func_node.body[0], ast.Expr) and
-        isinstance(func_node.body[0].value, (ast.Str, ast.Constant))):
+    if (
+        ast.get_docstring(func_node)
+        and func_node.body
+        and isinstance(func_node.body[0], ast.Expr)
+        and isinstance(func_node.body[0].value, (ast.Str, ast.Constant))
+    ):
         docstring_node = func_node.body[0]
-        if hasattr(docstring_node, 'end_lineno'):
+        if hasattr(docstring_node, "end_lineno"):
             docstring_lines = docstring_node.end_lineno - docstring_node.lineno + 1
             total_lines -= docstring_lines
 
@@ -151,7 +155,7 @@ def calculate_function_length(func_node: ast.FunctionDef) -> int:
 
 def analyze_file(file_path: Path) -> FileMetrics:
     """Analyze a Python file and return metrics."""
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, encoding="utf-8") as f:
         source = f.read()
 
     try:
@@ -160,7 +164,7 @@ def analyze_file(file_path: Path) -> FileMetrics:
         print(f"Error parsing {file_path}: {e}", file=sys.stderr)
         sys.exit(1)
 
-    functions: List[FunctionMetrics] = []
+    functions: list[FunctionMetrics] = []
 
     # Find all function definitions
     for node in ast.walk(tree):
@@ -171,7 +175,7 @@ def analyze_file(file_path: Path) -> FileMetrics:
                 complexity=calculate_complexity(node),
                 length=calculate_function_length(node),
                 max_nesting=calculate_max_nesting(node),
-                num_parameters=len(node.args.args)
+                num_parameters=len(node.args.args),
             )
             functions.append(metrics)
 
@@ -197,17 +201,17 @@ def analyze_file(file_path: Path) -> FileMetrics:
         max_length=max_length,
         avg_nesting=round(avg_nesting, 2),
         max_nesting=max_nesting,
-        functions=functions
+        functions=functions,
     )
 
 
 def print_metrics(metrics: FileMetrics, verbose: bool = True):
     """Print metrics in human-readable format."""
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"Complexity Metrics: {metrics.file_path}")
-    print(f"{'='*70}\n")
+    print(f"{'=' * 70}\n")
 
-    print(f"Overall Statistics:")
+    print("Overall Statistics:")
     print(f"  Total Functions: {metrics.total_functions}")
     print(f"  Avg Complexity: {metrics.avg_complexity} (target: <10, warning: 15+)")
     print(f"  Max Complexity: {metrics.max_complexity}")
@@ -228,15 +232,15 @@ def print_metrics(metrics: FileMetrics, verbose: bool = True):
         issues.append(f"  ⚠ Maximum nesting is {metrics.max_nesting} levels (target: ≤3)")
 
     if issues:
-        print(f"\nIssues Found:")
+        print("\nIssues Found:")
         for issue in issues:
             print(issue)
     else:
-        print(f"\n✓ All metrics within target ranges")
+        print("\n✓ All metrics within target ranges")
 
     if verbose and metrics.functions:
-        print(f"\nPer-Function Breakdown:")
-        print(f"{'─'*70}")
+        print("\nPer-Function Breakdown:")
+        print(f"{'─' * 70}")
 
         # Sort by complexity (descending) to show worst offenders first
         sorted_funcs = sorted(metrics.functions, key=lambda f: f.complexity, reverse=True)
@@ -257,17 +261,17 @@ def print_metrics(metrics: FileMetrics, verbose: bool = True):
             warning_str = f" [{', '.join(warnings)}]" if warnings else ""
 
             print(f"  {func.name}:{func.line_number}")
-            print(f"    Complexity: {func.complexity}, Length: {func.length} lines, "
-                  f"Nesting: {func.max_nesting}, Params: {func.num_parameters}{warning_str}")
+            print(
+                f"    Complexity: {func.complexity}, Length: {func.length} lines, "
+                f"Nesting: {func.max_nesting}, Params: {func.num_parameters}{warning_str}"
+            )
 
         if len(sorted_funcs) > 10:
             print(f"  ... and {len(sorted_funcs) - 10} more functions")
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Measure code complexity metrics for refactoring validation"
-    )
+    parser = argparse.ArgumentParser(description="Measure code complexity metrics for refactoring validation")
     parser.add_argument("file_path", type=Path, help="Path to Python file to analyze")
     parser.add_argument("--json", action="store_true", help="Output JSON format")
     parser.add_argument("--quiet", action="store_true", help="Minimal output")
@@ -278,8 +282,8 @@ def main():
         print(f"Error: File not found: {args.file_path}", file=sys.stderr)
         sys.exit(1)
 
-    if not args.file_path.suffix == '.py':
-        print(f"Error: File must be a Python file (.py)", file=sys.stderr)
+    if not args.file_path.suffix == ".py":
+        print("Error: File must be a Python file (.py)", file=sys.stderr)
         sys.exit(1)
 
     metrics = analyze_file(args.file_path)

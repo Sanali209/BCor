@@ -1,6 +1,7 @@
 import pytest
-from sqlalchemy import Table, Column, String, Integer, create_engine, text
+from sqlalchemy import Column, Integer, String, Table, create_engine, text
 from sqlalchemy.orm import Session, clear_mappers
+
 from src.adapters.orm import mapper_registry
 from tests.conftest import FakeAggregate
 
@@ -8,7 +9,7 @@ from tests.conftest import FakeAggregate
 @pytest.fixture
 def sqlite_engine():
     engine = create_engine("sqlite:///:memory:")
-    yield engine
+    return engine
 
 
 def test_imperative_mapping_loads_fake_aggregate(sqlite_engine):
@@ -29,9 +30,7 @@ def test_imperative_mapping_loads_fake_aggregate(sqlite_engine):
     try:
         # Insert raw data (bypassing ORM)
         with sqlite_engine.connect() as conn:
-            conn.execute(
-                text("INSERT INTO fake_aggregates (ref, version) VALUES ('agg1', 1)")
-            )
+            conn.execute(text("INSERT INTO fake_aggregates (ref, version) VALUES ('agg1', 1)"))
             conn.commit()
 
         # Verify ORM loads it as a domain object
