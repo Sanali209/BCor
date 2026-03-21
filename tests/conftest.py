@@ -4,8 +4,14 @@ from src.core.domain import Aggregate
 from src.core.repository import AbstractRepository
 from src.core.unit_of_work import AbstractUnitOfWork
 
+import os
+
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+def pytest_unconfigure(config):
+    print("bcor-expert: Forcing pytest process exit to avoid teardown hang...", flush=True)
+    os._exit(0)
 
 
 class FakeAggregate(Aggregate):

@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
+import typing
 
 from dishka import AsyncContainer, Provider, Scope, make_async_container, provide
 from loguru import logger
@@ -50,7 +51,7 @@ class CoreProvider(Provider):
         return self.settings
 
     @provide(scope=Scope.REQUEST)
-    def provide_message_bus(self, uow: AbstractUnitOfWork, container: AsyncContainer) -> MessageBus:
+    async def provide_message_bus(self, uow: AbstractUnitOfWork, container: AsyncContainer) -> typing.AsyncIterable[MessageBus]:
         """Provides a request-scoped MessageBus instance with DI container access.
 
         The MessageBus is injected with the current Unit of Work and
@@ -73,7 +74,8 @@ class CoreProvider(Provider):
             for handler in handlers:
                 bus.register_event(evt_type, handler)
 
-        return bus
+        yield bus
+        await bus.bus.stop()
 
 
 class System:

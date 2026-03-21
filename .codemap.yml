@@ -1,0 +1,19 @@
+project_name: BCor
+include:
+  - src/**/*.py
+  - Ddocks/**/*.md
+exclude:
+  - .venv/**
+  - __pycache__/**
+  - .git/**
+  - node_modules/**
+  - build/**
+  - dist/**
+  - .gemini/**
+  - .agent/**
+  - .agents/**
+  - .idea/**
+  - .vscode/**
+  - Ddocks/Reference/**
+  - temp/**
+  - tmp/**

@@ -52,13 +52,21 @@ The following skills are available in `.agents/skills/`. Trigger them when their
 - **`documentation`**: Write and maintain READMEs, runbooks, and architecture documents.
 - **`documentation-writer`**: Expert documentation creation following the Diátaxis framework.
 - **`skill-creator`**: Create or improve agent skills using iterative evaluation loops.
-- **`codemap`**: **PRIMARY TOOL FOR NAVIGATION**. Generate visual maps of the codebase and dependencies.
+- **`codemap`**: **PRIMARY TOOL FOR NAVIGATION**. Generate visual maps of the codebase and dependencies using the `cm` command. Support for Mermaid entity graphs (`cm gen -e .`) and RAG-based search (`cm ask`). Reference [codemap/SKILL.md](file:///d:/github/BCor/.agents/skills/codemap/SKILL.md) for Windows usage and troubleshooting.
 
 ---
 
-## Navigation
-Always use `codemap` to establish project context before starting a task.
-Example: `codemap .` or `codemap src/module_name`
+## Navigation & Context Establishment
+**MANDATORY**: Agents MUST use the `codemap` skill via the `cm` command to establish project context BEFORE starting any task. 
+
+### Execution Workflow
+1. **Locate Tool**: If `cm` is not in PATH, use `C:\Users\User\.local\bin\cm.exe`.
+2. **Scan Strategy**: 
+   - Use `cm gen src` for a high-level overview.
+   - Use `cm gen <subdirectory>` for focused tasks.
+   - **WARNING**: Avoid `cm gen .` on large projects to prevent `RecursionError`.
+3. **Deep Search**: Use `cm index` and `cm ask` for complex architectural questions.
+4. **Reference**: Refer to [codemap/SKILL.md](file:///d:/github/BCor/.agents/skills/codemap/SKILL.md) for advanced usage and troubleshooting.
 
 ---
 

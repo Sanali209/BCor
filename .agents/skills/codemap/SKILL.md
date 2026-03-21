@@ -3,42 +3,48 @@ name: codemap
 description: Generates visual maps of codebases, dependencies, and structures. Use for instant project context and navigation.
 ---
 
-
-Codemap is a CLI tool and VSCode extension that generates visual maps of codebases, dependencies, and structures, designed to empower AI agents with instant project context. It's particularly useful in agentic workflows like yours with antigravity agents, RAG systems, and clean architecture projects.
-Installation
-
-Install the CLI via uv (Python tool manager) on macOS/Linux (use WSL on Windows):
-
-text
-curl -LsSf https://astral.sh/uv/install.sh | sh
-uv tool install codemap
-
-For VSCode extension, search "llm-codemap" in the marketplace from mk668a
-fix if not worck
-
 # Codemap Skill
 
-`codemap` is a CLI tool that provides structural insights into your codebase. It's designed to help AI agents (like Antigravity) understand complex projects quickly.
+`codemap` is a CLI tool and VSCode extension that generates visual maps of codebases, dependencies, and structures. It is essential for AI agents to establish project context and understand architectural patterns quickly.
+
+## Installation & Environment
+
+### Windows (Local)
+The tool is typically installed via `uv tool install codemap`. On this system, it is located at:
+`C:\Users\User\.local\bin\cm.exe`
+
+If `cm` is not in your `PATH`, you must use the absolute path or add it to your session:
+```powershell
+$env:PATH += ";C:\Users\User\.local\bin"
+```
+
+### macOS/Linux
+```bash
+uv tool install codemap
+```
 
 ## Usage
 
-Run `codemap` from the project root.
+Run `cm` from the project root. For large projects, focus on specific subdirectories to avoid performance issues or recursion errors.
 
-### Basic commands
-
-- `cm gen .`: Generate a code representation/map of the current directory.
+### Basic Commands
+- `cm gen .`: Generate a code representation of the current directory.
+- `cm gen src`: Generate a map of the `src` directory (recommended for large projects).
 - `cm gen -e .`: Generate a Mermaid entity graph of the project structure.
 - `cm index`: Index the repository for RAG-based search with `cm ask`.
-- `cm ask "How is X implemented?"`: Ask questions about the codebase.
-- `cm help`: See all available options.
+- `cm ask "How is X implemented?"`: Ask questions about the codebase after indexing.
+- `cm conf`: Create a default `.codemap.yml` configuration.
 
-## When to use
+## Troubleshooting
 
-- Before starting a new task to get an overview of the relevant modules.
-- When you need to understand how different components interact.
-- To identify which files are affected by a change.
-- When documentation is sparse or outdated.
+### `RecursionError: maximum recursion depth exceeded`
+This common issue on Windows occurs when the project structure is too deep or contains cycles.
+- **Solution**: Use the `--exclude` flag to skip problematic directories (e.g., `.venv`, `node_modules`, `build`).
+- **Optimization**: Run `cm gen` on a specific subdirectory (e.g., `cm gen src/core`) instead of the entire project root.
+- **Config**: Create or edit `.codemap.yml` to strictly define `include` and `exclude` paths.
 
-## Output
-
-The output is formatted as Markdown or JSON, which is ideal for inclusion in agent prompts or for further analysis.
+## Best Practices for Agents
+1. **Context First**: Always run `cm gen src` (or a similar relevant path) before starting any task.
+2. **Subdirectory Focus**: If the project is huge, map only the components you are working on.
+3. **Index for Complex Queries**: If manual navigation is slow, use `cm index` and `cm ask`.
+4. **Absolute Paths**: On Windows, check `C:\Users\User\.local\bin\cm.exe` if the command is not found.

@@ -1,11 +1,7 @@
-[system]
-name = "ImageDedup"
-version = "0.1.0"
+[app]
+app_name = "ImageDedup"
+log_level = "INFO"
 
 [modules]
-vfs = { path = "src.modules.vfs.module.VfsModule" }
-imagededup = { path = "src.apps.ImageDedup.module.ImageDedupModule" }
-
-[vfs]
-url = "osfs://"
-root_path = "."
+paths = ["src.apps", "src.modules"]
+enabled = ["ImageDedup"]

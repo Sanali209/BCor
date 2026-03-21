@@ -1,62 +1,43 @@
-import asyncio
-import os
 import sys
-from pathlib import Path
+import asyncio
+from loguru import logger
+from src.core.system import System
+from src.core.messagebus import MessageBus
+from .messages import LaunchGuiCommand
 
-# Add project root to sys.path
-root_path = str(Path(__file__).resolve().parent.parent.parent.parent)
-if root_path not in sys.path:
-    sys.path.insert(0, root_path)
-
-from dishka import Provider, Scope, provide  # noqa: E402
-from loguru import logger  # noqa: E402
-
-from src.apps.ImageDedup.domain.project import ImageDedupProject  # noqa: E402
-from src.apps.ImageDedup.messages import LaunchImageDedupCommand  # noqa: E402
-from src.core.domain import Aggregate  # noqa: E402
-from src.core.messagebus import MessageBus  # noqa: E402
-from src.core.system import System  # noqa: E402
-from src.core.unit_of_work import AbstractUnitOfWork  # noqa: E402
-
-
-class DefaultUoW(AbstractUnitOfWork):
-    def __init__(self) -> None:
-        super().__init__()
-        self.projects = FakeProjectRepo()
-
-    def _commit(self) -> None: pass
-    def rollback(self) -> None: pass
-    def _get_all_seen_aggregates(self) -> list[Aggregate]: return []
-
-class FakeProjectRepo:
-    async def get(self, id: str) -> ImageDedupProject:
-        return ImageDedupProject(project_id=id, work_path=os.getcwd())
-    async def save(self, project: ImageDedupProject) -> None: pass
-
-class UoWProvider(Provider):
-    @provide(scope=Scope.REQUEST)
-    def provide_uow(self) -> AbstractUnitOfWork:
-        return DefaultUoW()
-
-async def run_image_dedup() -> None:
-    manifest_path = Path(__file__).parent / "app.toml"
-    system = System.from_manifest(manifest_path)
-    system.providers.append(UoWProvider())
-
-    logger.info("Starting Image Dedup App...")
-    await system.start()
-
+async def async_main():
+    """Bootstrap the BCor system and launch the app."""
     try:
-        async with system.container() as container:
-            bus = await container.get(MessageBus)
-            logger.info("--- Launching GUI ---")
-
-            # Launch with a default project ID
-            await bus.dispatch(LaunchImageDedupCommand(project_id="default-project"))
-            # Note: GUI blocks here until closed
-
-    finally:
+        # 1. Initialize System from manifest
+        # Note: app.toml is in the same directory as main.py
+        system = System.from_manifest("src/apps/ImageDedup/app.toml")
+        
+        # 2. Start System (runs hooks, builds DI container)
+        await system.start()
+        
+        # 3. Get MessageBus from container and send Launch command
+        # MessageBus is REQUEST scoped, so we might need a context or just resolve from container
+        # System doesn't directly expose container in a simple way for one-offs, 
+        # but we can use system.container.
+        async with system.container() as request_container:
+            bus = await request_container.get(MessageBus)
+            await bus.handle(LaunchGuiCommand())
+            
+        # 4. Stop System (cleanup)
         await system.stop()
+        
+    except Exception as e:
+        logger.exception(f"System failed: {e}")
+        sys.exit(1)
+
+def main():
+    # Configure logging
+    logger.remove()
+    logger.add(sys.stderr, format="{time} {level} {message}", level="INFO")
+    
+    # Run the async entry point
+    asyncio.run(async_main())
 
 if __name__ == "__main__":
-    asyncio.run(run_image_dedup())
+    main()
+

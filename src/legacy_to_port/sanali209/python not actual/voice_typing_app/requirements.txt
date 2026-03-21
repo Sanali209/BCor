@@ -1,3 +1,0 @@
-flet
-speech_recognition
-google-generativeai

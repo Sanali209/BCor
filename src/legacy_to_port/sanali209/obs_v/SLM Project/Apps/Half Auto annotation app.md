@@ -1,3 +1,0 @@
-#HalfAutoAnotationApp
-
-[[Half Auto Todo]]
