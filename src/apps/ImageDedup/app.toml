@@ -1,7 +1,0 @@
-[app]
-app_name = "ImageDedup"
-log_level = "INFO"
-
-[modules]
-paths = ["src.apps", "src.modules"]
-enabled = ["ImageDedup"]
