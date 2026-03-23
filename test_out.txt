@@ -1,0 +1,68 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0
+rootdir: D:\github\BCor
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, returns-0.26.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 6 items
+
+tests\apps\experemental\boruscraper\test_iteration1.py ...F              [ 66%]
+tests\apps\experemental\boruscraper\test_iteration2.py ..                [100%]
+
+================================== FAILURES ===================================
+________________ test_dishka_provider_yields_database_manager _________________
+
+    @pytest.mark.asyncio
+    async def test_dishka_provider_yields_database_manager():
+        from src.apps.experemental.boruscraper.settings import BoruScraperSettings
+        from src.apps.experemental.boruscraper.provider import BoruScraperProvider
+        from src.apps.experemental.boruscraper.database import DatabaseManager
+    
+        settings_dict = {"boruscraper": BoruScraperSettings(save_path="/tmp/test", deduplication_threshold=10)}
+        provider = BoruScraperProvider()
+    
+        class SettingsProvider(Provider):
+            @provide(scope=Scope.APP)
+            def get_settings(self) -> dict[str, BaseSettings]:
+                return settings_dict
+    
+>       container = make_async_container(SettingsProvider(), provider)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\apps\experemental\boruscraper\test_iteration1.py:43: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv\Lib\site-packages\dishka\async_container.py:402: in make_async_container
+    registries = builder.build()
+                 ^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\dishka\graph_builder\builder.py:554: in build
+    GraphValidator(registries).validate()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <dishka.graph_builder.validator.GraphValidator object at 0x000002993BFDDB50>
+
+    def validate(self) -> None:
+        for registry_index, registry in enumerate(self.registries):
+            factories = tuple(registry.factories.values())
+            for factory in factories:
+                self.path = {}
+                try:
+                    self._validate_factory(factory, registry_index)
+                except NoFactoryError as e:
+>                   raise GraphMissingFactoryError(
+                        e.requested,
+                        e.path,
+                        self._find_other_scope(e.requested),
+                        self._find_other_component(e.requested),
+                        e.suggest_abstract_factories,
+                        e.suggest_concrete_factories,
+                    ) from None
+E                   dishka.exceptions.GraphMissingFactoryError: Cannot find factory for (MessageBus, component=''). It is missing or has invalid scope.
+E                      │                                      ◈ Scope.APP, component='' ◈                                   
+E                      ▼   src.apps.experemental.boruscraper.handlers.ThreadManager   BoruScraperProvider.get_thread_manager
+E                      ╰─> src.core.messagebus.MessageBus                             ???
+
+.venv\Lib\site-packages\dishka\graph_builder\validator.py:99: GraphMissingFactoryError
+=========================== short test summary info ===========================
+FAILED tests/apps/experemental/boruscraper/test_iteration1.py::test_dishka_provider_yields_database_manager
+========================= 1 failed, 5 passed in 3.57s =========================
+bcor-expert: Forcing pytest process exit to avoid teardown hang...

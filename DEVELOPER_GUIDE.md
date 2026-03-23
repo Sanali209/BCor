@@ -29,7 +29,7 @@ pre-commit install
 uv run python -m src.apps.hello_app.main
 
 # Run with specific app.toml
-uv run python -m src.apps.ImageAnalyze.main
+uv run python -m src.apps.default_app.main
 
 # Run tests
 uv run pytest
@@ -59,101 +59,8 @@ BCor/
 
 ## Creating a New Module
 
-### 1. Module Structure
-Create directory structure:
-```
-src/modules/your_module/
-├── __init__.py
-├── module.py
-├── messages.py
-├── handlers.py
-├── provider.py
-├── domain/
-│   ├── __init__.py
-│   └── models.py
-└── adapters/
-    ├── __init__.py
-    └── repository.py
-```
-
-### 2. Define Messages (`messages.py`)
-```python
-from src.core.messages import Command, Event
-
-class CreateItemCommand(Command):
-    name: str
-    description: str
-
-class ItemCreatedEvent(Event):
-    item_id: str
-    name: str
-```
-
-### 3. Create Domain Model (`domain/models.py`)
-```python
-from src.core.domain import Aggregate
-
-class Item(Aggregate):
-    def __init__(self, item_id: str, name: str, description: str):
-        super().__init__()
-        self.item_id = item_id
-        self.name = name
-        self.description = description
-    
-    def create(self):
-        self.add_event(ItemCreatedEvent(
-            item_id=self.item_id,
-            name=self.name
-        ))
-```
-
-### 4. Implement Handlers (`handlers.py`)
-```python
-from src.core.unit_of_work import AbstractUnitOfWork
-from .messages import CreateItemCommand, ItemCreatedEvent
-
-async def handle_create_item(
-    cmd: CreateItemCommand,
-    uow: AbstractUnitOfWork,
-    event_bus
-):
-    async with uow:
-        item = Item(
-            item_id=generate_id(),
-            name=cmd.name,
-            description=cmd.description
-        )
-        item.create()
-        await uow.items.add(item)
-        await uow.commit()
-```
-
-### 5. Register Module (`module.py`)
-```python
-from src.core.module import BaseModule
-from .provider import YourProvider
-from .messages import CreateItemCommand
-from .handlers import handle_create_item
-
-class YourModule(BaseModule):
-    def __init__(self):
-        super().__init__()
-        self.provider = YourProvider()
-        self.command_handlers = {
-            CreateItemCommand: handle_create_item,
-        }
-```
-
-### 6. Create Provider (`provider.py`)
-```python
-from dishka import Provider, Scope
-from .adapters.repository import YourRepository
-
-class YourProvider(Provider):
-    def __init__(self):
-        super().__init__()
-        self.provide(YourRepository, scope=Scope.REQUEST)
-```
+For a detailed step-by-step guide on creating new business modules, setting up dependency injection, and handling messages, please refer to our dedicated **How-To Guide**:
+👉 [How-to: Add New Module](Ddocks/How-tos/Add_New_Module.md)
 
 ## Testing
 

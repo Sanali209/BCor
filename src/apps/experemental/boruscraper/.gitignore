@@ -1,0 +1,5 @@
+/.venv
+/data.db
+/__pycache__
+gui/__pycache__/dupe_dialog.cpython-311.pyc
+*.pyc

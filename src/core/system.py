@@ -50,7 +50,7 @@ class CoreProvider(Provider):
         """
         return self.settings
 
-    @provide(scope=Scope.REQUEST)
+    @provide(scope=Scope.APP)
     async def provide_message_bus(self, uow: AbstractUnitOfWork, container: AsyncContainer) -> typing.AsyncIterable[MessageBus]:
         """Provides a request-scoped MessageBus instance with DI container access.
 

@@ -3,12 +3,12 @@
 Welcome to the BCor project. As an AI agent working in this codebase, you MUST adhere to the following project guidelines and utilize the provided skills effectively.
 
 ## Project Constitution
-**CRITICAL**: All agents MUST read and follow the [Project Constitution](file:///d:/github/BCor/Ddocks/Design_docks/constitution.md). 
+**CRITICAL**: All agents MUST read and follow the [Project Constitution](Ddocks/Design_docks/constitution.md). 
 This document outlines core principles including:
 - **ADR First**: Architecture decisions guide implementation.
 - **TDD Requirement**: Write failing tests before code.
 - **uv Management**: Use `uv` for Python packages.
-- **Linting Hygiene**: Follow the project's [linting strategy](file:///d:/github/BCor/Ddocks/Design_docks/specs/2026-03-19-linting-strategy.md).
+- **Linting Hygiene**: Follow the project's [linting strategy](Ddocks/Design_docks/specs/2026-03-19-linting-strategy.md).
 
 ---
 

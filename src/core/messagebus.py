@@ -152,10 +152,35 @@ class MessageBus:
                 span.set_attribute("handler.name", handler.__name__)
 
                 try:
+                    # Resolve dependencies from container for parameters other than 'event'
+                    sig = inspect.signature(handler)
+                    type_hints = typing.get_type_hints(handler)
+                    kwargs = {}
+                    for i, (param_name, param) in enumerate(sig.parameters.items()):
+                        # Skip the first parameter (the event itself)
+                        if i == 0:
+                            continue
+
+                        if param_name == "uow":
+                            kwargs[param_name] = self.uow
+                            continue
+
+                        # Resolve type hint (handles 'from __future__ import annotations')
+                        hint = type_hints.get(param_name, param.annotation)
+
+                        # Try to resolve from container if available
+                        if self.container and hint != inspect.Parameter.empty:
+                            try:
+                                kwargs[param_name] = await self.container.get(hint)
+                            except Exception as e:
+                                logger.debug(
+                                    f"DI: Could not resolve {param_name} ({hint}) from container: {e}"
+                                )
+
                     if asyncio.iscoroutinefunction(handler):
-                        await handler(event, uow=self.uow)
+                        await handler(event, **kwargs)
                     else:
-                        await asyncio.to_thread(handler, event, uow=self.uow)
+                        await asyncio.to_thread(handler, event, **kwargs)
 
                     await self._publish_collected_events(event)
                 except Exception as e:

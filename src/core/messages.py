@@ -1,22 +1,18 @@
 import uuid
 
-from bubus import BaseEvent
+from bubus.models import BaseEvent
 from pydantic import Field
 
 
 class Message(BaseEvent):  # type: ignore[misc]
     """Base class for all messages in the framework.
-
-    Extends Pydantic BaseModel via bubus.BaseEvent. Supports correlation
-    IDs for distributed tracing and trace stacks for recursion detection.
-
-    Attributes:
-        correlation_id: Unique string linking related messages across the system.
-        trace_stack: List of message types encountered in the current causality chain.
     """
-
     correlation_id: str = Field(default_factory=lambda: uuid.uuid4().hex)
     trace_stack: list[str] = Field(default_factory=list)
+
+    async def event_result(self, raise_if_any: bool = True, raise_if_none: bool = False) -> None:
+        """Stub for event result handling to satisfy MessageBus."""
+        pass
 
 
 class Command(Message):

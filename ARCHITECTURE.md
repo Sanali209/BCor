@@ -69,8 +69,8 @@ src/modules/<module>/
 ```
 
 ### Module Types
-- **Core Modules**: `ecs`, `agm`, `analytics`, `orders`, `vfs`, `llm`, `search`
-- **Applications**: `ImageAnalyze`, `ImageDedup`, `VFSSample`, `hello_app`
+- **Core Modules**: `ecs`, `agm`, `analytics`, `orders`, `vfs`, `llm`, `files`
+- **Applications**: `default_app`, `VFSSample`, `hello_app`
 - **Common Libraries**: `src/common/` (pure Python utilities)
 
 ## Event Flow Example
