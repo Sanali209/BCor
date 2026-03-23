@@ -1,6 +1,6 @@
 import sqlite3
 import os
-from core.models import RelationType
+from src.apps.experemental.imgededupe.core.models import RelationType
 from core.repositories.file_repository import FileRepository
 from core.cluster_services import GraphBuilder
 from core.database import DatabaseManager

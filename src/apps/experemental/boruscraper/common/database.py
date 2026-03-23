@@ -3,14 +3,18 @@ import json
 import os
 from typing import List, Dict, Optional, Any, Tuple, Callable
 from loguru import logger
+from src.porting.repository_utils import SqliteRepositoryBase
 
-class DatabaseManager:
+class DatabaseManager(SqliteRepositoryBase):
     def __init__(self, db_path: str = "data.db"):
+        super().__init__()
         self.db_path = db_path
         self._init_db()
 
     def _get_connection(self):
-        return sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        return conn
 
     def _init_db(self):
         """Initialize the database schema."""
@@ -212,7 +216,7 @@ class DatabaseManager:
         )
         row = cursor.fetchone()
         conn.close()
-        return dict(row) if row else None
+        return self.row_to_dict(row) if row else None
 
     def update_pagination_state(self, project_id: int, url: str, last_page_url: str, direction: str = 'forward'):
         conn = self._get_connection()

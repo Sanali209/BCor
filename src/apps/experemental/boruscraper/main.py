@@ -19,8 +19,7 @@ from src.apps.experemental.boruscraper.common.database import DatabaseManager
 from src.apps.experemental.boruscraper.common.deduplication import DeduplicationManager
 from src.apps.experemental.boruscraper.application.handlers import ScrapeTaskManager
 from src.apps.experemental.boruscraper.infrastructure.events_adapter import GuiEventAdapter
-from src.core.messagebus import MessageBus
-from src.apps.experemental.boruscraper.presentation.gui.mainwindow import MainWindow
+from src.porting.porting import WindowsLoopManager
 
 async def amain(app: QApplication):
     # Bootstrap BCor System
@@ -28,26 +27,32 @@ async def amain(app: QApplication):
     system = System.from_manifest(str(manifest_path))
     await system.start()
     
-    async with system.container() as request_container:
-        # Resolve dependencies from Dishka container
-        db = await request_container.get(DatabaseManager)
-        dedup = await request_container.get(DeduplicationManager)
-        task_manager = await request_container.get(ScrapeTaskManager)
-        bus = await request_container.get(MessageBus)
-        adapter = await request_container.get(GuiEventAdapter)
-        from src.apps.experemental.boruscraper.application.template_registry import ScrapingTemplateRegistry
-        template_registry = await request_container.get(ScrapingTemplateRegistry)
-        loop = asyncio.get_running_loop()
-        
-        window = MainWindow(db=db, dedup=dedup, task_manager=task_manager, bus=bus, adapter=adapter, loop=loop, template_registry=template_registry)
-        window.show()
-        
-        # Keep asyncio alive while qt loop runs
-        stop_future = loop.create_future()
-        app.aboutToQuit.connect(lambda: stop_future.set_result(None) if not stop_future.done() else None)
-        await stop_future
+    try:
+        async with system.container() as request_container:
+            # Resolve dependencies from Dishka container
+            db = await request_container.get(DatabaseManager)
+            dedup = await request_container.get(DeduplicationManager)
+            task_manager = await request_container.get(ScrapeTaskManager)
+            bus = await request_container.get(MessageBus)
+            adapter = await request_container.get(GuiEventAdapter)
+            from src.apps.experemental.boruscraper.application.template_registry import ScrapingTemplateRegistry
+            template_registry = await request_container.get(ScrapingTemplateRegistry)
+            loop = asyncio.get_running_loop()
+            
+            window = MainWindow(db=db, dedup=dedup, task_manager=task_manager, bus=bus, adapter=adapter, loop=loop, template_registry=template_registry)
+            window.show()
+            
+            # Keep asyncio alive while qt loop runs
+            stop_future = loop.create_future()
+            app.aboutToQuit.connect(lambda: stop_future.set_result(None) if not stop_future.done() else None)
+            await stop_future
+    finally:
+        logger.info("Closing system...")
+        await system.stop()
+        await WindowsLoopManager.drain_loop(0.2)
 
 def main():
+    WindowsLoopManager.setup_loop()
     app = QApplication.instance() or QApplication(sys.argv)
     loop = qasync.QEventLoop(app)
     asyncio.set_event_loop(loop)

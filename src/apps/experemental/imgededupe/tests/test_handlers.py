@@ -8,6 +8,7 @@ from src.apps.experemental.imgededupe.application.messages import (
     StartScanCommand, ScanStarted, ScanCompleted
 )
 from src.apps.experemental.imgededupe.core.deduper import Deduper
+from src.apps.experemental.imgededupe.core.scanner import Scanner
 
 @pytest.mark.asyncio
 async def test_handle_start_deduplication():

@@ -11,7 +11,9 @@ from src.apps.experemental.boruscraper.application.messages import (
 )
 
 
-class GuiEventAdapter(QObject):
+from src.porting.ui_bridge import BaseGuiAdapter
+
+class GuiEventAdapter(BaseGuiAdapter):
     """
     Provides PySide6 Signals for the GUI to consume.
     BCor Event Handlers update this adapter.
@@ -23,9 +25,6 @@ class GuiEventAdapter(QObject):
     debug_confirmation_signal = Signal(int, str) # (project_id, message)
     min_content_warning_signal = Signal(int, str, int, int) # (project_id, url, current_size, min_size)
     worker_finished_signal = Signal(int) # (project_id)
-
-    def __init__(self):
-        super().__init__()
 
 
 # ---------------------------------------------------------------------------

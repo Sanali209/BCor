@@ -7,8 +7,8 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QLi
 from PySide6.QtCore import Qt, QSize, Signal, QMimeData, QCoreApplication, QRect
 from PySide6.QtGui import QPixmap, QIcon, QAction, QPainter, QColor, QFont
 
-from core.deduper import Deduper
-from core.thumbnail_manager import ThumbnailManager
+from src.apps.experemental.imgededupe.core.deduper import Deduper
+from src.apps.experemental.imgededupe.core.thumbnail_manager import ThumbnailManager
 from loguru import logger
 
 class ClusterDelegate(QStyledItemDelegate):

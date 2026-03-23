@@ -11,6 +11,8 @@ from playwright.async_api import BrowserContext, Page, Error as PlaywrightError
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from src.apps.experemental.boruscraper.common.schemas import ScraperSettings, TopicData
+from src.porting.porting import PathNormalizer
+from src.porting.async_utils import TaskThrottler
 
 class AsyncResourceDownloader:
     def __init__(self, settings: ScraperSettings, context: BrowserContext):
@@ -48,6 +50,7 @@ class AsyncResourceDownloader:
              result = result[:240]
         return result if result else "none"
 
+    @PathNormalizer.normalize_args
     async def download(self, resource_url: str, resource_field_name: str, topic_data: TopicData) -> Optional[Dict[str, Any]]:
         if not resource_url:
             return None

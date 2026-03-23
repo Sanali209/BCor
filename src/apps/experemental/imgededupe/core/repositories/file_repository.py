@@ -10,13 +10,11 @@ import sqlite3
 from typing import List, Optional, Tuple, Any, Union
 from loguru import logger
 from src.apps.experemental.imgededupe.core.models import FileRelation, RelationType
+from src.porting.repository_utils import SqliteRepositoryBase
 
-class FileRepository:
+class FileRepository(SqliteRepositoryBase):
     """
     Repository for managing File entities and their relationships.
-    
-    Provides methods for CRUD operations on files, efficient batch retrieval,
-    and managing file relationships (duplicates, similarities).
     """
     def __init__(self, db_manager):
         self.db = db_manager
@@ -166,7 +164,7 @@ class FileRepository:
         
         data = []
         if is_pydantic:
-            from core.models import FileRelation
+            from src.apps.experemental.imgededupe.core.models import FileRelation
             for r in relations:
                  if isinstance(r, FileRelation):
                      # Enforce sorting

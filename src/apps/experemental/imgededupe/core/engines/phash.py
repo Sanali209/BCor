@@ -22,10 +22,14 @@ def calculate_hash(file_path):
     except Exception as e:
         return file_path, None, 0, 0, 0, 0, str(e)
 
+from src.porting.porting import PathNormalizer
+from src.porting.repository_utils import SqliteRepositoryBase
+
 class PHashEngine(BaseEngine):
     def initialize(self):
         pass 
 
+    @PathNormalizer.normalize_args('files')
     def index_files(self, files, progress_callback=None):
         """
         Multiprocess hashing of files.
@@ -88,33 +92,36 @@ class PHashEngine(BaseEngine):
                 if progress_callback:
                     progress_callback(count, total)
 
+    @PathNormalizer.normalize_args('root_paths')
     def find_duplicates(self, files=None, threshold=5, root_paths=None, include_ignored=False, progress_callback=None):
         if files is None:
             if root_paths:
                 files = self.db_manager.get_files_in_roots(root_paths)
-                logger.info(f"PHashEngine: Loaded {len(files)} files from {len(root_paths)} roots.")
+                logger.info(f"PHashEngine: DB query returned {len(files)} files for roots {root_paths}.")
             else:
                 files = self.db_manager.get_all_files()
+                logger.info(f"PHashEngine: DB query returned {len(files)} files (all).")
         
-        logger.info(f"PHashEngine: Processing {len(files)} files.")
+        for f in files[:3]: logger.debug(f"DB File: {f['path']} phash={f['phash']}")
 
-        # Filter by roots
         if root_paths:
-            norm_roots = [os.path.normpath(r) for r in root_paths]
             def is_in_roots(f_path):
-                norm_path = os.path.normpath(f_path)
-                for r in norm_roots:
-                    if norm_path == r or norm_path.startswith(r + os.sep):
+                norm_path = PathNormalizer.norm(f_path)
+                for r in root_paths:
+                    if norm_path == r or norm_path.startswith(r + os.sep) or norm_path.startswith(r + "/"):
                         return True
                 return False
             files = [f for f in files if is_in_roots(f['path'])]
             logger.info(f"PHashEngine: Filtered to {len(files)} files within roots.")
-
+        
         # 1. Exact Match Grouping
         buckets = defaultdict(list)
         for f in files:
-            if f['phash']: 
-                buckets[f['phash']].append(f)
+            ph = f['phash']
+            if ph: 
+                buckets[ph].append(f)
+            else:
+                logger.warning(f"File missing hash in search: {f['path']}")
 
         hash_groups = list(buckets.items())
         
@@ -140,26 +147,32 @@ class PHashEngine(BaseEngine):
             if root1 != root2:
                 parent[root1] = root2
 
-        # Query
+        # Query and Pair Generation
+        found_pairs = []
+
+        # Part A: Identical Hashes (dist=0 internal to buckets)
+        for h, file_list in hash_groups:
+            if len(file_list) > 1:
+                # Note: PHashEngine uses hash strings for found_pairs keys here
+                # We need to store hash pairs or ID pairs? 
+                # Existing logic at line 172 converts found_pairs (type list of tuples)
+                # where each tuple is (h1, h2, type, dist).
+                # For internal bucket matches, h1 == h2.
+                found_pairs.append((h, h, 'phash_match', 0))
+
+        # Part B: Fuzzy matches between different hashes
         total = len(hash_groups)
         log_interval = max(1, total // 10)
         
-        found_pairs = []
-
         for i, (h, _) in enumerate(hash_groups):
             matches = tree.query(h, int(threshold))
             for match_h, dist in matches:
                 if dist > 0:
-                    # Check if ignored before grouping
+                    # Union only different hashes
                     is_ignored = self.db_manager.is_ignored(h, match_h)
-                    
                     if include_ignored or not is_ignored:
                         union(h, match_h)
                     
-                    # Store pair for persistence (if not already ignored/handled)
-                    # We want to capture it even if ignored, to update distance if needed?
-                    # But add_ignored_pairs_batch(overwrite=False) won't update if exists.
-                    # That's fine.
                     h1, h2 = sorted((h, match_h))
                     found_pairs.append((h1, h2, 'phash_match', dist))
             
@@ -167,7 +180,6 @@ class PHashEngine(BaseEngine):
                 logger.info(f"PHash Matching Progress: {i}/{total}")
                 if progress_callback:
                     progress_callback(i, total)
-                QCoreApplication.processEvents()
         
         
         # Persist found pairs to DB (convert hash-based to ID-based)
@@ -180,15 +192,27 @@ class PHashEngine(BaseEngine):
             
             # Convert hash pairs to ID pairs
             from src.apps.experemental.imgededupe.core.models import FileRelation, RelationType
+            import itertools
             id_relations = []
             for h1, h2, rel_type, dist in found_pairs:
                 ids1 = hash_to_ids.get(h1, [])
                 ids2 = hash_to_ids.get(h2, [])
                 
-                # Create relations for all combinations of IDs
-                for id1 in ids1:
-                    for id2 in ids2:
-                        if id1 != id2:
+                if h1 == h2:
+                    # Internal relations for identical hashes
+                    if len(ids1) > 1:
+                        for id_a, id_b in itertools.combinations(ids1, 2):
+                             s1, s2 = sorted((id_a, id_b))
+                             id_relations.append(FileRelation(
+                                 id1=s1,
+                                 id2=s2,
+                                 relation_type=RelationType.NEW_MATCH,
+                                 distance=float(dist)
+                             ))
+                else:
+                    # Relations between different hashes
+                    for id1 in ids1:
+                        for id2 in ids2:
                             s1, s2 = sorted((id1, id2))
                             id_relations.append(FileRelation(
                                 id1=s1,
@@ -198,7 +222,7 @@ class PHashEngine(BaseEngine):
                             ))
             
             if id_relations:
-                # Remove duplicates
+                # Remove duplicates (important as BKTree matches might be bidirectional or redundant)
                 unique_relations = list({(r.id1, r.id2): r for r in id_relations}.values())
                 logger.info(f"PHashEngine: Persisting {len(unique_relations)} ID-based pairs to DB...")
                 

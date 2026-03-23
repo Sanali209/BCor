@@ -3,7 +3,7 @@ from src.core.repository import AbstractRepository
 from src.apps.experemental.imgededupe.core.database import DatabaseManager
 from src.apps.experemental.imgededupe.core.models import Cluster
 
-class BcorClusterRepository(AbstractRepository):
+class BcorClusterRepository(AbstractRepository[Cluster]):
     """
     BCor-native Repository for Cluster entities.
     """
@@ -11,9 +11,8 @@ class BcorClusterRepository(AbstractRepository):
         super().__init__()
         self.db = db_manager
 
-    def save(self, cluster_aggregate: Cluster) -> None:
-        """Saves a cluster aggregate and tracks it."""
-        # Use legacy create_cluster or update_cluster
+    def _add(self, cluster_aggregate: Cluster) -> None:
+        """Saves a cluster aggregate."""
         if cluster_aggregate.id:
             self.db.update_cluster(
                 cluster_id=cluster_aggregate.id,
@@ -26,10 +25,20 @@ class BcorClusterRepository(AbstractRepository):
                 target_folder=cluster_aggregate.target_folder
             )
             cluster_aggregate.id = cluster_id
-            
-        self.seen.add(cluster_aggregate)
 
-    def get_by_id(self, cluster_id: int) -> Optional[Cluster]:
+    def _get(self, cluster_id: str) -> Optional[Cluster]:
         """Retrieves a cluster by ID."""
-        # TODO: Implement lazy loading from legacy clusters table
-        return None
+        try:
+            cid = int(cluster_id)
+        except (ValueError, TypeError):
+            return None
+            
+        row = self.db.get_cluster_by_id(cid)
+        if not row:
+            return None
+            
+        return Cluster(
+            id=row['id'],
+            name=row['name'],
+            target_folder=row['target_folder']
+        )

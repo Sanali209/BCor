@@ -4,7 +4,7 @@ import re
 import subprocess
 import platform
 from loguru import logger
-from core.commands.base import CommandHistory
+from src.apps.experemental.imgededupe.core.commands.base import CommandHistory
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QListWidget, QListView, 
                                QLabel, QPushButton, QScrollArea, QFrame, QMessageBox, QListWidgetItem, QMenu,
                                QDialog, QLineEdit, QFileDialog, QDialogButtonBox, QGridLayout, QSizePolicy)
@@ -13,7 +13,7 @@ from PySide6.QtGui import QPixmap, QImage, QFont, QKeySequence, QShortcut
 import shutil
 from PIL import Image, ImageChops, ImageEnhance, ImageOps
 import numpy as np
-from core.deduper import Deduper
+from src.apps.experemental.imgededupe.core.deduper import Deduper
 from PySide6.QtCore import QAbstractListModel, QModelIndex
 
 class PairsModel(QAbstractListModel):
@@ -510,6 +510,10 @@ class ResultsWidget(QWidget):
             self.refresh_current_view()
     
 
+    def refresh_results(self):
+        """Bridge to load_results for MessageBus events."""
+        self.load_results()
+    
     def load_results(self, existing_results=None):
         self.include_ignored = self.session.include_ignored
         
@@ -517,22 +521,11 @@ class ResultsWidget(QWidget):
         if existing_results is not None:
              relations = existing_results
         else:
-             # Initialize engine
-             engine_type = self.session.engine
-             try:
-                 self.deduper.set_engine(engine_type)
-                 # Deduper now returns List[FileRelation]
-                 relations = self.deduper.find_duplicates(
-                     self.session.threshold, 
-                     self.session.include_ignored, 
-                     self.session.roots
-                 )
-             except Exception as e:
-                 QMessageBox.critical(self, "Engine Error", f"Failed to load engine {engine_type}:\n{e}")
-                 return
+             # Just load existing relations from repository
+             relations = self.file_repo.get_relations_by_threshold(self.session.threshold)
 
         # Hydrate relations with file info
-        from core.models import FileRelation, RelationType
+        from src.apps.experemental.imgededupe.core.models import FileRelation, RelationType
         
         # 1. Collect all File IDs
         all_ids = set()

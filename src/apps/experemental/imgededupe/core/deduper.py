@@ -67,6 +67,14 @@ class Deduper:
         """
         if roots is None: roots = []
         
+        # Ensure files are hashed/indexed before searching
+        # We fetch paths that need processing in the given roots
+        files_for_indexing = self.db_manager.get_files_in_roots(roots) if roots else self.db_manager.get_all_files()
+        paths_for_indexing = [f['path'] for f in files_for_indexing]
+        if paths_for_indexing:
+            logger.info(f"Deduper: Indexing {len(paths_for_indexing)} files before search...")
+            self.engine.index_files(paths_for_indexing, progress_callback=progress_callback)
+            
         # Engine execution
         results = self.engine.find_duplicates(
             files=None, 

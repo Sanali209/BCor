@@ -23,6 +23,8 @@ from src.apps.experemental.boruscraper.application.messages import (
     WorkerFinishedEvent
 )
 
+from src.porting.async_utils import TaskThrottler
+
 class ScrapeProjectUseCase:
     """Use case to scrape an entire project using async Playwright."""
     
@@ -38,6 +40,7 @@ class ScrapeProjectUseCase:
         self.debug_mode = False
         self.resolution_action: Optional[str] = None
         self.metadata_writer = MetadataWriter()
+        self.throttler = TaskThrottler(concurrency_limit=5) # Default limit
 
     async def _emit_log(self, project_id: int, msg: str, level: str = "INFO"):
         logger.log(level.upper(), msg)
@@ -185,99 +188,100 @@ class ScrapeProjectUseCase:
             await self.bus.dispatch(WorkerFinishedEvent(project_id=project_id, status="Finished"))
 
     async def _process_topic(self, project_id, project_name, page, downloader, settings, topic_url, stats: dict) -> bool:
-        topic_id = TopicData.generate_id(topic_url)
-        
-        async with self.uow:
-            # check exists using UnitOfWork instead of db directly if possible, or direct db
-            if self.db.post_exists(project_id, topic_id): 
-                return False
-
-            try:
-                @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_exception_type(PlaywrightError), reraise=True)
-                async def _do_topic_nav():
-                    await page.goto(topic_url, wait_until="domcontentloaded", timeout=settings.download_timeout_ms)
-                await _do_topic_nav()
-            except Exception as e:
-                return False
-
-            content = await page.content()
-            soup = BeautifulSoup(content, "lxml")
-            topic_data = TopicData(topic_id, topic_url)
-
-            for field_conf in settings.fields_to_parse:
-                elements = soup.select(field_conf.selector)
-                
-                if field_conf.type == "text":
-                    texts = [el.get_text(strip=True) for el in elements]
-                    if field_conf.filter_regex:
-                        regex = re.compile(field_conf.filter_regex)
-                        texts = [t for t in texts if not regex.search(t)]
-                    if field_conf.prepend_field_name:
-                        texts = [f"{field_conf.name}{field_conf.prepend_delimiter}{t}" for t in texts]
-
-                    topic_data.fields[field_conf.name] = texts if field_conf.multiple else (texts[0] if texts else None)
-                
-                elif field_conf.type == "resource_url":
-                    urls = []
-                    attr = field_conf.attribute or "src"
-                    for el in elements:
-                        if url := el.get(attr):
-                            urls.append(urllib.parse.urljoin(topic_url, url))
-                    
-                    if urls:
-                        target_urls = urls if field_conf.multiple else urls[:1]
-                        downloaded_info = []
-                        for i, res_url in enumerate(target_urls):
-                            _, ext = os.path.splitext(urllib.parse.urlparse(res_url).path)
-                            if ext and ext.lstrip('.').lower() in [e.lower() for e in settings.exclude_extensions]:
-                                continue
-
-                            fname = f"{field_conf.name}_{i}" if len(target_urls) > 1 else field_conf.name
-                            result = await downloader.download(res_url, fname, topic_data)
-                            
-                            if result:
-                                stats["images"] += 1
-                                dhash = self.dedup.calculate_dhash(result['absolute_path'])
-                                is_dupe, conflicts, _ = self.dedup.check_is_duplicate(dhash, project_id, settings.deduplication_threshold)
-                                
-                                if is_dupe:
-                                    await self.bus.dispatch(DuplicateFoundEvent(project_id=project_id, data={"path": result['absolute_path'], "conflicts": [dict(c) for c in conflicts]}))
-                                    self.is_paused = True
-                                    while self.is_paused and self.is_running:
-                                        await asyncio.sleep(0.5)
-                                    
-                                    if self.resolution_action == 'SKIP':
-                                        if os.path.exists(result['absolute_path']): os.remove(result['absolute_path'])
-                                        self.resolution_action = None
-                                        continue
-                                    elif self.resolution_action == 'REPLACE':
-                                        for conf in conflicts:
-                                            old_abs = os.path.join(conf.get('save_path', ''), conf.get('relative_path') or conf.get('file_path', ''))
-                                            if os.path.exists(old_abs): os.remove(old_abs)
-                                        self.resolution_action = None
-
-                                if not hasattr(topic_data, '_pending_resources'):
-                                    topic_data._pending_resources = []
-                                topic_data._pending_resources.append({
-                                    'relative_path': result['relative_path'],
-                                    'dhash': dhash,
-                                    'md5': result['md5']
-                                })
-                                
-                                downloaded_info.append(result['relative_path'])
-                            else:
-                                stats["images_failed"] += 1
-                        
-                        topic_data.fields[field_conf.name] = downloaded_info if field_conf.multiple else (downloaded_info[0] if downloaded_info else None)
+        async with self.throttler:
+            topic_id = TopicData.generate_id(topic_url)
             
-            if not self.is_running: return False
-
-            post_id = self.db.save_post(project_id, topic_id, topic_data.to_dict())
-            if hasattr(topic_data, '_pending_resources'):
-                for res in topic_data._pending_resources:
-                    self.db.save_resource(post_id, res['relative_path'], res['dhash'], res['md5'])
+            async with self.uow:
+                # check exists using UnitOfWork instead of db directly if possible, or direct db
+                if self.db.post_exists(project_id, topic_id): 
+                    return False
+    
+                try:
+                    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_exception_type(PlaywrightError), reraise=True)
+                    async def _do_topic_nav():
+                        await page.goto(topic_url, wait_until="domcontentloaded", timeout=settings.download_timeout_ms)
+                    await _do_topic_nav()
+                except Exception as e:
+                    return False
+    
+                content = await page.content()
+                soup = BeautifulSoup(content, "lxml")
+                topic_data = TopicData(topic_id, topic_url)
+    
+                for field_conf in settings.fields_to_parse:
+                    elements = soup.select(field_conf.selector)
                     
-            self.uow.commit()
-
-        return True
+                    if field_conf.type == "text":
+                        texts = [el.get_text(strip=True) for el in elements]
+                        if field_conf.filter_regex:
+                            regex = re.compile(field_conf.filter_regex)
+                            texts = [t for t in texts if not regex.search(t)]
+                        if field_conf.prepend_field_name:
+                            texts = [f"{field_conf.name}{field_conf.prepend_delimiter}{t}" for t in texts]
+    
+                        topic_data.fields[field_conf.name] = texts if field_conf.multiple else (texts[0] if texts else None)
+                    
+                    elif field_conf.type == "resource_url":
+                        urls = []
+                        attr = field_conf.attribute or "src"
+                        for el in elements:
+                            if url := el.get(attr):
+                                urls.append(urllib.parse.urljoin(topic_url, url))
+                        
+                        if urls:
+                            target_urls = urls if field_conf.multiple else urls[:1]
+                            downloaded_info = []
+                            for i, res_url in enumerate(target_urls):
+                                _, ext = os.path.splitext(urllib.parse.urlparse(res_url).path)
+                                if ext and ext.lstrip('.').lower() in [e.lower() for e in settings.exclude_extensions]:
+                                    continue
+    
+                                fname = f"{field_conf.name}_{i}" if len(target_urls) > 1 else field_conf.name
+                                result = await downloader.download(res_url, fname, topic_data)
+                                
+                                if result:
+                                    stats["images"] += 1
+                                    dhash = self.dedup.calculate_dhash(result['absolute_path'])
+                                    is_dupe, conflicts, _ = self.dedup.check_is_duplicate(dhash, project_id, settings.deduplication_threshold)
+                                    
+                                    if is_dupe:
+                                        await self.bus.dispatch(DuplicateFoundEvent(project_id=project_id, data={"path": result['absolute_path'], "conflicts": [dict(c) for c in conflicts]}))
+                                        self.is_paused = True
+                                        while self.is_paused and self.is_running:
+                                            await asyncio.sleep(0.5)
+                                        
+                                        if self.resolution_action == 'SKIP':
+                                            if os.path.exists(result['absolute_path']): os.remove(result['absolute_path'])
+                                            self.resolution_action = None
+                                            continue
+                                        elif self.resolution_action == 'REPLACE':
+                                            for conf in conflicts:
+                                                old_abs = os.path.join(conf.get('save_path', ''), conf.get('relative_path') or conf.get('file_path', ''))
+                                                if os.path.exists(old_abs): os.remove(old_abs)
+                                            self.resolution_action = None
+    
+                                    if not hasattr(topic_data, '_pending_resources'):
+                                        topic_data._pending_resources = []
+                                    topic_data._pending_resources.append({
+                                        'relative_path': result['relative_path'],
+                                        'dhash': dhash,
+                                        'md5': result['md5']
+                                    })
+                                    
+                                    downloaded_info.append(result['relative_path'])
+                                else:
+                                    stats["images_failed"] += 1
+                            
+                            topic_data.fields[field_conf.name] = downloaded_info if field_conf.multiple else (downloaded_info[0] if downloaded_info else None)
+                
+                if not self.is_running: return False
+    
+                post_id = self.db.save_post(project_id, topic_id, topic_data.to_dict())
+                if hasattr(topic_data, '_pending_resources'):
+                    for res in topic_data._pending_resources:
+                        self.db.save_resource(post_id, res['relative_path'], res['dhash'], res['md5'])
+                        
+                self.uow.commit()
+    
+            return True
 
