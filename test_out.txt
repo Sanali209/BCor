@@ -1,68 +1,246 @@
 ============================= test session starts =============================
-platform win32 -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0
+platform win32 -- Python 3.12.9, pytest-9.0.2, pluggy-1.6.0 -- D:\github\BCor\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+PySide6 6.10.2 -- Qt runtime 6.10.2 -- Qt compiled 6.10.2
 rootdir: D:\github\BCor
 configfile: pyproject.toml
-plugins: anyio-4.12.1, asyncio-1.3.0, returns-0.26.0
-asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
-collected 6 items
+plugins: anyio-4.12.1, asyncio-1.3.0, mock-3.15.1, qt-4.5.0, timeout-2.4.0, returns-0.26.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1 item
 
-tests\apps\experemental\boruscraper\test_iteration1.py ...F              [ 66%]
-tests\apps\experemental\boruscraper\test_iteration2.py ..                [100%]
+tests/integration/test_image_asset_full_verification.py::test_image_asset_e2e_pipeline_integrity [32m2026-03-28 22:00:04.958[0m | [34m[1mDEBUG   [0m | [36msrc.core.loop_policies[0m:[36msetup_loop[0m:[36m25[0m - [34m[1mApplied WindowsSelectorEventLoopPolicy[0m
+[32m2026-03-28 22:00:04.983[0m | [1mINFO    [0m | [36msrc.modules.agm.mapper[0m:[36mregister_subclass[0m:[36m86[0m - [1mSyncing schema for registered subclass: ImageAsset[0m
+[32m2026-03-28 22:00:05.081[0m | [1mINFO    [0m | [36msrc.modules.agm.mapper[0m:[36mregister_subclass[0m:[36m86[0m - [1mSyncing schema for registered subclass: Tag[0m
+[32m2026-03-28 22:00:05.188[0m | [34m[1mDEBUG   [0m | [36msrc.modules.agm.mapper[0m:[36msave[0m:[36m323[0m - [34m[1mGenerated Cypher MERGE:
+MERGE (n {id: $id})
+SET n:Asset:ImageAsset
+SET
+  n.uri = $uri,
+  n.name = $name,
+  n.mime_type = $mime_type,
+  n.description = $description,
+  n.content_hash = $content_hash,
+  n.size = $size,
+  n.thumbnails_ready = $thumbnails_ready,
+  n.embedding = $embedding,
+  n.width = $width,
+  n.height = $height,
+  n.format = $format,
+  n.phash = $phash,
+  n.f_number = $f_number,
+  n.exposure_time = $exposure_time,
+  n.iso = $iso,
+  n.camera_make = $camera_make,
+  n.camera_model = $camera_model,
+  n.captured_at = $captured_at,
+  n.clip_embedding = $clip_embedding,
+  n.blip_embedding = $blip_embedding
+
+RETURN n
+Params: {'id': 'dc604e87-d104-4a18-a0c4-a7601726f2d4', 'uri': 'file:///D:/github/BCor/tests/test_data/images/37948324394_38056398fb_b.webp', 'name': 'test_verification.webp', 'mime_type': 'image/webp', 'description': '', 'content_hash': '', 'size': 0, 'thumbnails_ready': False, 'embedding': '[]', 'width': 0, 'height': 0, 'format': '', 'phash': '', 'f_number': 0.0, 'exposure_time': 0.0, 'iso': 0, 'camera_make': '', 'camera_model': '', 'captured_at': 0.0, 'clip_embedding': '[]', 'blip_embedding': '[]'}[0m
+[32m2026-03-28 22:00:05.224[0m | [1mINFO    [0m | [36msrc.modules.agm.mapper[0m:[36msave[0m:[36m382[0m - [1mSource field(s) ['uri'] changed. Dependencies () met. Requesting recalculation for 'content_hash'.[0m
+[32m2026-03-28 22:00:05.224[0m | [1mINFO    [0m | [36msrc.modules.agm.mapper[0m:[36msave[0m:[36m382[0m - [1mSource field(s) ['uri', 'content_hash'] changed. Dependencies () met. Requesting recalculation for 'thumbnails_ready'.[0m
+[32m2026-03-28 22:00:05.224[0m | [1mINFO    [0m | [36msrc.modules.agm.mapper[0m:[36msave[0m:[36m382[0m - [1mSource field(s) ['description'] changed. Dependencies () met. Requesting recalculation for 'embedding'.[0m
+[32m2026-03-28 22:00:05.224[0m | [1mINFO    [0m | [36msrc.modules.agm.mapper[0m:[36msave[0m:[36m382[0m - [1mSource field(s) ['uri'] changed. Dependencies () met. Requesting recalculation for 'f_number'.[0m
+[32m2026-03-28 22:00:05.224[0m | [1mINFO    [0m | [36msrc.modules.agm.mapper[0m:[36msave[0m:[36m382[0m - [1mSource field(s) ['uri'] changed. Dependencies () met. Requesting recalculation for 'exposure_time'.[0m
+[32m2026-03-28 22:00:05.224[0m | [1mINFO    [0m | [36msrc.modules.agm.mapper[0m:[36msave[0m:[36m382[0m - [1mSource field(s) ['uri'] changed. Dependencies () met. Requesting recalculation for 'iso'.[0m
+[32m2026-03-28 22:00:05.224[0m | [1mINFO    [0m | [36msrc.modules.agm.mapper[0m:[36msave[0m:[36m382[0m - [1mSource field(s) ['uri'] changed. Dependencies () met. Requesting recalculation for 'camera_make'.[0m
+[32m2026-03-28 22:00:05.225[0m | [1mINFO    [0m | [36msrc.modules.agm.mapper[0m:[36msave[0m:[36m382[0m - [1mSource field(s) ['uri'] changed. Dependencies () met. Requesting recalculation for 'camera_model'.[0m
+[32m2026-03-28 22:00:05.225[0m | [1mINFO    [0m | [36msrc.modules.agm.mapper[0m:[36msave[0m:[36m382[0m - [1mSource field(s) ['uri'] changed. Dependencies () met. Requesting recalculation for 'captured_at'.[0m
+[32m2026-03-28 22:00:05.225[0m | [1mINFO    [0m | [36msrc.modules.agm.mapper[0m:[36msave[0m:[36m382[0m - [1mSource field(s) ['uri'] changed. Dependencies () met. Requesting recalculation for 'clip_embedding'.[0m
+[32m2026-03-28 22:00:05.225[0m | [1mINFO    [0m | [36msrc.modules.agm.mapper[0m:[36msave[0m:[36m382[0m - [1mSource field(s) ['uri'] changed. Dependencies () met. Requesting recalculation for 'blip_embedding'.[0m
+[32m2026-03-28 22:00:05.225[0m | [1mINFO    [0m | [36msrc.modules.agm.mapper[0m:[36msave[0m:[36m382[0m - [1mSource field(s) ['uri'] changed. Dependencies () met. Requesting recalculation for 'wd_tags'.[0m
+[32m2026-03-28 22:00:08.644[0m | [1mINFO    [0m | [36msrc.modules.assets.infrastructure.handlers.base_hash[0m:[36mrun[0m:[36m63[0m - [1mContentHashHandler: 37948324394_38056398fb_b.webp (91362 bytes) -> 7548e62c...[0m
+[32m2026-03-28 22:00:08.730[0m | [33m[1mWARNING [0m | [36msrc.modules.assets.infrastructure.handlers.thumbnail[0m:[36mrun[0m:[36m77[0m - [33m[1mThumbnailHandler: No content_hash for file:///D:/github/BCor/tests/test_data/images/37948324394_38056398fb_b.webp[0m
+[32m2026-03-28 22:00:19.864[0m | [1mINFO    [0m | [36msrc.modules.assets.infrastructure.handlers.blip[0m:[36m_get_model[0m:[36m27[0m - [1mBLIPHandler: Loading Salesforce/blip-image-captioning-base...[0m
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+The image processor of type `BlipImageProcessor` is now loaded as a fast processor by default, even if the model checkpoint was saved with a slow processor. This is a breaking change and may produce slightly different outputs. To continue using the slow processor, instantiate this class with `use_fast=False`. 
+`BlipModel` is going to be deprecated in future release, please use `BlipForConditionalGeneration`, `BlipForQuestionAnswering` or `BlipForImageTextRetrieval` depending on your usecase.
+Loading weights:   0%|          | 0/150 [00:00<?, ?it/s]Loading weights: 100%|##########| 150/150 [00:00<00:00, 23027.91it/s]
+[1mBlipModel LOAD REPORT[0m from: Salesforce/blip-image-captioning-base
+Key                                                                             | Status     | 
+--------------------------------------------------------------------------------+------------+-
+text_decoder.bert.encoder.layer.{0...11}.attention.output.dense.weight          | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.crossattention.output.dense.bias       | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.crossattention.self.value.weight       | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.crossattention.output.LayerNorm.weight | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.crossattention.output.dense.weight     | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.attention.self.value.weight            | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.attention.output.dense.bias            | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.crossattention.output.LayerNorm.bias   | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.attention.self.value.bias              | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.attention.output.LayerNorm.weight      | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.attention.self.query.weight            | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.output.dense.weight                    | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.attention.output.LayerNorm.bias        | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.intermediate.dense.bias                | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.crossattention.self.query.weight       | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.crossattention.self.key.bias           | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.output.dense.bias                      | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.crossattention.self.value.bias         | UNEXPECTED | 
+text_decoder.cls.predictions.transform.LayerNorm.bias                           | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.intermediate.dense.weight              | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.crossattention.self.query.bias         | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.output.LayerNorm.bias                  | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.attention.self.key.weight              | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.attention.self.key.bias                | UNEXPECTED | 
+text_decoder.bert.embeddings.position_ids                                       | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.attention.self.query.bias              | UNEXPECTED | 
+text_decoder.cls.predictions.transform.dense.weight                             | UNEXPECTED | 
+text_decoder.bert.embeddings.LayerNorm.bias                                     | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.crossattention.self.key.weight         | UNEXPECTED | 
+text_decoder.bert.embeddings.LayerNorm.weight                                   | UNEXPECTED | 
+text_decoder.bert.encoder.layer.{0...11}.output.LayerNorm.weight                | UNEXPECTED | 
+text_decoder.cls.predictions.decoder.weight                                     | UNEXPECTED | 
+text_decoder.cls.predictions.transform.LayerNorm.weight                         | UNEXPECTED | 
+text_decoder.bert.embeddings.position_embeddings.weight                         | UNEXPECTED | 
+text_decoder.bert.embeddings.word_embeddings.weight                             | UNEXPECTED | 
+text_decoder.cls.predictions.transform.dense.bias                               | UNEXPECTED | 
+text_decoder.cls.predictions.bias                                               | UNEXPECTED | 
+text_decoder.cls.predictions.decoder.bias                                       | UNEXPECTED | 
+text_model.encoder.layer.{0...11}.crossattention.output.dense.weight            | MISSING    | 
+text_model.encoder.layer.{0...11}.attention.self.query.bias                     | MISSING    | 
+text_model.encoder.layer.{0...11}.crossattention.output.LayerNorm.weight        | MISSING    | 
+text_model.encoder.layer.{0...11}.intermediate.dense.weight                     | MISSING    | 
+text_model.encoder.layer.{0...11}.crossattention.output.dense.bias              | MISSING    | 
+text_model.encoder.layer.{0...11}.attention.self.value.bias                     | MISSING    | 
+text_model.encoder.layer.{0...11}.attention.self.value.weight                   | MISSING    | 
+text_model.pooler.dense.weight                                                  | MISSING    | 
+text_model.encoder.layer.{0...11}.intermediate.dense.bias                       | MISSING    | 
+text_model.encoder.layer.{0...11}.crossattention.self.value.weight              | MISSING    | 
+text_model.encoder.layer.{0...11}.attention.self.key.weight                     | MISSING    | 
+text_projection.weight                                                          | MISSING    | 
+text_model.encoder.layer.{0...11}.attention.output.dense.bias                   | MISSING    | 
+text_model.encoder.layer.{0...11}.crossattention.output.LayerNorm.bias          | MISSING    | 
+text_model.encoder.layer.{0...11}.output.dense.weight                           | MISSING    | 
+text_model.encoder.layer.{0...11}.crossattention.self.query.weight              | MISSING    | 
+text_model.encoder.layer.{0...11}.crossattention.self.query.bias                | MISSING    | 
+text_model.encoder.layer.{0...11}.crossattention.self.value.bias                | MISSING    | 
+text_model.encoder.layer.{0...11}.attention.output.LayerNorm.weight             | MISSING    | 
+text_model.encoder.layer.{0...11}.output.dense.bias                             | MISSING    | 
+text_model.encoder.layer.{0...11}.attention.output.dense.weight                 | MISSING    | 
+text_model.embeddings.LayerNorm.bias                                            | MISSING    | 
+text_model.encoder.layer.{0...11}.attention.self.query.weight                   | MISSING    | 
+text_model.encoder.layer.{0...11}.attention.self.key.bias                       | MISSING    | 
+text_model.encoder.layer.{0...11}.output.LayerNorm.bias                         | MISSING    | 
+text_model.encoder.layer.{0...11}.crossattention.self.key.bias                  | MISSING    | 
+text_model.encoder.layer.{0...11}.attention.output.LayerNorm.bias               | MISSING    | 
+text_model.encoder.layer.{0...11}.crossattention.self.key.weight                | MISSING    | 
+text_model.embeddings.position_embeddings.weight                                | MISSING    | 
+text_model.encoder.layer.{0...11}.output.LayerNorm.weight                       | MISSING    | 
+text_model.pooler.dense.bias                                                    | MISSING    | 
+text_model.embeddings.word_embeddings.weight                                    | MISSING    | 
+logit_scale                                                                     | MISSING    | 
+text_model.embeddings.LayerNorm.weight                                          | MISSING    | 
+visual_projection.weight                                                        | MISSING    | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+- MISSING[3m	:those params were newly initialized because missing from the checkpoint. Consider training on your downstream task.[0m
+[32m2026-03-28 22:00:25.216[0m | [33m[1mWARNING [0m | [36msrc.modules.assets.infrastructure.handlers.blip[0m:[36mrun[0m:[36m54[0m - [33m[1mBLIPHandler: File not found at \D:\github\BCor\tests\test_data\images\37948324394_38056398fb_b.webp[0m
+[32m2026-03-28 22:00:25.736[0m | [1mINFO    [0m | [36msrc.modules.assets.infrastructure.handlers.clip[0m:[36m_get_model[0m:[36m26[0m - [1mCLIPHandler: Loading clip-ViT-B-32 model...[0m
+Loading weights:   0%|          | 0/398 [00:00<?, ?it/s]Loading weights:  88%|########8 | 351/398 [00:00<00:00, 3499.91it/s]Loading weights: 100%|##########| 398/398 [00:00<00:00, 3591.44it/s]
+[1mCLIPModel LOAD REPORT[0m from: C:\Users\User\.cache\huggingface\hub\models--sentence-transformers--clip-ViT-B-32\snapshots\327ab6726d33c0e22f920c83f2ff9e4bd38ca37f\0_CLIPModel
+Key                                  | Status     |  | 
+-------------------------------------+------------+--+-
+vision_model.embeddings.position_ids | UNEXPECTED |  | 
+text_model.embeddings.position_ids   | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+The image processor of type `CLIPImageProcessor` is now loaded as a fast processor by default, even if the model checkpoint was saved with a slow processor. This is a breaking change and may produce slightly different outputs. To continue using the slow processor, instantiate this class with `use_fast=False`. 
+[32m2026-03-28 22:00:27.684[0m | [33m[1mWARNING [0m | [36msrc.modules.assets.infrastructure.handlers.clip[0m:[36mrun[0m:[36m52[0m - [33m[1mCLIPHandler: File not found at \D:\github\BCor\tests\test_data\images\37948324394_38056398fb_b.webp[0m
+[32m2026-03-28 22:00:27.740[0m | [33m[1mWARNING [0m | [36msrc.modules.assets.infrastructure.handlers.thumbnail[0m:[36mrun[0m:[36m77[0m - [33m[1mThumbnailHandler: No content_hash for file:///D:/github/BCor/tests/test_data/images/37948324394_38056398fb_b.webp[0m
+FAILED[32m2026-03-28 22:00:27.899[0m | [34m[1mDEBUG   [0m | [36msrc.core.loop_policies[0m:[36mdrain_loop[0m:[36m34[0m - [34m[1mDraining event loop for 0.1s...[0m
+
 
 ================================== FAILURES ===================================
-________________ test_dishka_provider_yields_database_manager _________________
+___________________ test_image_asset_e2e_pipeline_integrity ___________________
+
+mapper = <src.modules.agm.mapper.AGMMapper object at 0x000001EC50864740>
+session = <neo4j._async.work.session.AsyncSession object at 0x000001EC50867AD0>
 
     @pytest.mark.asyncio
-    async def test_dishka_provider_yields_database_manager():
-        from src.apps.experemental.boruscraper.settings import BoruScraperSettings
-        from src.apps.experemental.boruscraper.provider import BoruScraperProvider
-        from src.apps.experemental.boruscraper.database import DatabaseManager
+    async def test_image_asset_e2e_pipeline_integrity(mapper: AGMMapper, session: AsyncSession):
+        """
+        End-to-End verification of the ImageAsset metadata extraction pipeline.
+        Steps:
+        1. Create ImageAsset with URI.
+        2. Save to Neo4j (triggers Stored field recalcs).
+        3. Manually run compute_stored_field for all @Stored fields.
+        4. Verify Neo4j has correct primitives (no JSON strings).
+        5. Verify Graph relationships (Tags, InferenceEvents).
+        """
+        if not os.path.exists(TEST_IMAGE_PATH):
+            pytest.skip(f"Test image missing: {TEST_IMAGE_PATH}")
     
-        settings_dict = {"boruscraper": BoruScraperSettings(save_path="/tmp/test", deduplication_threshold=10)}
-        provider = BoruScraperProvider()
+        asset_id = str(uuid.uuid4())
+        asset = ImageAsset(
+            id=asset_id,
+            uri=TEST_IMAGE_URI,
+            name="test_verification.webp",
+            mime_type="image/webp"
+        )
     
-        class SettingsProvider(Provider):
-            @provide(scope=Scope.APP)
-            def get_settings(self) -> dict[str, BaseSettings]:
-                return settings_dict
+        # 1. Initial Save
+        await mapper.save(asset, session=session)
     
->       container = make_async_container(SettingsProvider(), provider)
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        # 2. Trigger Pipeline (Normally automated via MessageBus + TaskIQ)
+        # Fields to extract: exif_data, content_hash, thumbnail, blip_caption, clip_embedding, wd_tags
+        fields_to_trigger = [
+            ("content_hash", "ContentHashHandler"),
+            ("exif_data", "Pyexiv2Smart"),
+            ("thumbnail", "ThumbnailHandler"),
+            ("blip_caption", "BLIP"),
+            ("clip_embedding", "CLIP"),
+            ("wd_tags", "SmilingWolf")
+        ]
+    
+        for field_name, handler_name in fields_to_trigger:
+            await compute_stored_field(
+                node_id=asset_id,
+                field_name=field_name,
+                source_value=TEST_IMAGE_URI,
+                handler=handler_name,
+                mime_type="image/webp"
+            )
+    
+        # 3. Reload from DB and Verify
+        # We clear the mapper cache if any existed (not relevant here but good practice)
+        # Re-fetch asset
+        result = await session.run(
+            """
+            MATCH (n:ImageAsset {id: $id})
+            OPTIONAL MATCH (n)-[:HAS_TAG]->(t:Tag)
+            OPTIONAL MATCH (n)-[:INFERENCE_EVENT]->(ie:InferenceEvent)
+            RETURN n, collect(DISTINCT t) as tags, collect(DISTINCT ie) as events
+            """,
+            {"id": asset_id}
+        )
+        record = await result.single()
+        assert record is not None
+    
+        props = record["n"]._properties
+        tags = record["tags"]
+    
+        # 3a. Verify Core Properties
+        assert props["content_hash"] is not None
+        assert isinstance(props["content_hash"], str)
+>       assert props["content_hash"].startswith("sha256:")
+E       AssertionError: assert False
+E        +  where False = <built-in method startswith of str object at 0x000001ECBA937C20>('sha256:')
+E        +    where <built-in method startswith of str object at 0x000001ECBA937C20> = '7548e62c07618b30ea6843fa08a57fb12677b1e18ecd216be602a83fab5696e8'.startswith
 
-tests\apps\experemental\boruscraper\test_iteration1.py:43: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-.venv\Lib\site-packages\dishka\async_container.py:402: in make_async_container
-    registries = builder.build()
-                 ^^^^^^^^^^^^^^^
-.venv\Lib\site-packages\dishka\graph_builder\builder.py:554: in build
-    GraphValidator(registries).validate()
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\integration\test_image_asset_full_verification.py:120: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  huggingface_hub.utils._http:_http.py:916 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+WARNING  neo4j.notifications:result.py:343 Received notification from DBMS server: <GqlStatusObject gql_status='01N42', status_description="One of the relationship types in your query is not available in the database, make sure you didn't misspell it or that the label is available when you run this statement in your application (the missing relationship type is: INFERENCE_EVENT)", position=<SummaryInputPosition line=4, column=30, offset=116>, raw_classification='UNRECOGNIZED', classification=<NotificationClassification.UNRECOGNIZED: 'UNRECOGNIZED'>, raw_severity='WARNING', severity=<NotificationSeverity.WARNING: 'WARNING'>, diagnostic_record={'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/', '_classification': 'UNRECOGNIZED', '_severity': 'WARNING', '_position': {'column': 30, 'offset': 116, 'line': 4}}> for query: '\n        MATCH (n:ImageAsset {id: $id})\n        OPTIONAL MATCH (n)-[:HAS_TAG]->(t:Tag)\n        OPTIONAL MATCH (n)-[:INFERENCE_EVENT]->(ie:InferenceEvent)\n        RETURN n, collect(DISTINCT t) as tags, collect(DISTINCT ie) as events\n        '
+============================== warnings summary ===============================
+tests/integration/test_image_asset_full_verification.py::test_image_asset_e2e_pipeline_integrity
+  D:\github\BCor\.venv\Lib\site-packages\transformers\models\clip\tokenization_clip.py:79: DeprecationWarning: Deprecated in 0.9.0: BPE.__init__ will not create from files anymore, try `BPE.from_file` instead
+    BPE(
 
-self = <dishka.graph_builder.validator.GraphValidator object at 0x000002993BFDDB50>
-
-    def validate(self) -> None:
-        for registry_index, registry in enumerate(self.registries):
-            factories = tuple(registry.factories.values())
-            for factory in factories:
-                self.path = {}
-                try:
-                    self._validate_factory(factory, registry_index)
-                except NoFactoryError as e:
->                   raise GraphMissingFactoryError(
-                        e.requested,
-                        e.path,
-                        self._find_other_scope(e.requested),
-                        self._find_other_component(e.requested),
-                        e.suggest_abstract_factories,
-                        e.suggest_concrete_factories,
-                    ) from None
-E                   dishka.exceptions.GraphMissingFactoryError: Cannot find factory for (MessageBus, component=''). It is missing or has invalid scope.
-E                      │                                      ◈ Scope.APP, component='' ◈                                   
-E                      ▼   src.apps.experemental.boruscraper.handlers.ThreadManager   BoruScraperProvider.get_thread_manager
-E                      ╰─> src.core.messagebus.MessageBus                             ???
-
-.venv\Lib\site-packages\dishka\graph_builder\validator.py:99: GraphMissingFactoryError
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
 =========================== short test summary info ===========================
-FAILED tests/apps/experemental/boruscraper/test_iteration1.py::test_dishka_provider_yields_database_manager
-========================= 1 failed, 5 passed in 3.57s =========================
-bcor-expert: Forcing pytest process exit to avoid teardown hang...
+FAILED tests/integration/test_image_asset_full_verification.py::test_image_asset_e2e_pipeline_integrity
+======================== 1 failed, 1 warning in 26.43s ========================

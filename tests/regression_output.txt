@@ -1,0 +1,174 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.9, pytest-9.0.2, pluggy-1.6.0 -- D:\github\BCor\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+PySide6 6.10.2 -- Qt runtime 6.10.2 -- Qt compiled 6.10.2
+rootdir: D:\github\BCor
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, mock-3.15.1, qt-4.5.0, timeout-2.4.0, returns-0.26.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 3 items
+
+tests/integration/test_metadata_regression.py::test_metadata_primitive_type_regression FAILED [ 33%]
+tests/integration/test_metadata_regression.py::test_binary_serialization_regression FAILED [ 66%]
+tests/integration/test_metadata_regression.py::test_blip_embedding_regression FAILED [100%]
+
+================================== FAILURES ===================================
+___________________ test_metadata_primitive_type_regression ___________________
+
+neo4j_session = <neo4j._async.work.session.AsyncSession object at 0x000002AA91A49820>
+
+    @pytest.mark.asyncio
+    async def test_metadata_primitive_type_regression(neo4j_session):
+        """
+        FAILURE CASE: f_number and camera_make should NOT contain a full JSON dictionary.
+        They should be primitives (float, str).
+        """
+        repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        sample_path = os.path.join(repo_dir, "tests", "samples", "test_diagnostic.webp")
+    
+        # 1. Test f_number (should be float)
+        await getattr(compute_stored_field, "coroutine", compute_stored_field)(
+            node_id="regression-asset-1",
+            field_name="f_number",
+            source_value=f"file://{sample_path}",
+            mime_type="image/webp",
+            handler="Pyexiv2Smart",
+            model="TestAsset",
+            priority=0
+        )
+    
+        # 2. Test camera_make (should be str)
+        await getattr(compute_stored_field, "coroutine", compute_stored_field)(
+            node_id="regression-asset-1",
+            field_name="camera_make",
+            source_value=f"file://{sample_path}",
+            mime_type="image/webp",
+            handler="Pyexiv2Smart",
+            model="TestAsset",
+            priority=0
+        )
+    
+        result = await neo4j_session.run(
+            "MATCH (n:TestAsset {id: 'regression-asset-1'}) RETURN n.f_number as f, n.camera_make as m"
+        )
+        record = await result.single()
+    
+        f_val = record["f"]
+        m_val = record["m"]
+    
+        # EXPECTED FAILURES if bugs persist:
+        # 1. These will be JSON strings containing dictionaries
+        # 2. Or if dumped as dict, they will be strings starting with '{'
+    
+>       assert isinstance(f_val, (float, int)), f"f_number should be numeric, got {type(f_val)}: {f_val}"
+E       AssertionError: f_number should be numeric, got <class 'NoneType'>: None
+E       assert False
+E        +  where False = isinstance(None, (<class 'float'>, <class 'int'>))
+
+tests\integration\test_metadata_regression.py:65: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+2026-03-28 17:14:42.055 | DEBUG    | src.core.loop_policies:setup_loop:25 - Applied WindowsSelectorEventLoopPolicy
+---------------------------- Captured stderr call -----------------------------
+2026-03-28 17:14:42.107 | INFO     | src.modules.agm.tasks:compute_stored_field:34 - Computing stored field 'f_number' for node 'regression-asset-1' using handler 'Pyexiv2Smart' (MIME: image/webp).
+2026-03-28 17:14:48.206 | ERROR    | src.modules.assets.infrastructure.handlers.smart_exif:run:60 - Pyexiv2SmartHandler failed for D:\github\BCor\tests\samples\test_diagnostic.webp: name 'self' is not defined
+2026-03-28 17:14:48.237 | INFO     | src.modules.agm.tasks:compute_stored_field:139 - Successfully updated property 'f_number' on node 'regression-asset-1'.
+2026-03-28 17:14:48.244 | INFO     | src.modules.agm.tasks:compute_stored_field:162 - Logged InferenceEvent 'EMPTY' for handler 'Pyexiv2Smart' (field: f_number).
+2026-03-28 17:14:48.306 | INFO     | src.modules.agm.tasks:compute_stored_field:34 - Computing stored field 'camera_make' for node 'regression-asset-1' using handler 'Pyexiv2Smart' (MIME: image/webp).
+2026-03-28 17:14:48.308 | ERROR    | src.modules.assets.infrastructure.handlers.smart_exif:run:60 - Pyexiv2SmartHandler failed for D:\github\BCor\tests\samples\test_diagnostic.webp: name 'self' is not defined
+2026-03-28 17:14:48.331 | INFO     | src.modules.agm.tasks:compute_stored_field:139 - Successfully updated property 'camera_make' on node 'regression-asset-1'.
+2026-03-28 17:14:48.337 | INFO     | src.modules.agm.tasks:compute_stored_field:162 - Logged InferenceEvent 'EMPTY' for handler 'Pyexiv2Smart' (field: camera_make).
+-------------------------- Captured stderr teardown ---------------------------
+2026-03-28 17:14:48.385 | DEBUG    | src.core.loop_policies:drain_loop:34 - Draining event loop for 0.1s...
+____________________ test_binary_serialization_regression _____________________
+
+neo4j_session = <neo4j._async.work.session.AsyncSession object at 0x000002AA9C362F30>
+
+    @pytest.mark.asyncio
+    async def test_binary_serialization_regression(neo4j_session):
+        """
+        FAILURE CASE: thumbnail_bytes should NOT be '[object Object]' or serialized badly.
+        It should be a Base64 encoded string or a raw byte-safe format.
+        """
+        repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        sample_path = os.path.join(repo_dir, "tests", "samples", "test_diagnostic.webp")
+    
+        await getattr(compute_stored_field, "coroutine", compute_stored_field)(
+            node_id="regression-asset-1",
+            field_name="thumbnail_bytes",
+            source_value=f"file://{sample_path}",
+            mime_type="image/webp",
+            handler="ThumbnailHandler",
+            model="TestAsset",
+            priority=0
+        )
+    
+        result = await neo4j_session.run(
+            "MATCH (n:TestAsset {id: 'regression-asset-1'}) RETURN n.thumbnail_bytes as thumb"
+        )
+        record = await result.single()
+        thumb = record["thumb"]
+    
+        assert thumb is not None
+        assert thumb != "[object Object]", "Thumbnail should not be stringified as '[object Object]'"
+        # If we use base64, check it
+>       assert isinstance(thumb, str), f"Expected thumb to be Base64 string, got {type(thumb)}"
+E       AssertionError: Expected thumb to be Base64 string, got <class 'bool'>
+E       assert False
+E        +  where False = isinstance(False, str)
+
+tests\integration\test_metadata_regression.py:97: AssertionError
+---------------------------- Captured stderr call -----------------------------
+2026-03-28 17:14:48.533 | INFO     | src.modules.agm.tasks:compute_stored_field:34 - Computing stored field 'thumbnail_bytes' for node 'regression-asset-1' using handler 'ThumbnailHandler' (MIME: image/webp).
+2026-03-28 17:14:48.635 | ERROR    | src.modules.assets.infrastructure.handlers.thumbnail:run:78 - ThumbnailHandler failed for D:\github\BCor\tests\samples\test_diagnostic.webp: Invalid content hash: {'field_name': 'thumbnail_bytes', 'model': 'TestAsset'}
+2026-03-28 17:14:48.665 | INFO     | src.modules.agm.tasks:compute_stored_field:139 - Successfully updated property 'thumbnail_bytes' on node 'regression-asset-1'.
+2026-03-28 17:14:48.681 | INFO     | src.modules.agm.tasks:compute_stored_field:162 - Logged InferenceEvent 'SUCCESS' for handler 'ThumbnailHandler' (field: thumbnail_bytes).
+-------------------------- Captured stderr teardown ---------------------------
+2026-03-28 17:14:48.734 | DEBUG    | src.core.loop_policies:drain_loop:34 - Draining event loop for 0.1s...
+_______________________ test_blip_embedding_regression ________________________
+
+neo4j_session = <neo4j._async.work.session.AsyncSession object at 0x000002AA9C50DA30>
+
+    @pytest.mark.asyncio
+    async def test_blip_embedding_regression(neo4j_session):
+        """
+        FAILURE CASE: blip_embedding should NOT be empty [].
+        """
+        repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        sample_path = os.path.join(repo_dir, "tests", "samples", "test_diagnostic.webp")
+    
+        await getattr(compute_stored_field, "coroutine", compute_stored_field)(
+            node_id="regression-asset-1",
+            field_name="blip_embedding",
+            source_value=f"file://{sample_path}",
+            mime_type="image/webp",
+            handler="BLIP",
+            model="TestAsset",
+            priority=0
+        )
+    
+        result = await neo4j_session.run(
+            "MATCH (n:TestAsset {id: 'regression-asset-1'}) RETURN n.blip_embedding as emb"
+        )
+        record = await result.single()
+        emb_json = record["emb"]
+    
+        assert emb_json is not None
+        emb = json.loads(emb_json) if isinstance(emb_json, str) else emb_json
+        assert isinstance(emb, list)
+>       assert len(emb) == 768, f"BLIP embedding should have 768 dims, got {len(emb) if emb else 0}"
+E       AssertionError: BLIP embedding should have 768 dims, got 0
+E       assert 0 == 768
+E        +  where 0 = len([])
+
+tests\integration\test_metadata_regression.py:126: AssertionError
+---------------------------- Captured stderr call -----------------------------
+2026-03-28 17:14:48.890 | INFO     | src.modules.agm.tasks:compute_stored_field:34 - Computing stored field 'blip_embedding' for node 'regression-asset-1' using handler 'BLIP' (MIME: image/webp).\n2026-03-28 17:15:00.723 | INFO     | src.modules.assets.infrastructure.handlers.blip:_get_model:27 - BLIPHandler: Loading Salesforce/blip-image-captioning-base...\nThe image processor of type `BlipImageProcessor` is now loaded as a fast processor by default, even if the model checkpoint was saved with a slow processor. This is a breaking change and may produce slightly different outputs. To continue using the slow processor, instantiate this class with `use_fast=False`. \nWarning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n`BlipModel` is going to be deprecated in future release, please use `BlipForConditionalGeneration`, `BlipForQuestionAnswering` or `BlipForImageTextRetrieval` depending on your usecase.\n\rLoading weights:   0%|          | 0/150 [00:00<?, ?it/s]\rLoading weights: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 150/150 [00:00<00:00, 11917.44it/s]\n\x1b[1mBlipModel LOAD REPORT\x1b[0m from: Salesforce/blip-image-captioning-base\nKey                                                                             | Status     | \n--------------------------------------------------------------------------------+------------+-\ntext_decoder.bert.encoder.layer.{0...11}.attention.self.query.weight            | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.self.value.bias         | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.output.dense.bias       | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.self.key.bias                | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.output.dense.bias            | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.output.dense.bias                      | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.intermediate.dense.weight              | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.output.dense.weight                    | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.self.key.bias           | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.output.LayerNorm.weight | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.self.value.weight            | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.self.query.bias         | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.self.query.bias              | UNEXPECTED | \ntext_decoder.cls.predictions.transform.dense.bias                               | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.output.LayerNorm.bias        | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.self.value.bias              | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.output.LayerNorm.bias   | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.self.key.weight         | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.output.LayerNorm.bias                  | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.self.query.weight       | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.output.LayerNorm.weight      | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.output.LayerNorm.weight                | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.output.dense.weight     | UNEXPECTED | \ntext_decoder.bert.embeddings.word_embeddings.weight                             | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.output.dense.weight          | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.self.key.weight              | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.intermediate.dense.bias                | UNEXPECTED | \ntext_decoder.cls.predictions.transform.dense.weight                             | UNEXPECTED | \ntext_decoder.bert.embeddings.position_ids                                       | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.self.value.weight       | UNEXPECTED | \ntext_decoder.cls.predictions.bias                                               | UNEXPECTED | \ntext_decoder.bert.embeddings.LayerNorm.bias                                     | UNEXPECTED | \ntext_decoder.cls.predictions.transform.LayerNorm.bias                           | UNEXPECTED | \ntext_decoder.cls.predictions.transform.LayerNorm.weight                         | UNEXPECTED | \ntext_decoder.bert.embeddings.LayerNorm.weight                                   | UNEXPECTED | \ntext_decoder.cls.predictions.decoder.bias                                       | UNEXPECTED | \ntext_decoder.bert.embeddings.position_embeddings.weight                         | UNEXPECTED | \ntext_decoder.cls.predictions.decoder.weight                                     | UNEXPECTED | \ntext_model.encoder.layer.{0...11}.crossattention.self.key.weight                | MISSING    | \ntext_model.encoder.layer.{0...11}.crossattention.output.dense.bias              | MISSING    | \ntext_model.encoder.layer.{0...11}.output.dense.bias                             | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.self.key.bias                       | MISSING    | \ntext_model.encoder.layer.{0...11}.output.LayerNorm.bias                         | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.output.LayerNorm.bias               | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.self.query.weight                   | MISSING    | \ntext_model.encoder.layer.{0...11}.crossattention.output.dense.weight            | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.output.LayerNorm.weight             | MISSING    | \ntext_model.encoder.layer.{0...11}.output.LayerNorm.weight                       | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.self.key.weight                     | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.output.dense.bias                   | MISSING    | \ntext_model.pooler.dense.bias                                                    | MISSING    | \ntext_model.encoder.layer.{0...11}.crossattention.self.key.bias                  | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.output.dense.weight                 | MISSING    | \ntext_model.encoder.layer.{0...11}.crossattention.output.LayerNorm.bias          | MISSING    | \ntext_model.encoder.layer.{0...11}.crossattention.self.value.weight              | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.self.value.bias                     | MISSING    | \ntext_model.encoder.layer.{0...11}.intermediate.dense.bias                       | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.self.query.bias                     | MISSING    | \ntext_model.encoder.layer.{0...11}.crossattention.self.value.bias                | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.self.value.weight                   | MISSING    | \ntext_model.encoder.layer.{0...11}.crossattention.output.LayerNorm.weight        | MISSING    | \ntext_model.encoder.layer.{0...11}.intermediate.dense.weight                     | MISSING    | \ntext_model.pooler.dense.weight                                                  | MISSING    | \ntext_model.encoder.layer.{0...11}.crossattention.self.query.weight              | MISSING    | \ntext_model.encoder.layer.{0...11}.crossattention.self.query.bias                | MISSING    | \ntext_model.encoder.layer.{0...11}.output.dense.weight                           | MISSING    | \ntext_model.embeddings.LayerNorm.bias                                            | MISSING    | \ntext_model.embeddings.position_embeddings.weight                                | MISSING    | \ntext_projection.weight                                                          | MISSING    | \ntext_model.embeddings.LayerNorm.weight                                          | MISSING    | \nlogit_scale                                                                     | MISSING    | \ntext_model.embeddings.word_embeddings.weight                                    | MISSING    | \nvisual_projection.weight                                                        | MISSING    | \n\n\x1b[3mNotes:\n- UNEXPECTED\x1b[3m\t:can be ignored when loading from different task/architecture; not ok if you expect identical arch.\n- MISSING\x1b[3m\t:those params were newly initialized because missing from the checkpoint. Consider training on your downstream task.\x1b[0m\n2026-03-28 17:15:10.451 | ERROR    | src.modules.assets.infrastructure.handlers.blip:run:84 - BLIPHandler failed for D:\\github\\BCor\\tests\\samples\\test_diagnostic.webp: 'BaseModelOutputWithPooling' object has no attribute 'squeeze'\n2026-03-28 17:15:10.497 | INFO     | src.modules.agm.tasks:compute_stored_field:139 - Successfully updated property 'blip_embedding' on node 'regression-asset-1'.\n2026-03-28 17:15:10.511 | INFO     | src.modules.agm.tasks:compute_stored_field:162 - Logged InferenceEvent 'EMPTY' for handler 'BLIP' (field: blip_embedding).
+------------------------------ Captured log call ------------------------------
+WARNING  huggingface_hub.utils._http:_http.py:916 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+-------------------------- Captured stderr teardown ---------------------------
+2026-03-28 17:15:10.615 | DEBUG    | src.core.loop_policies:drain_loop:34 - Draining event loop for 0.1s...
+=========================== short test summary info ===========================
+FAILED tests/integration/test_metadata_regression.py::test_metadata_primitive_type_regression
+FAILED tests/integration/test_metadata_regression.py::test_binary_serialization_regression
+FAILED tests/integration/test_metadata_regression.py::test_blip_embedding_regression
+============================= 3 failed in 33.90s ==============================

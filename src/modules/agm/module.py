@@ -3,9 +3,9 @@ from pydantic_settings import BaseSettings
 
 from src.core.messagebus import MessageBus
 from src.core.module import BaseModule
-from src.modules.agm.handlers import handle_stored_field_recalc
+from src.modules.agm.handlers import handle_stored_field_recalc, handle_node_sync_requested
 from src.modules.agm.mapper import AGMMapper
-from src.modules.agm.messages import StoredFieldRecalculationRequested
+from src.modules.agm.messages import StoredFieldRecalculationRequested, NodeSyncRequested
 
 
 class AGMSettings(BaseSettings):
@@ -54,4 +54,7 @@ class AGMModule(BaseModule):
         self.provider = AGMProvider()
 
         # Register event handlers for TaskIQ triggers
-        self.event_handlers = {StoredFieldRecalculationRequested: [handle_stored_field_recalc]}
+        self.event_handlers = {
+            StoredFieldRecalculationRequested: [handle_stored_field_recalc],
+            NodeSyncRequested: [handle_node_sync_requested]
+        }

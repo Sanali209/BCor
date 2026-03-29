@@ -3,5 +3,8 @@ name = "imgededupe"
 description = "Image Deduplication Module"
 version = "1.0.0"
 
+[storage]
+root = "data"
+
 [module]
 path = "src.apps.experemental.imgededupe.module.ImgeDeduplicationModule"

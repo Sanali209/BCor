@@ -1,0 +1,261 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.9, pytest-9.0.2, pluggy-1.6.0 -- D:\github\BCor\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+PySide6 6.10.2 -- Qt runtime 6.10.2 -- Qt compiled 6.10.2
+rootdir: D:\github\BCor
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, mock-3.15.1, qt-4.5.0, timeout-2.4.0, returns-0.26.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 5 items
+
+tests/integration/test_metadata_regression.py::test_metadata_primitive_type_regression FAILED [ 20%]
+tests/integration/test_metadata_regression.py::test_binary_serialization_regression FAILED [ 40%]
+tests/integration/test_metadata_regression.py::test_blip_embedding_regression FAILED [ 60%]
+tests/integration/test_metadata_regression.py::test_inference_event_provenance_regression FAILED [ 80%]
+tests/integration/test_metadata_regression.py::test_inference_event_metadata_regression PASSED [100%]
+
+================================== FAILURES ===================================
+___________________ test_metadata_primitive_type_regression ___________________
+
+neo4j_session = <neo4j._async.work.session.AsyncSession object at 0x0000015437DC06E0>
+
+    @pytest.mark.asyncio
+    async def test_metadata_primitive_type_regression(neo4j_session):
+        """
+        FAILURE CASE: f_number and camera_make should NOT contain a full JSON dictionary.
+        They should be primitives (float, str).
+        """
+        repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        sample_path = os.path.join(repo_dir, "tests", "samples", "test_diagnostic.webp")
+    
+        # 1. Test f_number (should be float)
+        await getattr(compute_stored_field, "coroutine", compute_stored_field)(
+            node_id="regression-asset-1",
+            field_name="f_number",
+            source_value=f"file://{sample_path}",
+            mime_type="image/webp",
+            handler="Pyexiv2Smart",
+            model="TestAsset",
+            priority=0
+        )
+    
+        # 2. Test camera_make (should be str)
+        await getattr(compute_stored_field, "coroutine", compute_stored_field)(
+            node_id="regression-asset-1",
+            field_name="camera_make",
+            source_value=f"file://{sample_path}",
+            mime_type="image/webp",
+            handler="Pyexiv2Smart",
+            model="TestAsset",
+            priority=0
+        )
+    
+        result = await neo4j_session.run(
+            "MATCH (n:TestAsset {id: 'regression-asset-1'}) RETURN n.f_number as f, n.camera_make as m"
+        )
+        record = await result.single()
+    
+        f_val = record["f"]
+        m_val = record["m"]
+    
+        # EXPECTED FAILURES if bugs persist:
+        # 1. These will be JSON strings containing dictionaries
+        # 2. Or if dumped as dict, they will be strings starting with '{'
+    
+>       assert isinstance(f_val, (float, int)), f"f_number should be numeric, got {type(f_val)}: {f_val}"
+E       AssertionError: f_number should be numeric, got <class 'NoneType'>: None
+E       assert False
+E        +  where False = isinstance(None, (<class 'float'>, <class 'int'>))
+
+tests\integration\test_metadata_regression.py:65: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+2026-03-28 19:41:34.337 | DEBUG    | src.core.loop_policies:setup_loop:25 - Applied WindowsSelectorEventLoopPolicy
+---------------------------- Captured stderr call -----------------------------
+2026-03-28 19:41:34.366 | INFO     | src.modules.agm.tasks:compute_stored_field:35 - Computing stored field 'f_number' for node 'regression-asset-1' using handler 'Pyexiv2Smart' (MIME: image/webp).
+2026-03-28 19:41:34.443 | WARNING  | src.modules.agm.tasks:compute_stored_field:44 - Failed to resolve through registry: non-default argument 'created_at' follows default argument. Falling back to manual lookup.
+2026-03-28 19:41:34.443 | INFO     | src.modules.agm.tasks:compute_stored_field:61 - Manually resolved fallback handler 'Pyexiv2Smart'.
+2026-03-28 19:41:36.494 | INFO     | src.modules.agm.tasks:compute_stored_field:199 - Successfully updated property 'f_number' on node 'regression-asset-1'.
+2026-03-28 19:41:36.545 | ERROR    | src.modules.agm.tasks:compute_stored_field:263 - Critical Worker Failure during field 'f_number' computation for 'regression-asset-1': non-default argument 'created_at' follows default argument
+2026-03-28 19:41:36.545 | INFO     | src.modules.agm.tasks:compute_stored_field:35 - Computing stored field 'camera_make' for node 'regression-asset-1' using handler 'Pyexiv2Smart' (MIME: image/webp).
+2026-03-28 19:41:36.557 | WARNING  | src.modules.agm.tasks:compute_stored_field:44 - Failed to resolve through registry: non-default argument 'created_at' follows default argument. Falling back to manual lookup.
+2026-03-28 19:41:36.558 | INFO     | src.modules.agm.tasks:compute_stored_field:61 - Manually resolved fallback handler 'Pyexiv2Smart'.
+2026-03-28 19:41:36.893 | INFO     | src.modules.agm.tasks:compute_stored_field:199 - Successfully updated property 'camera_make' on node 'regression-asset-1'.
+2026-03-28 19:41:36.908 | ERROR    | src.modules.agm.tasks:compute_stored_field:263 - Critical Worker Failure during field 'camera_make' computation for 'regression-asset-1': non-default argument 'created_at' follows default argument
+-------------------------- Captured stderr teardown ---------------------------
+2026-03-28 19:41:37.632 | DEBUG    | src.core.loop_policies:drain_loop:34 - Draining event loop for 0.1s...
+____________________ test_binary_serialization_regression _____________________
+
+neo4j_session = <neo4j._async.work.session.AsyncSession object at 0x0000015437F7E0F0>
+
+    @pytest.mark.asyncio
+    async def test_binary_serialization_regression(neo4j_session):
+        """
+        FAILURE CASE: thumbnail_bytes should NOT be '[object Object]' or serialized badly.
+        It should be a Base64 encoded string or a raw byte-safe format.
+        """
+        repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        sample_path = os.path.join(repo_dir, "tests", "samples", "test_diagnostic.webp")
+    
+        await getattr(compute_stored_field, "coroutine", compute_stored_field)(
+            node_id="regression-asset-1",
+            field_name="thumbnail_bytes",
+            source_value=f"file://{sample_path}",
+            mime_type="image/webp",
+            handler="ThumbnailHandler",
+            model="TestAsset",
+            priority=0
+        )
+    
+        result = await neo4j_session.run(
+            "MATCH (n:TestAsset {id: 'regression-asset-1'}) RETURN n.thumbnail_bytes as thumb"
+        )
+        record = await result.single()
+        thumb = record["thumb"]
+    
+        assert thumb is not None
+        assert thumb != "[object Object]", "Thumbnail should not be stringified as '[object Object]'"
+        # If we use base64, check it
+>       assert isinstance(thumb, str), f"Expected thumb to be Base64 string, got {type(thumb)}"
+E       AssertionError: Expected thumb to be Base64 string, got <class 'bool'>
+E       assert False
+E        +  where False = isinstance(False, str)
+
+tests\integration\test_metadata_regression.py:97: AssertionError
+---------------------------- Captured stderr call -----------------------------
+2026-03-28 19:41:37.765 | INFO     | src.modules.agm.tasks:compute_stored_field:35 - Computing stored field 'thumbnail_bytes' for node 'regression-asset-1' using handler 'ThumbnailHandler' (MIME: image/webp).
+2026-03-28 19:41:37.772 | WARNING  | src.modules.agm.tasks:compute_stored_field:44 - Failed to resolve through registry: non-default argument 'created_at' follows default argument. Falling back to manual lookup.
+2026-03-28 19:41:37.772 | INFO     | src.modules.agm.tasks:compute_stored_field:61 - Manually resolved fallback handler 'ThumbnailHandler'.
+2026-03-28 19:41:37.875 | ERROR    | src.modules.assets.infrastructure.handlers.thumbnail:run:78 - ThumbnailHandler failed for D:\github\BCor\tests\samples\test_diagnostic.webp: Invalid content hash: {'field_name': 'thumbnail_bytes', 'model': 'TestAsset'}
+2026-03-28 19:41:37.933 | INFO     | src.modules.agm.tasks:compute_stored_field:199 - Successfully updated property 'thumbnail_bytes' on node 'regression-asset-1'.
+2026-03-28 19:41:37.948 | ERROR    | src.modules.agm.tasks:compute_stored_field:263 - Critical Worker Failure during field 'thumbnail_bytes' computation for 'regression-asset-1': non-default argument 'created_at' follows default argument
+-------------------------- Captured stderr teardown ---------------------------
+2026-03-28 19:41:37.972 | DEBUG    | src.core.loop_policies:drain_loop:34 - Draining event loop for 0.1s...
+_______________________ test_blip_embedding_regression ________________________
+
+neo4j_session = <neo4j._async.work.session.AsyncSession object at 0x00000154380EC1A0>
+
+    @pytest.mark.asyncio
+    async def test_blip_embedding_regression(neo4j_session):
+        """
+        FAILURE CASE: blip_embedding should NOT be empty [].
+        """
+        repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        sample_path = os.path.join(repo_dir, "tests", "samples", "test_diagnostic.webp")
+    
+        await getattr(compute_stored_field, "coroutine", compute_stored_field)(
+            node_id="regression-asset-1",
+            field_name="blip_embedding",
+            source_value=f"file://{sample_path}",
+            mime_type="image/webp",
+            handler="BLIP",
+            model="TestAsset",
+            priority=0
+        )
+    
+        result = await neo4j_session.run(
+            "MATCH (n:TestAsset {id: 'regression-asset-1'}) RETURN n.blip_embedding as emb"
+        )
+        record = await result.single()
+        emb_json = record["emb"]
+    
+        assert emb_json is not None
+        emb = json.loads(emb_json) if isinstance(emb_json, str) else emb_json
+        assert isinstance(emb, list)
+>       assert len(emb) == 768, f"BLIP embedding should have 768 dims, got {len(emb) if emb else 0}"
+E       AssertionError: BLIP embedding should have 768 dims, got 0
+E       assert 0 == 768
+E        +  where 0 = len([])
+
+tests\integration\test_metadata_regression.py:126: AssertionError
+---------------------------- Captured stderr call -----------------------------
+2026-03-28 19:41:38.104 | INFO     | src.modules.agm.tasks:compute_stored_field:35 - Computing stored field 'blip_embedding' for node 'regression-asset-1' using handler 'BLIP' (MIME: image/webp).\n2026-03-28 19:41:38.111 | WARNING  | src.modules.agm.tasks:compute_stored_field:44 - Failed to resolve through registry: non-default argument 'created_at' follows default argument. Falling back to manual lookup.\n2026-03-28 19:41:38.111 | INFO     | src.modules.agm.tasks:compute_stored_field:61 - Manually resolved fallback handler 'BLIP'.\n2026-03-28 19:41:53.964 | INFO     | src.modules.assets.infrastructure.handlers.blip:_get_model:27 - BLIPHandler: Loading Salesforce/blip-image-captioning-base...\nWarning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\nThe image processor of type `BlipImageProcessor` is now loaded as a fast processor by default, even if the model checkpoint was saved with a slow processor. This is a breaking change and may produce slightly different outputs. To continue using the slow processor, instantiate this class with `use_fast=False`. \n`BlipModel` is going to be deprecated in future release, please use `BlipForConditionalGeneration`, `BlipForQuestionAnswering` or `BlipForImageTextRetrieval` depending on your usecase.\n\rLoading weights:   0%|          | 0/150 [00:00<?, ?it/s]\rLoading weights: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 150/150 [00:00<00:00, 26630.50it/s]\n\x1b[1mBlipModel LOAD REPORT\x1b[0m from: Salesforce/blip-image-captioning-base\nKey                                                                             | Status     | \n--------------------------------------------------------------------------------+------------+-\ntext_decoder.bert.encoder.layer.{0...11}.crossattention.self.query.bias         | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.intermediate.dense.bias                | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.output.LayerNorm.bias        | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.self.query.weight       | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.self.value.bias              | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.self.key.bias                | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.output.LayerNorm.weight | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.output.dense.bias                      | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.output.LayerNorm.weight                | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.self.value.weight            | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.output.dense.bias       | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.output.dense.weight     | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.self.key.bias           | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.self.query.bias              | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.self.query.weight            | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.output.dense.weight          | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.self.value.weight       | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.output.LayerNorm.bias   | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.output.LayerNorm.weight      | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.self.value.bias         | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.output.LayerNorm.bias                  | UNEXPECTED | \ntext_decoder.cls.predictions.decoder.weight                                     | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.self.key.weight              | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.crossattention.self.key.weight         | UNEXPECTED | \ntext_decoder.bert.embeddings.LayerNorm.weight                                   | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.attention.output.dense.bias            | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.intermediate.dense.weight              | UNEXPECTED | \ntext_decoder.bert.encoder.layer.{0...11}.output.dense.weight                    | UNEXPECTED | \ntext_decoder.bert.embeddings.word_embeddings.weight                             | UNEXPECTED | \ntext_decoder.cls.predictions.transform.LayerNorm.bias                           | UNEXPECTED | \ntext_decoder.bert.embeddings.position_embeddings.weight                         | UNEXPECTED | \ntext_decoder.cls.predictions.transform.LayerNorm.weight                         | UNEXPECTED | \ntext_decoder.cls.predictions.transform.dense.weight                             | UNEXPECTED | \ntext_decoder.cls.predictions.bias                                               | UNEXPECTED | \ntext_decoder.cls.predictions.transform.dense.bias                               | UNEXPECTED | \ntext_decoder.bert.embeddings.position_ids                                       | UNEXPECTED | \ntext_decoder.bert.embeddings.LayerNorm.bias                                     | UNEXPECTED | \ntext_decoder.cls.predictions.decoder.bias                                       | UNEXPECTED | \ntext_model.encoder.layer.{0...11}.crossattention.self.query.weight              | MISSING    | \ntext_model.encoder.layer.{0...11}.crossattention.output.dense.bias              | MISSING    | \ntext_model.encoder.layer.{0...11}.intermediate.dense.weight                     | MISSING    | \ntext_model.encoder.layer.{0...11}.crossattention.self.key.weight                | MISSING    | \ntext_model.encoder.layer.{0...11}.output.LayerNorm.bias                         | MISSING    | \ntext_projection.weight                                                          | MISSING    | \ntext_model.encoder.layer.{0...11}.intermediate.dense.bias                       | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.output.dense.weight                 | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.output.LayerNorm.bias               | MISSING    | \ntext_model.encoder.layer.{0...11}.crossattention.self.value.weight              | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.self.value.bias                     | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.output.LayerNorm.weight             | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.self.key.bias                       | MISSING    | \ntext_model.encoder.layer.{0...11}.output.LayerNorm.weight                       | MISSING    | \ntext_model.encoder.layer.{0...11}.crossattention.output.dense.weight            | MISSING    | \ntext_model.encoder.layer.{0...11}.output.dense.bias                             | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.self.query.bias                     | MISSING    | \ntext_model.encoder.layer.{0...11}.crossattention.output.LayerNorm.bias          | MISSING    | \ntext_model.encoder.layer.{0...11}.crossattention.self.key.bias                  | MISSING    | \ntext_model.encoder.layer.{0...11}.crossattention.self.value.bias                | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.self.key.weight                     | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.self.value.weight                   | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.output.dense.bias                   | MISSING    | \ntext_model.encoder.layer.{0...11}.crossattention.self.query.bias                | MISSING    | \ntext_model.encoder.layer.{0...11}.crossattention.output.LayerNorm.weight        | MISSING    | \ntext_model.encoder.layer.{0...11}.attention.self.query.weight                   | MISSING    | \ntext_model.pooler.dense.weight                                                  | MISSING    | \ntext_model.embeddings.LayerNorm.weight                                          | MISSING    | \ntext_model.encoder.layer.{0...11}.output.dense.weight                           | MISSING    | \ntext_model.embeddings.LayerNorm.bias                                            | MISSING    | \ntext_model.pooler.dense.bias                                                    | MISSING    | \nlogit_scale                                                                     | MISSING    | \ntext_model.embeddings.word_embeddings.weight                                    | MISSING    | \ntext_model.embeddings.position_embeddings.weight                                | MISSING    | \nvisual_projection.weight                                                        | MISSING    | \n\n\x1b[3mNotes:\n- UNEXPECTED\x1b[3m\t:can be ignored when loading from different task/architecture; not ok if you expect identical arch.\n- MISSING\x1b[3m\t:those params were newly initialized because missing from the checkpoint. Consider training on your downstream task.\x1b[0m\n2026-03-28 19:42:01.888 | ERROR    | src.modules.assets.infrastructure.handlers.blip:run:84 - BLIPHandler failed for D:\\github\\BCor\\tests\\samples\\test_diagnostic.webp: 'BaseModelOutputWithPooling' object has no attribute 'squeeze'\n2026-03-28 19:42:02.231 | INFO     | src.modules.agm.tasks:compute_stored_field:199 - Successfully updated property 'blip_embedding' on node 'regression-asset-1'.\n2026-03-28 19:42:02.250 | ERROR    | src.modules.agm.tasks:compute_stored_field:263 - Critical Worker Failure during field 'blip_embedding' computation for 'regression-asset-1': non-default argument 'created_at' follows default argument
+------------------------------ Captured log call ------------------------------
+WARNING  huggingface_hub.utils._http:_http.py:916 Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+-------------------------- Captured stderr teardown ---------------------------
+2026-03-28 19:42:02.280 | DEBUG    | src.core.loop_policies:drain_loop:34 - Draining event loop for 0.1s...
+_________________ test_inference_event_provenance_regression __________________
+
+neo4j_session = <neo4j._async.work.session.AsyncSession object at 0x0000015465AE3AA0>
+
+    @pytest.mark.asyncio
+    async def test_inference_event_provenance_regression(neo4j_session):
+        """
+        FAILURE CASE: InferenceEvent should be linked to the result (Tag) via :GENERATED
+        and to the previous InferenceEvent via :NEXT_INFERENCE.
+        """
+        repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        sample_path = os.path.join(repo_dir, "tests", "samples", "test_diagnostic.webp")
+    
+        # 1. First inference (e.g. wd_tags)
+        await getattr(compute_stored_field, "coroutine", compute_stored_field)(
+            node_id="regression-asset-1",
+            field_name="wd_tags",
+            source_value=f"file://{sample_path}",
+            mime_type="image/webp",
+            handler="SmilingWolf",
+            model="TestAsset",
+            priority=0
+        )
+    
+        # 2. Second inference (e.g. blip)
+        await getattr(compute_stored_field, "coroutine", compute_stored_field)(
+            node_id="regression-asset-1",
+            field_name="blip_embedding",
+            source_value=f"file://{sample_path}",
+            mime_type="image/webp",
+            handler="BLIP",
+            model="TestAsset",
+            priority=0
+        )
+    
+        # Verify GENERATED link for tags (SmilingWolf)
+        result_gen = await neo4j_session.run(
+            """
+            MATCH (e:InferenceEvent {handler_name: 'SmilingWolf'})-[:GENERATED]->(t:Tag)
+            RETURN count(t) as tag_count
+            """
+        )
+        record_gen = await result_gen.single()
+>       assert record_gen["tag_count"] > 0, "InferenceEvent should be linked to generated Tags"
+E       AssertionError: InferenceEvent should be linked to generated Tags
+E       assert 0 > 0
+
+tests\integration\test_metadata_regression.py:167: AssertionError
+---------------------------- Captured stderr call -----------------------------
+2026-03-28 19:42:02.409 | INFO     | src.modules.agm.tasks:compute_stored_field:35 - Computing stored field 'wd_tags' for node 'regression-asset-1' using handler 'SmilingWolf' (MIME: image/webp).
+2026-03-28 19:42:02.419 | WARNING  | src.modules.agm.tasks:compute_stored_field:44 - Failed to resolve through registry: non-default argument 'created_at' follows default argument. Falling back to manual lookup.
+2026-03-28 19:42:02.428 | ERROR    | src.modules.agm.tasks:compute_stored_field:63 - Manual fallback failed for 'SmilingWolf': non-default argument 'created_at' follows default argument
+2026-03-28 19:42:02.429 | ERROR    | src.modules.agm.tasks:compute_stored_field:66 - No handler found for 'SmilingWolf' or field 'wd_tags'. Registry: SmilingWolf, MIME: image/webp
+2026-03-28 19:42:02.429 | INFO     | src.modules.agm.tasks:compute_stored_field:35 - Computing stored field 'blip_embedding' for node 'regression-asset-1' using handler 'BLIP' (MIME: image/webp).
+2026-03-28 19:42:02.437 | WARNING  | src.modules.agm.tasks:compute_stored_field:44 - Failed to resolve through registry: non-default argument 'created_at' follows default argument. Falling back to manual lookup.
+2026-03-28 19:42:02.437 | INFO     | src.modules.agm.tasks:compute_stored_field:61 - Manually resolved fallback handler 'BLIP'.
+2026-03-28 19:42:03.270 | ERROR    | src.modules.assets.infrastructure.handlers.blip:run:84 - BLIPHandler failed for D:\github\BCor\tests\samples\test_diagnostic.webp: 'BaseModelOutputWithPooling' object has no attribute 'squeeze'
+2026-03-28 19:42:03.324 | INFO     | src.modules.agm.tasks:compute_stored_field:199 - Successfully updated property 'blip_embedding' on node 'regression-asset-1'.
+2026-03-28 19:42:03.342 | ERROR    | src.modules.agm.tasks:compute_stored_field:263 - Critical Worker Failure during field 'blip_embedding' computation for 'regression-asset-1': non-default argument 'created_at' follows default argument
+------------------------------ Captured log call ------------------------------
+WARNING  neo4j.notifications:result.py:343 Received notification from DBMS server: <GqlStatusObject gql_status='01N42', status_description="One of the relationship types in your query is not available in the database, make sure you didn't misspell it or that the label is available when you run this statement in your application (the missing relationship type is: GENERATED)", position=<SummaryInputPosition line=2, column=58, offset=66>, raw_classification='UNRECOGNIZED', classification=<NotificationClassification.UNRECOGNIZED: 'UNRECOGNIZED'>, raw_severity='WARNING', severity=<NotificationSeverity.WARNING: 'WARNING'>, diagnostic_record={'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/', '_classification': 'UNRECOGNIZED', '_severity': 'WARNING', '_position': {'column': 58, 'offset': 66, 'line': 2}}> for query: "\n        MATCH (e:InferenceEvent {handler_name: 'SmilingWolf'})-[:GENERATED]->(t:Tag)\n        RETURN count(t) as tag_count\n        "
+-------------------------- Captured stderr teardown ---------------------------
+2026-03-28 19:42:03.423 | DEBUG    | src.core.loop_policies:drain_loop:34 - Draining event loop for 0.1s...
+============================== warnings summary ===============================
+tests/integration/test_metadata_regression.py::test_metadata_primitive_type_regression
+tests/integration/test_metadata_regression.py::test_binary_serialization_regression
+tests/integration/test_metadata_regression.py::test_blip_embedding_regression
+tests/integration/test_metadata_regression.py::test_inference_event_provenance_regression
+tests/integration/test_metadata_regression.py::test_inference_event_metadata_regression
+  D:\github\BCor\.venv\Lib\site-packages\neo4j\_async\work\result.py:635: UserWarning: Expected a result with a single record, but found multiple.
+    warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/integration/test_metadata_regression.py::test_metadata_primitive_type_regression - AssertionError: f_number should be numeric, got <class 'NoneType'>: None
+assert False
+ +  where False = isinstance(None, (<class 'float'>, <class 'int'>))
+FAILED tests/integration/test_metadata_regression.py::test_binary_serialization_regression - AssertionError: Expected thumb to be Base64 string, got <class 'bool'>
+assert False
+ +  where False = isinstance(False, str)
+FAILED tests/integration/test_metadata_regression.py::test_blip_embedding_regression - AssertionError: BLIP embedding should have 768 dims, got 0
+assert 0 == 768
+ +  where 0 = len([])
+FAILED tests/integration/test_metadata_regression.py::test_inference_event_provenance_regression - AssertionError: InferenceEvent should be linked to generated Tags
+assert 0 > 0
+================== 4 failed, 1 passed, 5 warnings in 34.06s ===================

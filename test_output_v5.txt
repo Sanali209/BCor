@@ -1,0 +1,266 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.9, pytest-9.0.2, pluggy-1.6.0 -- D:\github\BCor\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+PySide6 6.10.2 -- Qt runtime 6.10.2 -- Qt compiled 6.10.2
+rootdir: D:\github\BCor
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, mock-3.15.1, qt-4.5.0, timeout-2.4.0, returns-0.26.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 5 items
+
+tests/integration/test_metadata_regression.py::test_metadata_primitive_type_regression FAILED [ 20%]
+tests/integration/test_metadata_regression.py::test_binary_serialization_regression FAILED [ 40%]
+tests/integration/test_metadata_regression.py::test_blip_embedding_regression FAILED [ 60%]
+tests/integration/test_metadata_regression.py::test_inference_event_provenance_regression FAILED [ 80%]
+tests/integration/test_metadata_regression.py::test_inference_event_metadata_regression FAILED [100%]
+
+================================== FAILURES ===================================
+___________________ test_metadata_primitive_type_regression ___________________
+
+neo4j_session = <neo4j._async.work.session.AsyncSession object at 0x00000222CF25C470>
+
+    @pytest.mark.asyncio
+    async def test_metadata_primitive_type_regression(neo4j_session):
+        """
+        FAILURE CASE: f_number and camera_make should NOT contain a full JSON dictionary.
+        They should be primitives (float, str).
+        """
+        repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        sample_path = os.path.join(repo_dir, "tests", "samples", "test_diagnostic.webp")
+    
+        # 1. Test f_number (should be float)
+        await getattr(compute_stored_field, "coroutine", compute_stored_field)(
+            node_id="regression-asset-1",
+            field_name="f_number",
+            source_value=f"file://{sample_path}",
+            mime_type="image/webp",
+            handler="Pyexiv2Smart",
+            model="TestAsset",
+            priority=0
+        )
+    
+        # 2. Test camera_make (should be str)
+        await getattr(compute_stored_field, "coroutine", compute_stored_field)(
+            node_id="regression-asset-1",
+            field_name="camera_make",
+            source_value=f"file://{sample_path}",
+            mime_type="image/webp",
+            handler="Pyexiv2Smart",
+            model="TestAsset",
+            priority=0
+        )
+    
+        result = await neo4j_session.run(
+            "MATCH (n:TestAsset {id: 'regression-asset-1'}) RETURN n.f_number as f, n.camera_make as m"
+        )
+        record = await result.single()
+    
+        f_val = record["f"]
+        m_val = record["m"]
+    
+        # EXPECTED FAILURES if bugs persist:
+        # 1. These will be JSON strings containing dictionaries
+        # 2. Or if dumped as dict, they will be strings starting with '{'
+    
+>       assert isinstance(f_val, (float, int)), f"f_number should be numeric, got {type(f_val)}: {f_val}"
+E       AssertionError: f_number should be numeric, got <class 'NoneType'>: None
+E       assert False
+E        +  where False = isinstance(None, (<class 'float'>, <class 'int'>))
+
+tests\integration\test_metadata_regression.py:65: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+2026-03-28 19:40:28.491 | DEBUG    | src.core.loop_policies:setup_loop:25 - Applied WindowsSelectorEventLoopPolicy
+---------------------------- Captured stderr call -----------------------------
+2026-03-28 19:40:28.858 | INFO     | src.modules.agm.tasks:compute_stored_field:34 - Computing stored field 'f_number' for node 'regression-asset-1' using handler 'Pyexiv2Smart' (MIME: image/webp).
+2026-03-28 19:40:28.998 | WARNING  | src.modules.agm.tasks:compute_stored_field:42 - Failed to resolve through registry: non-default argument 'created_at' follows default argument. Falling back to naming convention.
+2026-03-28 19:40:28.998 | ERROR    | src.modules.agm.tasks:compute_stored_field:46 - No handler found for 'Pyexiv2Smart' or field 'f_number'.
+2026-03-28 19:40:28.998 | INFO     | src.modules.agm.tasks:compute_stored_field:34 - Computing stored field 'camera_make' for node 'regression-asset-1' using handler 'Pyexiv2Smart' (MIME: image/webp).
+2026-03-28 19:40:29.009 | WARNING  | src.modules.agm.tasks:compute_stored_field:42 - Failed to resolve through registry: non-default argument 'created_at' follows default argument. Falling back to naming convention.
+2026-03-28 19:40:29.009 | ERROR    | src.modules.agm.tasks:compute_stored_field:46 - No handler found for 'Pyexiv2Smart' or field 'camera_make'.
+-------------------------- Captured stderr teardown ---------------------------
+2026-03-28 19:40:29.901 | DEBUG    | src.core.loop_policies:drain_loop:34 - Draining event loop for 0.1s...
+____________________ test_binary_serialization_regression _____________________
+
+neo4j_session = <neo4j._async.work.session.AsyncSession object at 0x00000222CF3BEE70>
+
+    @pytest.mark.asyncio
+    async def test_binary_serialization_regression(neo4j_session):
+        """
+        FAILURE CASE: thumbnail_bytes should NOT be '[object Object]' or serialized badly.
+        It should be a Base64 encoded string or a raw byte-safe format.
+        """
+        repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        sample_path = os.path.join(repo_dir, "tests", "samples", "test_diagnostic.webp")
+    
+        await getattr(compute_stored_field, "coroutine", compute_stored_field)(
+            node_id="regression-asset-1",
+            field_name="thumbnail_bytes",
+            source_value=f"file://{sample_path}",
+            mime_type="image/webp",
+            handler="ThumbnailHandler",
+            model="TestAsset",
+            priority=0
+        )
+    
+        result = await neo4j_session.run(
+            "MATCH (n:TestAsset {id: 'regression-asset-1'}) RETURN n.thumbnail_bytes as thumb"
+        )
+        record = await result.single()
+        thumb = record["thumb"]
+    
+>       assert thumb is not None
+E       assert None is not None
+
+tests\integration\test_metadata_regression.py:94: AssertionError
+---------------------------- Captured stderr call -----------------------------
+2026-03-28 19:40:30.045 | INFO     | src.modules.agm.tasks:compute_stored_field:34 - Computing stored field 'thumbnail_bytes' for node 'regression-asset-1' using handler 'ThumbnailHandler' (MIME: image/webp).
+2026-03-28 19:40:30.057 | WARNING  | src.modules.agm.tasks:compute_stored_field:42 - Failed to resolve through registry: non-default argument 'created_at' follows default argument. Falling back to naming convention.
+2026-03-28 19:40:30.057 | ERROR    | src.modules.agm.tasks:compute_stored_field:46 - No handler found for 'ThumbnailHandler' or field 'thumbnail_bytes'.
+-------------------------- Captured stderr teardown ---------------------------
+2026-03-28 19:40:30.090 | DEBUG    | src.core.loop_policies:drain_loop:34 - Draining event loop for 0.1s...
+_______________________ test_blip_embedding_regression ________________________
+
+neo4j_session = <neo4j._async.work.session.AsyncSession object at 0x00000222CF3D1550>
+
+    @pytest.mark.asyncio
+    async def test_blip_embedding_regression(neo4j_session):
+        """
+        FAILURE CASE: blip_embedding should NOT be empty [].
+        """
+        repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        sample_path = os.path.join(repo_dir, "tests", "samples", "test_diagnostic.webp")
+    
+        await getattr(compute_stored_field, "coroutine", compute_stored_field)(
+            node_id="regression-asset-1",
+            field_name="blip_embedding",
+            source_value=f"file://{sample_path}",
+            mime_type="image/webp",
+            handler="BLIP",
+            model="TestAsset",
+            priority=0
+        )
+    
+        result = await neo4j_session.run(
+            "MATCH (n:TestAsset {id: 'regression-asset-1'}) RETURN n.blip_embedding as emb"
+        )
+        record = await result.single()
+        emb_json = record["emb"]
+    
+>       assert emb_json is not None
+E       assert None is not None
+
+tests\integration\test_metadata_regression.py:123: AssertionError
+---------------------------- Captured stderr call -----------------------------
+2026-03-28 19:40:30.244 | INFO     | src.modules.agm.tasks:compute_stored_field:34 - Computing stored field 'blip_embedding' for node 'regression-asset-1' using handler 'BLIP' (MIME: image/webp).
+2026-03-28 19:40:30.257 | WARNING  | src.modules.agm.tasks:compute_stored_field:42 - Failed to resolve through registry: non-default argument 'created_at' follows default argument. Falling back to naming convention.
+2026-03-28 19:40:30.257 | ERROR    | src.modules.agm.tasks:compute_stored_field:46 - No handler found for 'BLIP' or field 'blip_embedding'.
+-------------------------- Captured stderr teardown ---------------------------
+2026-03-28 19:40:30.298 | DEBUG    | src.core.loop_policies:drain_loop:34 - Draining event loop for 0.1s...
+_________________ test_inference_event_provenance_regression __________________
+
+neo4j_session = <neo4j._async.work.session.AsyncSession object at 0x00000222CF3D3B00>
+
+    @pytest.mark.asyncio
+    async def test_inference_event_provenance_regression(neo4j_session):
+        """
+        FAILURE CASE: InferenceEvent should be linked to the result (Tag) via :GENERATED
+        and to the previous InferenceEvent via :NEXT_INFERENCE.
+        """
+        repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        sample_path = os.path.join(repo_dir, "tests", "samples", "test_diagnostic.webp")
+    
+        # 1. First inference (e.g. wd_tags)
+        await getattr(compute_stored_field, "coroutine", compute_stored_field)(
+            node_id="regression-asset-1",
+            field_name="wd_tags",
+            source_value=f"file://{sample_path}",
+            mime_type="image/webp",
+            handler="SmilingWolf",
+            model="TestAsset",
+            priority=0
+        )
+    
+        # 2. Second inference (e.g. blip)
+        await getattr(compute_stored_field, "coroutine", compute_stored_field)(
+            node_id="regression-asset-1",
+            field_name="blip_embedding",
+            source_value=f"file://{sample_path}",
+            mime_type="image/webp",
+            handler="BLIP",
+            model="TestAsset",
+            priority=0
+        )
+    
+        # Verify GENERATED link for tags (SmilingWolf)
+        result_gen = await neo4j_session.run(
+            """
+            MATCH (e:InferenceEvent {handler_name: 'SmilingWolf'})-[:GENERATED]->(t:Tag)
+            RETURN count(t) as tag_count
+            """
+        )
+        record_gen = await result_gen.single()
+>       assert record_gen["tag_count"] > 0, "InferenceEvent should be linked to generated Tags"
+E       AssertionError: InferenceEvent should be linked to generated Tags
+E       assert 0 > 0
+
+tests\integration\test_metadata_regression.py:167: AssertionError
+---------------------------- Captured stderr call -----------------------------
+2026-03-28 19:40:30.458 | INFO     | src.modules.agm.tasks:compute_stored_field:34 - Computing stored field 'wd_tags' for node 'regression-asset-1' using handler 'SmilingWolf' (MIME: image/webp).
+2026-03-28 19:40:30.469 | WARNING  | src.modules.agm.tasks:compute_stored_field:42 - Failed to resolve through registry: non-default argument 'created_at' follows default argument. Falling back to naming convention.
+2026-03-28 19:40:30.469 | ERROR    | src.modules.agm.tasks:compute_stored_field:46 - No handler found for 'SmilingWolf' or field 'wd_tags'.
+2026-03-28 19:40:30.470 | INFO     | src.modules.agm.tasks:compute_stored_field:34 - Computing stored field 'blip_embedding' for node 'regression-asset-1' using handler 'BLIP' (MIME: image/webp).
+2026-03-28 19:40:30.479 | WARNING  | src.modules.agm.tasks:compute_stored_field:42 - Failed to resolve through registry: non-default argument 'created_at' follows default argument. Falling back to naming convention.
+2026-03-28 19:40:30.479 | ERROR    | src.modules.agm.tasks:compute_stored_field:46 - No handler found for 'BLIP' or field 'blip_embedding'.
+------------------------------ Captured log call ------------------------------
+WARNING  neo4j.notifications:result.py:343 Received notification from DBMS server: <GqlStatusObject gql_status='01N42', status_description="One of the relationship types in your query is not available in the database, make sure you didn't misspell it or that the label is available when you run this statement in your application (the missing relationship type is: GENERATED)", position=<SummaryInputPosition line=2, column=58, offset=66>, raw_classification='UNRECOGNIZED', classification=<NotificationClassification.UNRECOGNIZED: 'UNRECOGNIZED'>, raw_severity='WARNING', severity=<NotificationSeverity.WARNING: 'WARNING'>, diagnostic_record={'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/', '_classification': 'UNRECOGNIZED', '_severity': 'WARNING', '_position': {'column': 58, 'offset': 66, 'line': 2}}> for query: "\n        MATCH (e:InferenceEvent {handler_name: 'SmilingWolf'})-[:GENERATED]->(t:Tag)\n        RETURN count(t) as tag_count\n        "
+-------------------------- Captured stderr teardown ---------------------------
+2026-03-28 19:40:30.534 | DEBUG    | src.core.loop_policies:drain_loop:34 - Draining event loop for 0.1s...
+__________________ test_inference_event_metadata_regression ___________________
+
+neo4j_session = <neo4j._async.work.session.AsyncSession object at 0x00000222CF4B5E20>
+
+    @pytest.mark.asyncio
+    async def test_inference_event_metadata_regression(neo4j_session):
+        """
+        FAILURE CASE: InferenceEvent should have field_name and created_at.
+        """
+        repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        sample_path = os.path.join(repo_dir, "tests", "samples", "test_diagnostic.webp")
+    
+        await getattr(compute_stored_field, "coroutine", compute_stored_field)(
+            node_id="regression-asset-1",
+            field_name="f_number",
+            source_value=f"file://{sample_path}",
+            mime_type="image/webp",
+            handler="Pyexiv2Smart",
+            model="TestAsset",
+            priority=0
+        )
+    
+        result = await neo4j_session.run(
+            "MATCH (e:InferenceEvent {handler_name: 'Pyexiv2Smart'}) RETURN e.field_name as f, e.created_at as t"
+        )
+        record = await result.single()
+>       assert record["f"] == "f_number", f"InferenceEvent should store field_name 'f_number', got {record['f']}"
+               ^^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+tests\integration\test_metadata_regression.py:201: TypeError
+---------------------------- Captured stderr call -----------------------------
+2026-03-28 19:40:30.677 | INFO     | src.modules.agm.tasks:compute_stored_field:34 - Computing stored field 'f_number' for node 'regression-asset-1' using handler 'Pyexiv2Smart' (MIME: image/webp).
+2026-03-28 19:40:30.691 | WARNING  | src.modules.agm.tasks:compute_stored_field:42 - Failed to resolve through registry: non-default argument 'created_at' follows default argument. Falling back to naming convention.
+2026-03-28 19:40:30.691 | ERROR    | src.modules.agm.tasks:compute_stored_field:46 - No handler found for 'Pyexiv2Smart' or field 'f_number'.
+------------------------------ Captured log call ------------------------------
+WARNING  neo4j.notifications:result.py:343 Received notification from DBMS server: <GqlStatusObject gql_status='01N42', status_description="One of the property names in your query is not available in the database, make sure you didn't misspell it or that the label is available when you run this statement in your application (the missing property name is: created_at)", position=<SummaryInputPosition line=1, column=85, offset=84>, raw_classification='UNRECOGNIZED', classification=<NotificationClassification.UNRECOGNIZED: 'UNRECOGNIZED'>, raw_severity='WARNING', severity=<NotificationSeverity.WARNING: 'WARNING'>, diagnostic_record={'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/', '_classification': 'UNRECOGNIZED', '_severity': 'WARNING', '_position': {'column': 85, 'offset': 84, 'line': 1}}> for query: "MATCH (e:InferenceEvent {handler_name: 'Pyexiv2Smart'}) RETURN e.field_name as f, e.created_at as t"
+-------------------------- Captured stderr teardown ---------------------------
+2026-03-28 19:40:30.724 | DEBUG    | src.core.loop_policies:drain_loop:34 - Draining event loop for 0.1s...
+=========================== short test summary info ===========================
+FAILED tests/integration/test_metadata_regression.py::test_metadata_primitive_type_regression - AssertionError: f_number should be numeric, got <class 'NoneType'>: None
+assert False
+ +  where False = isinstance(None, (<class 'float'>, <class 'int'>))
+FAILED tests/integration/test_metadata_regression.py::test_binary_serialization_regression - assert None is not None
+FAILED tests/integration/test_metadata_regression.py::test_blip_embedding_regression - assert None is not None
+FAILED tests/integration/test_metadata_regression.py::test_inference_event_provenance_regression - AssertionError: InferenceEvent should be linked to generated Tags
+assert 0 > 0
+FAILED tests/integration/test_metadata_regression.py::test_inference_event_metadata_regression - TypeError: 'NoneType' object is not subscriptable
+============================== 5 failed in 7.66s ==============================

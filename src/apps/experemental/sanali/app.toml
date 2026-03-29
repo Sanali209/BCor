@@ -1,0 +1,10 @@
+[app]
+app_name = "sanali"
+log_level = "INFO"
+
+[modules]
+enabled = ["sanali"]
+paths = ["src.modules"]
+
+[sanali]
+# Custom settings for sanali module can go here

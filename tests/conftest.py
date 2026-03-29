@@ -1,57 +1,17 @@
-import sys
+import pytest
+import platform
 import asyncio
-from src.core.domain import Aggregate
-from src.core.repository import AbstractRepository
-from src.core.unit_of_work import AbstractUnitOfWork
+from src.core.loop_policies import WindowsLoopManager
 
-import os
+@pytest.fixture(scope="session", autouse=True)
+def setup_windows_loop():
+    """Ensure stable event loop policy for Windows tests."""
+    if platform.system() == "Windows":
+        WindowsLoopManager.setup_loop()
 
-if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-def pytest_unconfigure(config):
-    print("bcor-expert: Forcing pytest process exit to avoid teardown hang...", flush=True)
-    os._exit(0)
-
-
-class FakeAggregate(Aggregate):
-    """A fake aggregate used for testing purposes."""
-
-    def __init__(self, ref: str):
-        super().__init__()
-        self.ref = ref
-        self.version = 1
-
-
-class FakeRepository(AbstractRepository[FakeAggregate]):
-    """An in-memory fake repository for testing."""
-
-    def __init__(self):
-        super().__init__()
-        self._aggregates: dict[str, FakeAggregate] = {}
-
-    def _add(self, aggregate: FakeAggregate) -> None:
-        self._aggregates[aggregate.ref] = aggregate
-
-    def _get(self, reference: str) -> FakeAggregate | None:
-        return self._aggregates.get(reference)
-
-
-class FakeUnitOfWork(AbstractUnitOfWork):
-    """An in-memory fake UoW for testing."""
-
-    def __init__(self):
-        self.repo = FakeRepository()
-        self.committed = False
-        self.rolled_back = False
-
-    def __enter__(self):
-        self.committed = False
-        self.rolled_back = False
-        return super().__enter__()
-
-    def _commit(self):
-        self.committed = True
-
-    def rollback(self):
-        self.rolled_back = True
+@pytest.fixture(autouse=True)
+async def drain_loop_after_test():
+    """Drain the event loop after each test to prevent hangs/deadlocks."""
+    yield
+    if platform.system() == "Windows":
+        await WindowsLoopManager.drain_loop(delay=0.1)
