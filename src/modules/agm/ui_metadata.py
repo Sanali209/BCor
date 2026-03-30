@@ -33,6 +33,19 @@ class IsThumbnail(UiHint):
     height: int = 128
 
 @dataclass(frozen=True)
+class Searchable(UiHint):
+    """Indicates that this field should be available for dynamic search generation.
+    
+    Attributes:
+        priority:   Sort order in the search form (lower = higher up).
+        widget:     Optional hint for the GUI widget (e.g., 'range', 'slider', 'date', 'text').
+        advanced:   If True, hide in 'Basic' search mode.
+    """
+    priority: int = 100
+    widget: Optional[str] = None
+    advanced: bool = False
+
+@dataclass(frozen=True)
 class FormatAs(UiHint):
     """Specifies a formatter for the field value (e.g., 'bytes', 'date')."""
     formatter_type: str

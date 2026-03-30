@@ -131,31 +131,43 @@ class AssetIngestionService:
     async def ingest_directory(
         self,
         root_path: str,
-        session: Any,
+        session: Any = None,
         recursive: bool = True,
         ignore_patterns: list[str] | None = None,
         overwrite: bool = False,
+        progress_callback: callable | None = None,
     ) -> list[Asset]:
-        """Scan a directory and ingest all discovered assets.
-
-        Assets already known to the mapper (by URI) are skipped unless
-        *overwrite* is True.  This makes repeated ingestion idempotent.
+        """Scan a directory and ingest all discovered assets in batches.
 
         Args:
             root_path: Path to start scanning from.
-            session: Neo4j session for persistence (may be None; mapper opens its own).
+            session: Neo4j session for persistence.
             recursive: Whether to crawl subdirectories.
             ignore_patterns: Glob patterns to skip.
             overwrite: When True, re-save assets even if already tracked.
+            progress_callback: Optional async function(current, total, status)
 
         Returns:
-            List of ingested Asset domain objects (newly created or cached).
+            List of ingested Asset domain objects.
         """
         import os
         from loguru import logger
 
         self._abort = False
         ingested: list[Asset] = []
+        batch_buffer: list[Asset] = []
+        batch_size = 100
+        
+        # 1. First pass: counting files for progress
+        total_files = 0
+        if progress_callback:
+            for dirpath, _, filenames in os.walk(root_path):
+                if not recursive and dirpath != root_path: continue
+                total_files += len(filenames)
+            await progress_callback(0, total_files, f"Starting scan of {total_files} files...")
+
+        # 2. Second pass: ingestion
+        count = 0
         for dirpath, _, filenames in os.walk(root_path):
             if self._abort:
                 logger.info("Ingestion process aborted by request.")
@@ -164,35 +176,84 @@ class AssetIngestionService:
                 continue
 
             for filename in filenames:
-                if self._abort:
-                    break
+                if self._abort: break
+                count += 1
                 full_path = os.path.join(dirpath, filename)
                 if ignore_patterns and any(p in filename for p in ignore_patterns):
                     continue
 
                 try:
                     uri = f"file://{full_path}"
-
-                    # ── Fast path: URI already in Identity Map ─────────────
                     uri_map: dict = getattr(self._mapper, "_uri_map", {})
+                    
                     if not overwrite and uri in uri_map:
                         ingested.append(uri_map[uri])
-                        if len(ingested) % 5 == 0:
-                            await asyncio.sleep(0.01) # Throttling for Windows UI stability
-                        continue
+                    else:
+                        asset = self._factory.create_from_path(full_path)
+                        if asset:
+                            batch_buffer.append(asset)
+                    
+                    # Flush batch
+                    if len(batch_buffer) >= batch_size:
+                        await self._mapper.save_batch(batch_buffer, session=session)
+                        ingested.extend(batch_buffer)
+                        batch_buffer = []
+                        if progress_callback:
+                            await progress_callback(count, total_files, f"Ingested {count}/{total_files}...")
+                        await asyncio.sleep(0.01) # Yield for UI
+                        
+                    elif count % 20 == 0:
+                        if progress_callback:
+                            await progress_callback(count, total_files, f"Scanning {count}/{total_files}...")
+                        await asyncio.sleep(0.001)
 
-                    asset = self._factory.create_from_path(full_path)
-                    if asset:
-                        await self._mapper.save(asset, session=session)
-                        ingested.append(asset)
-
-                    # Yield to GUI / event loop more aggressively for stability
-                    if len(ingested) % 2 == 0:
-                        await asyncio.sleep(0.01) 
                 except Exception as e:
                     logger.error(f"Failed to ingest {full_path}: {e}")
 
+        # Final flush
+        if batch_buffer:
+            await self._mapper.save_batch(batch_buffer, session=session)
+            ingested.extend(batch_buffer)
+        
+        if progress_callback:
+            await progress_callback(total_files, total_files, "Ingestion complete.")
+
         return ingested
+
+    async def ingest_file(
+        self,
+        file_path: str,
+        session: Any = None,
+        overwrite: bool = False,
+    ) -> Asset | None:
+        """Ingest a single local file into the Asset graph.
+
+        Args:
+            file_path: Absolute path to the file.
+            session: Neo4j session for persistence.
+            overwrite: When True, re-save asset even if already tracked.
+
+        Returns:
+            The ingested Asset domain object or None if failed.
+        """
+        from loguru import logger
+        try:
+            uri = f"file://{file_path}"
+            uri_map: dict = getattr(self._mapper, "_uri_map", {})
+            
+            if not overwrite and uri in uri_map:
+                logger.debug(f"Asset already tracked: {uri}")
+                return uri_map[uri]
+            
+            asset = self._factory.create_from_path(file_path)
+            if asset:
+                await self._mapper.save_batch([asset], session=session)
+                logger.info(f"Successfully ingested single asset: {file_path}")
+                return asset
+            return None
+        except Exception as e:
+            logger.error(f"Failed to ingest single file {file_path}: {e}")
+            return None
 
 
 

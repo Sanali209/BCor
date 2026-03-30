@@ -5,7 +5,9 @@ from src.core.messagebus import MessageBus
 from src.core.module import BaseModule
 from src.modules.agm.handlers import handle_stored_field_recalc, handle_node_sync_requested
 from src.modules.agm.mapper import AGMMapper
+from src.modules.agm.schema import AGMSchemaManager
 from src.modules.agm.messages import StoredFieldRecalculationRequested, NodeSyncRequested
+from neo4j import AsyncDriver
 
 
 class AGMSettings(BaseSettings):
@@ -17,24 +19,37 @@ class AGMSettings(BaseSettings):
 class AGMProvider(Provider):
     """Dishka Provider for AGM-specific dependencies.
 
-    Provides the AGMMapper, ensuring it has access to the application
-    container for live field resolution.
+    Provides the AGMMapper and AGMSchemaManager, ensuring automated
+    schema synchronization and live field resolution.
     """
 
-    scope = Scope.REQUEST
+    @provide(scope=Scope.APP)
+    def provide_schema_manager(self, driver: AsyncDriver) -> AGMSchemaManager:
+        """Provides a singleton AGMSchemaManager for Neo4j index management."""
+        return AGMSchemaManager(driver=driver)
 
-    @provide
-    def provide_agm_mapper(self, container: AsyncContainer, message_bus: MessageBus) -> AGMMapper:
-        """Provides a request-scoped AGMMapper instance.
+    @provide(scope=Scope.APP)
+    def provide_agm_mapper(
+        self, 
+        container: AsyncContainer, 
+        message_bus: MessageBus,
+        schema_manager: AGMSchemaManager
+    ) -> AGMMapper:
+        """Provides a singleton AGMMapper instance.
 
         Args:
             container: The active AsyncContainer for dependency resolution.
             message_bus: The system MessageBus for dispatching side effects.
+            schema_manager: Manager for automated index/constraint creation.
 
         Returns:
             A configured AGMMapper instance.
         """
-        return AGMMapper(container=container, message_bus=message_bus)
+        return AGMMapper(
+            container=container, 
+            message_bus=message_bus, 
+            schema_manager=schema_manager
+        )
 
 
 class AGMModule(BaseModule):

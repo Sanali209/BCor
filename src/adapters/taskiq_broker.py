@@ -21,7 +21,8 @@ def get_broker(is_test: bool = False) -> "taskiq.AsyncBroker":
     Returns:
         A configured AsyncBroker instance.
     """
-    if is_test:
+    force_real = os.getenv("TASKIQ_FORCE_REAL_BROKER") == "1"
+    if is_test and not force_real:
         from taskiq import InMemoryBroker
 
         return InMemoryBroker()

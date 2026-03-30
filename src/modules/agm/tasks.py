@@ -15,6 +15,9 @@ from src.adapters.taskiq_broker import broker
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Global concurrency guard for heavy AI tasks (Windows stability)
+_HEAVY_TASK_SEMAPHORE = asyncio.Semaphore(1)
+
 @broker.task
 async def compute_stored_field(
     node_id: str,
@@ -25,9 +28,18 @@ async def compute_stored_field(
     **kwargs: Any
 ) -> None:
     """Model-Aware Metadata Worker for BCor (Single Field)."""
-    result = await _process_single_field(node_id, field_name, source_value, handler, context, **kwargs)
+    priority = kwargs.get("priority", 0)
     
-    # Single Persistence if called individually
+    # Sequential Execution for high-priority tasks (e.g., Vision/Ollama)
+    if priority >= 10:
+        async with _HEAVY_TASK_SEMAPHORE:
+            logger.info(f"[AGM:SEQUENTIAL] START field={field_name} node={node_id}")
+            result = await _process_single_field(node_id, field_name, source_value, handler, context, **kwargs)
+            logger.info(f"[AGM:SEQUENTIAL] END field={field_name}")
+    else:
+        result = await _process_single_field(node_id, field_name, source_value, handler, context, **kwargs)
+    
+    # Latest-Only Persistence
     repo = _get_repo()
     try:
         event_id = str(uuid.uuid4())

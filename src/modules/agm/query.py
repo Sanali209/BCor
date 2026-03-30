@@ -1,4 +1,4 @@
-from typing import Any, Generic, Optional, Type, TypeVar, Union, TYPE_CHECKING
+from typing import Any, Generic, Optional, Type, TypeVar, Union, TYPE_CHECKING, List, Dict, Tuple
 import asyncio
 
 if TYPE_CHECKING:
@@ -11,27 +11,52 @@ class CypherQuery(Generic[T]):
     
     Allows chaining filters, matches, and pagination before executing
     the query through the AGMMapper and returning domain objects.
+    Now supports CONTAINS, RANGE, and Vector NEAR search.
     """
     
     def __init__(self, mapper: "AGMMapper", model_class: Type[T]):
         self._mapper = mapper
         self._model_class = model_class
-        self._filters: dict[str, Any] = {}
+        self._filters: Dict[str, Any] = {}
+        self._contains_filters: Dict[str, str] = {}
+        self._range_filters: Dict[str, Tuple[Any, Any]] = {}
+        self._vector_info: Optional[Dict[str, Any]] = None
+        
         self._limit: Optional[int] = None
         self._skip: Optional[int] = None
         self._order_by: Optional[str] = None
-        self._matches: list[str] = []
-        self._return_fields: list[str] = ["n"]
+        self._matches: List[str] = []
         
     def where(self, **kwargs) -> "CypherQuery[T]":
-        """Adds property-based filters to the query.
-        
-        Args:
-            **kwargs: Property names and values to filter by.
-        """
+        """Adds property-based equality filters to the query."""
         self._filters.update(kwargs)
         return self
         
+    def contains(self, field: str, value: str) -> "CypherQuery[T]":
+        """Adds a case-sensitive substring filter (CONTAINS)."""
+        self._contains_filters[field] = value
+        return self
+        
+    def range(self, field: str, start: Any, end: Any) -> "CypherQuery[T]":
+        """Adds a range filter for numeric or date fields."""
+        self._range_filters[field] = (start, end)
+        return self
+        
+    def near(self, field: str, vector: List[float], limit: int = 10) -> "CypherQuery[T]":
+        """Adds a vector similarity filter (Semantic Search).
+        
+        Args:
+            field: Name of the vector-indexed field.
+            vector: The query vector.
+            limit: How many neighbors to retrieve within the vector query.
+        """
+        self._vector_info = {
+            "field": field,
+            "vector": vector,
+            "limit": limit
+        }
+        return self
+
     def limit(self, value: int) -> "CypherQuery[T]":
         """Sets the maximum number of results to return."""
         self._limit = value
@@ -47,35 +72,63 @@ class CypherQuery(Generic[T]):
         self._order_by = field
         return self
 
-    def build_cypher(self) -> tuple[str, dict[str, Any]]:
-        """Generates the Cypher statement and parameters.
-        
-        Returns:
-            A tuple of (cypher_string, parameters_dict).
-        """
+    def build_cypher(self) -> Tuple[str, Dict[str, Any]]:
+        """Generates the Cypher statement and parameters."""
         label = getattr(self._model_class, "__label__", self._model_class.__name__)
-        
-        # Base MATCH
-        clauses = [f"MATCH (n:{label})"]
-        
-        # WHERE
         params = {}
-        if self._filters:
-            where_parts = []
-            for key, value in self._filters.items():
-                param_name = f"p_{key}"
-                where_parts.append(f"n.{key} = ${param_name}")
-                params[param_name] = value
+        clauses = []
+
+        # 1. Start with Vector Search CALL or base MATCH
+        if self._vector_info:
+            vec_field = self._vector_info["field"]
+            # Convention: vec_{Label}_{Field}
+            index_name = f"vec_{label}_{vec_field}"
+            params["p_vector"] = self._vector_info["vector"]
+            params["p_limit"] = self._vector_info["limit"]
+            clauses.append(f"CALL db.index.vector.queryNodes('{index_name}', $p_limit, $p_vector) YIELD node AS n, score")
+        else:
+            clauses.append(f"MATCH (n:{label})")
+        
+        # 2. Add WHERE filters
+        where_parts = []
+        
+        # Equality filters
+        for key, value in self._filters.items():
+            param_name = f"p_{key}"
+            where_parts.append(f"n.{key} = ${param_name}")
+            params[param_name] = value
+            
+        # CONTAINS filters
+        for key, value in self._contains_filters.items():
+            param_name = f"p_{key}_contains"
+            where_parts.append(f"n.{key} CONTAINS ${param_name}")
+            params[param_name] = value
+            
+        # RANGE filters
+        for key, (start, end) in self._range_filters.items():
+            start_param = f"p_{key}_start"
+            end_param = f"p_{key}_end"
+            where_parts.append(f"n.{key} >= ${start_param} AND n.{key} <= ${end_param}")
+            params[start_param] = start
+            params[end_param] = end
+            
+        if where_parts:
             clauses.append("WHERE " + " AND ".join(where_parts))
             
-        # RETURN
-        clauses.append("RETURN n, labels(n) as labels, elementId(n) as id")
+        # 3. RETURN clause
+        return_stmt = "RETURN n, labels(n) as labels, elementId(n) as id"
+        if self._vector_info:
+            return_stmt += ", score"
+        clauses.append(return_stmt)
         
-        # ORDER BY
+        # 4. Global ORDER BY
         if self._order_by:
             clauses.append(f"ORDER BY n.{self._order_by}")
+        elif self._vector_info:
+            # If vector search, allow Neo4j's default descending score ordering
+            pass
             
-        # LIMIT / SKIP
+        # 5. Global LIMIT / SKIP
         if self._skip is not None:
             clauses.append(f"SKIP {self._skip}")
         if self._limit is not None:
@@ -83,24 +136,22 @@ class CypherQuery(Generic[T]):
             
         return " ".join(clauses), params
 
-    async def all(self, session: Any) -> list[T]:
-        """Executes the query and returns all matching domain objects.
-        
-        Args:
-            session: The Neo4j async session to use for execution.
-        """
+    async def all(self, session: Any) -> List[T]:
+        """Executes the query and returns matching domain objects."""
         query_str, params = self.build_cypher()
         result = await session.run(query_str, **params)
         records = await result.data()
         
         instances = []
         for record in records:
-            # Reconstruct the expected 'record' format for AGMMapper.load
-            # which expects properties + id + labels
             node = record["n"]
             node_data = dict(node)
             node_data["id"] = record["id"]
             node_data["labels"] = record["labels"]
+            
+            # Map score if present (for viewmodels to display)
+            if "score" in record:
+                node_data["_score"] = record["score"]
             
             instance = await self._mapper.load(self._model_class, node_data)
             instances.append(instance)
@@ -114,28 +165,20 @@ class CypherQuery(Generic[T]):
         return results[0] if results else None
 
     async def delete(self, session: Any) -> int:
-        """Deletes all nodes matching the query criteria.
-        
-        Args:
-            session: The Neo4j async session.
-
-        Returns:
-            The number of nodes deleted.
-        """
+        """Deletes all nodes matching the query criteria."""
         label = getattr(self._model_class, "__label__", self._model_class.__name__)
+        # Delete doesn't support vector search context easily, 
+        # normally delete is for filtered cleanup.
         clauses = [f"MATCH (n:{label})"]
+        query_str, params = self.build_cypher()
         
-        params = {}
-        if self._filters:
-            where_parts = []
-            for key, value in self._filters.items():
-                param_name = f"p_{key}"
-                where_parts.append(f"n.{key} = ${param_name}")
-                params[param_name] = value
-            clauses.append("WHERE " + " AND ".join(where_parts))
-            
-        clauses.append("DETACH DELETE n")
-        query_str = " ".join(clauses)
+        # Extract WHERE parts from build_cypher if needed, 
+        # or simplified re-implementation for delete.
+        # For PoC, let's just use MATCH + WHERE + DETACH DELETE
+        
+        # Actually, let's just rebuild a simplified version for delete
+        temp_query = " ".join([c for c in query_str.split(" ") if "RETURN" not in c and "ORDER BY" not in c and "LIMIT" not in c and "SKIP" not in c])
+        query_str = f"{temp_query} DETACH DELETE n"
         
         result = await session.run(query_str, **params)
         summary = await result.consume()

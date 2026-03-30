@@ -1,7 +1,8 @@
 import logging
-from typing import Annotated, Any, get_args, get_origin, get_type_hints
+from typing import Annotated, Any, get_args, get_origin, get_type_hints, List, Dict, Optional
 from neo4j import Driver
 from src.modules.agm.metadata import Unique, Indexed, VectorIndex
+from src.modules.agm.ui_metadata import Searchable, DisplayName, Column
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,67 @@ class AGMSchemaManager:
                     elif isinstance(metadata, VectorIndex):
                         await self._create_vector_index(session, label, field_name, metadata)
 
+    def get_search_schema(self, classes: List[type]) -> List[Dict[str, Any]]:
+        """Scans classes for Searchable fields and returns a GUI-ready schema.
+        
+        Args:
+            classes: List of domain model classes to inspect.
+            
+        Returns:
+            A list of searchable field definitions sorted by priority.
+        """
+        schema: Dict[str, Dict[str, Any]] = {}
+        
+        for cls in classes:
+            # We use get_type_hints which handles MRO/inheritance.
+            hints = get_type_hints(cls, include_extras=True)
+            
+            for field_name, field_type in hints.items():
+                if get_origin(field_type) is not Annotated:
+                    continue
+                
+                args = get_args(field_type)
+                base_type = args[0]
+                metadata = args[1:]
+                
+                search_meta = next((m for m in metadata if isinstance(m, Searchable)), None)
+                if not search_meta:
+                    continue
+                
+                # Extract DisplayName override or fallback to capitalized field name
+                display_name = next((m.name for m in metadata if isinstance(m, DisplayName)), field_name.replace("_", " ").capitalize())
+                
+                # Consolidate if multiple classes share a field (keep highest priority / most specific)
+                if field_name not in schema or search_meta.priority < schema[field_name]["priority"]:
+                    schema[field_name] = {
+                        "name": field_name,
+                        "label": display_name,
+                        "type": self._normalize_type(base_type),
+                        "widget": search_meta.widget or self._guess_widget(base_type),
+                        "priority": search_meta.priority,
+                        "advanced": search_meta.advanced
+                    }
+        
+        return sorted(schema.values(), key=lambda x: x["priority"])
+
+    def _normalize_type(self, base_type: type) -> str:
+        if base_type is int: return "int"
+        if base_type is float: return "float"
+        if base_type is str: return "str"
+        if base_type is bool: return "bool"
+        return str(base_type)
+
+    def _guess_widget(self, base_type: type) -> str:
+        """Heuristics to determine the best UI widget based on Python type."""
+        type_str = str(base_type).lower()
+        if base_type in (int, float): 
+            return "range"
+        if "list[float]" in type_str or "list[int]" in type_str:
+            return "vector"
+        if base_type is bool:
+            return "checkbox"
+        return "text"
+
     async def _create_unique_constraint(self, session, label: str, field: str):
         constraint_name = f"uniq_{label}_{field}"
         query = f"CREATE CONSTRAINT {constraint_name} IF NOT EXISTS FOR (n:{label}) REQUIRE n.{field} IS UNIQUE"
@@ -55,7 +117,6 @@ class AGMSchemaManager:
             return
 
         # Use procedure for wider compatibility (Neo4j 5.x Community)
-        # Signature: createNodeIndex(indexName, label, propertyKey, dimensions, similarityFunction)
         query = (
             f"CALL db.index.vector.createNodeIndex("
             f"'{index_name}', '{label}', '{field}', "

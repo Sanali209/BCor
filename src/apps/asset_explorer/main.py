@@ -2,7 +2,7 @@ import sys
 import os
 import asyncio
 import qasync
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Dict, Type
 from unittest.mock import MagicMock 
 
 # Ensure project root is in path for 'src' imports
@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, QHeaderView, QFileDialog
 )
 from PySide6 import QtWidgets as QtW
-from PySide6.QtCore import Qt, Signal, Slot, QRect, QPoint, QSize
+from PySide6.QtCore import Qt, Signal, Slot, QRect, QPoint, QSize, QProcess
 
 from src.core.system import System
 from src.core.loop_policies import WindowsLoopManager
@@ -281,36 +281,270 @@ class TaskMonitor(QTableWidget):
         if event_type == "started":
             self.item(row, 2).setText("Running")
         elif event_type == "executed":
-            self.item(row, 2).setText(event.get("status", "Done").capitalize())
+            status = event.get("status", "Done")
+            self.item(row, 2).setText(status.capitalize())
+            if status == "SUCCESS":
+                self.item(row, 2).setForeground(Qt.green)
+            else:
+                self.item(row, 2).setForeground(Qt.red)
+        
+        if "time" in event:
+            self.setItem(row, 3, QTableWidgetItem(f"{event['time']:.2f}s"))
+        if "details" in event:
+            self.setItem(row, 4, QTableWidgetItem(str(event["details"])))
+
+class WorkerManager(QWidget):
+    """Manages the lifecycle of the TaskIQ worker process."""
+    status_changed = Signal(str)
+    task_event = Signal(dict)
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.process = QProcess(self)
+        self.process.readyReadStandardOutput.connect(self._handle_stdout)
+        self.process.readyReadStandardError.connect(self._handle_stderr)
+        self.process.finished.connect(self._on_finished)
+        
+    def start_worker(self):
+        """Starts the TaskIQ worker via uv run."""
+        if self.process.state() != QProcess.NotRunning:
+            return
+            
+        cmd = "uv"
+        args = [
+            "run", "taskiq", "worker", 
+            "src.adapters.taskiq_broker:broker", 
+            "src.modules.agm.tasks",
+            # "--reload" # Disable reload for production/integrated feel
+        ]
+        
+        # Enable GUI monitoring middleware and force real broker for E2E stability
+        env = os.environ.copy()
+        env["BCOR_GUI_MONITOR"] = "1"
+        env["TASKIQ_FORCE_REAL_BROKER"] = "1"
+        # Ensure we are in the project root
+        self.process.setWorkingDirectory(os.getcwd())
+        
+        env_list = [f"{k}={v}" for k, v in env.items()]
+        self.process.setEnvironment(env_list)
+        
+        self.status_changed.emit("Starting...")
+        self.process.start(cmd, args)
+        if not self.process.waitForStarted(5000):
+             self.status_changed.emit("Failed to Start")
+             logger.error(f"Worker failed to start: {self.process.errorString()}")
+        else:
+             self.status_changed.emit("Running")
+        
+    def stop_worker(self):
+        self.status_changed.emit("Stopping...")
+        self.process.terminate()
+        if not self.process.waitForFinished(3000):
+            self.process.kill()
+
+    def _handle_stdout(self):
+        data = self.process.readAllStandardOutput().data().decode()
+        for line in data.splitlines():
+            logger.info(f"[WORKER] {line}")
+            if "[BCOR_TASK]" in line:
+                try:
+                    import json
+                    event_info = line.split("[BCOR_TASK]")[1].strip()
+                    event = json.loads(event_info)
+                    self.task_event.emit(event)
+                except Exception as e:
+                    logger.error(f"Failed to parse task event: {e}")
+            # logger.debug(f"Worker: {line}")
+
+    def _handle_stderr(self):
+        data = self.process.readAllStandardError().data().decode()
+        for line in data.splitlines():
+            logger.warning(f"Worker Error: {line}")
+
+    def _on_finished(self):
+        self.status_changed.emit("Stopped")
+
+# --- Dynamic Search GUI ---
+class SearchConstructor(QWidget):
+    """Dynamically builds search filters based on domain model metadata."""
+    def __init__(self, search_callback):
+        super().__init__()
+        self.callback = search_callback
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(8)
+        self.filters = {} # name -> widget(s)
+
+    def set_schema(self, schema: List[Dict[str, Any]]):
+        """Rebuilds the search form from the provided metadata schema."""
+        # Clear existing
+        while self.layout.count():
+            item = self.layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+            elif item.layout():
+                # Clear nested layouts
+                l = item.layout()
+                while l.count():
+                    si = l.takeAt(0)
+                    if si.widget(): si.widget().deleteLater()
+        
+        self.filters = {}
+        for item in schema:
+            name = item["name"]
+            label_text = item["label"]
+            widget_hint = item["widget"]
+            
+            lbl = QLabel(label_text)
+            lbl.setStyleSheet("color: #aaa; font-size: 11px; margin-top: 5px;")
+            self.layout.addWidget(lbl)
+            
+            if widget_hint == "range":
+                h_layout = QHBoxLayout()
+                min_edit = QLineEdit()
+                min_edit.setPlaceholderText("Min")
+                max_edit = QLineEdit()
+                max_edit.setPlaceholderText("Max")
+                h_layout.addWidget(min_edit)
+                h_layout.addWidget(max_edit)
+                self.filters[name] = (min_edit, max_edit)
+                self.layout.addLayout(h_layout)
+            elif widget_hint == "date":
+                from PySide6.QtWidgets import QDateEdit
+                date_edit = QDateEdit()
+                date_edit.setCalendarPopup(True)
+                date_edit.setSpecialValueText("Any Date")
+                self.filters[name] = date_edit
+                self.layout.addWidget(date_edit)
+            else: # text, vector, etc
+                edit = QLineEdit()
+                edit.setPlaceholderText(f"Search {label_text}...")
+                edit.returnPressed.connect(self._on_search)
+                self.filters[name] = edit
+                self.layout.addWidget(edit)
+
+    def _on_search(self):
+        query_data = {}
+        for name, widget in self.filters.items():
+            if isinstance(widget, tuple): # Range
+                min_val = widget[0].text().strip()
+                max_val = widget[1].text().strip()
+                if min_val or max_val:
+                    try:
+                        query_data[name] = (float(min_val) if min_val else None, 
+                                           float(max_val) if max_val else None)
+                    except ValueError: pass
+            elif isinstance(widget, QLineEdit):
+                val = widget.text().strip()
+                if val: query_data[name] = val
+            elif hasattr(widget, "date") and widget.text() != "Any Date":
+                query_data[name] = widget.date().toPython().isoformat()
+        
+        # In a real app we'd trigger the search via callback
+        self.callback(query_data)
+
+# --- Status HUD ---
+class StatusHUD(QFrame):
+    """Floating HUD for real-time ingestion and inference progress."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFrameShape(QFrame.StyledPanel)
+        self.setStyleSheet("""
+            StatusHUD {
+                background-color: rgba(30, 30, 30, 220);
+                border: 1px solid #444;
+                border-radius: 8px;
+                color: #eee;
+            }
+        """)
+        layout = QVBoxLayout(self)
+        self.label = QLabel("Idle")
+        self.progress = QtW.QProgressBar()
+        self.progress.setFixedHeight(10)
+        self.progress.setTextVisible(False)
+        layout.addWidget(self.label)
+        layout.addWidget(self.progress)
+        self.hide()
+
+    @Slot(int, int, str)
+    def update_status(self, current, total, status):
+        self.show()
+        self.label.setText(status)
+        if total > 0:
+            self.progress.setMaximum(total)
+            self.progress.setValue(current)
+        if current >= total and total > 0:
+            asyncio.create_task(self._hide_delayed())
+
+    async def _hide_delayed(self):
+        await asyncio.sleep(3)
+        self.hide()
+
+class PaginationBar(QWidget):
+    """Controls for explicit 500-item batch navigation."""
+    next_requested = Signal()
+    prev_requested = Signal()
+
+    def __init__(self):
+        super().__init__()
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 5, 0, 5)
+        
+        self.prev_btn = QPushButton("⬅️ Prev")
+        self.prev_btn.setEnabled(False)
+        self.prev_btn.clicked.connect(self.prev_requested)
+        
+        self.page_lbl = QLabel("Page 1")
+        self.page_lbl.setAlignment(Qt.AlignCenter)
+        self.page_lbl.setStyleSheet("font-weight: bold; color: #888;")
+        
+        self.next_btn = QPushButton("Next ➡️")
+        self.next_btn.setEnabled(False)
+        self.next_btn.clicked.connect(self.next_requested)
+        
+        layout.addWidget(self.prev_btn)
+        layout.addWidget(self.page_lbl)
+        layout.addWidget(self.next_btn)
+
+    @Slot(int, bool, bool)
+    def update_state(self, current_page, can_prev, can_next):
+        self.page_lbl.setText(f"Page {current_page}")
+        self.prev_btn.setEnabled(can_prev)
+        self.next_btn.setEnabled(can_next)
 
 # --- Explorer UI Components ---
 class SearchPanel(QGroupBox):
     search_requested = Signal(str)
     clear_db_requested = Signal()
     mass_add_requested = Signal()
+    add_image_requested = Signal()
 
-    def __init__(self):
+    def __init__(self, search_callback):
         super().__init__("Query Constructor")
         layout = QVBoxLayout(self)
-        self.query_input = QLineEdit()
-        self.query_input.setPlaceholderText("Search assets...")
-        layout.addWidget(self.query_input)
         
-        search_btn = QPushButton("🔍 Run Search")
-        search_btn.clicked.connect(lambda: self.search_requested.emit(self.query_input.text()))
+        # Dynamic Search
+        self.constructor = SearchConstructor(search_callback)
+        layout.addWidget(self.constructor)
+        
+        layout.addSpacing(10)
+        search_btn = QPushButton("🔍 Universal Search")
+        search_btn.setStyleSheet("background-color: #007acc; font-weight: bold;")
+        search_btn.clicked.connect(self.constructor._on_search)
         layout.addWidget(search_btn)
         
         layout.addSpacing(20)
         layout.addWidget(QLabel("Pipeline Actions:"))
-        self.add_btn = QPushButton("➕ Add Image...")
+        self.add_btn = QPushButton("➕ Add Single Asset...")
+        self.add_btn.clicked.connect(self.add_image_requested)
         layout.addWidget(self.add_btn)
         
-        self.mass_add_btn = QPushButton("📁 Mass Add (Dir)...")
+        self.mass_add_btn = QPushButton("📁 Mass Ingest Directory...")
         self.mass_add_btn.clicked.connect(self.mass_add_requested)
         layout.addWidget(self.mass_add_btn)
         
         layout.addStretch()
-        self.clear_btn = QPushButton("🗑️ Clear Database")
+        self.clear_btn = QPushButton("🗑️ Wipe Database")
         self.clear_btn.setStyleSheet("color: #f14c4c; font-weight: bold;")
         self.clear_btn.clicked.connect(self.clear_db_requested)
         layout.addWidget(self.clear_btn)
@@ -416,36 +650,95 @@ class AssetExplorerDashboard(QMainWindow):
         self.explorer_page = QWidget()
         self.tabs.addTab(self.explorer_page, "Asset Explorer")
         exp_layout = QHBoxLayout(self.explorer_page)
-        self.search_panel = SearchPanel()
+        
+        self.search_panel = SearchPanel(self._on_search)
+        
+        # Combined Results and Pagination
+        results_container = QWidget()
+        results_layout = QVBoxLayout(results_container)
+        results_layout.setContentsMargins(0, 0, 0, 0)
+        
         self.results_panel = QListWidget()
+        self.pagination_bar = PaginationBar()
+        
+        results_layout.addWidget(self.results_panel)
+        results_layout.addWidget(self.pagination_bar)
+        
         self.metadata_panel = AutoMetadataPanel()
         
         exp_layout.addWidget(self.search_panel, 1)
-        exp_layout.addWidget(self.results_panel, 2)
+        exp_layout.addWidget(results_container, 2)
         exp_layout.addWidget(self.metadata_panel, 1)
         
+        # Ingestion HUD
+        self.hud = StatusHUD(self.explorer_page)
+        self.hud.setGeometry(QRect(400, 700, 500, 80))
+
         # Infrastructure Tab
         self.infra_page = QWidget()
         self.tabs.addTab(self.infra_page, "Infrastructure Monitor")
         infra_layout = QVBoxLayout(self.infra_page)
+        
+        # Worker Control
+        worker_ctrl = QGroupBox("TaskIQ Worker Management")
+        worker_layout = QHBoxLayout(worker_ctrl)
+        self.worker_status_lbl = QLabel("Worker: Offline")
+        self.worker_status_lbl.setStyleSheet("font-weight: bold; color: #f14c4c;")
+        self.start_worker_btn = QPushButton("🚀 Start Worker")
+        self.stop_worker_btn = QPushButton("🛑 Stop")
+        self.stop_worker_btn.setEnabled(False)
+        worker_layout.addWidget(self.worker_status_lbl)
+        worker_layout.addStretch()
+        worker_layout.addWidget(self.start_worker_btn)
+        worker_layout.addWidget(self.stop_worker_btn)
+        infra_layout.addWidget(worker_ctrl)
+        
         self.task_monitor = TaskMonitor()
-        infra_layout.addWidget(QLabel("Live TaskIQ Worker Feed (Ported from Companion)"))
+        infra_layout.addWidget(QLabel("Live TaskIQ Worker Feed (Sequential VLM Pipeline)"))
         infra_layout.addWidget(self.task_monitor)
+        
+        # Worker Manager Integration
+        self.worker_manager = WorkerManager(self)
+        self.worker_manager.status_changed.connect(self._on_worker_status)
+        self.worker_manager.task_event.connect(self.task_monitor.update_task)
+        
+        self.start_worker_btn.clicked.connect(self.worker_manager.start_worker)
+        self.stop_worker_btn.clicked.connect(self.worker_manager.stop_worker)
         
         # Status Bar
         self.status_bar = self.statusBar()
         self.status_bar.showMessage("Ready")
         
         # Wiring
-        self.search_panel.search_requested.connect(self._on_search)
+        self.search_panel.add_image_requested.connect(self._on_add_single)
         self.search_panel.mass_add_requested.connect(self._on_mass_add)
         self.search_panel.clear_db_requested.connect(self._on_clear_db)
         self.results_panel.itemClicked.connect(self._on_item_clicked)
         
         self.vm.results_updated.connect(self._update_results)
         self.vm.asset_selected.connect(self._on_asset_selected)
+        self.vm.progress_updated.connect(self.hud.update_status)
+        self.vm.search_schema_updated.connect(self.search_panel.constructor.set_schema)
+        self.vm.pagination_updated.connect(self.pagination_bar.update_state)
         self.vm.operation_started.connect(lambda name: self.status_bar.showMessage(f"Starting: {name}..."))
         self.vm.operation_finished.connect(self._on_operation_finished)
+        
+        # Pagination Wiring
+        self.pagination_bar.next_requested.connect(lambda: asyncio.create_task(self.vm.next_page()))
+        self.pagination_bar.prev_requested.connect(lambda: asyncio.create_task(self.vm.prev_page()))
+        
+        # Initial schema trigger
+        self.vm.refresh_search_schema()
+
+    def _on_worker_status(self, status):
+        self.worker_status_lbl.setText(f"Worker: {status}")
+        is_running = "Running" in status
+        self.start_worker_btn.setEnabled(not is_running and "Starting" not in status)
+        self.stop_worker_btn.setEnabled(is_running or "Starting" in status)
+        if is_running:
+            self.worker_status_lbl.setStyleSheet("font-weight: bold; color: #4ec9b0;")
+        else:
+            self.worker_status_lbl.setStyleSheet("font-weight: bold; color: #f14c4c;")
 
     def _on_operation_finished(self, name, success):
         msg = f"Finished: {name} ({'Success' if success else 'Failed'})"
@@ -466,6 +759,11 @@ class AssetExplorerDashboard(QMainWindow):
 
     def _on_search(self, query):
         asyncio.create_task(self.vm.search(query))
+
+    def _on_add_single(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select Asset to Import")
+        if file_path:
+            asyncio.create_task(self.vm.add_single_asset(file_path))
 
     def _on_mass_add(self):
         dir_path = QFileDialog.getExistingDirectory(self, "Select Directory to Import")
@@ -489,9 +787,15 @@ async def async_main():
         window = AssetExplorerDashboard(vm)
         window.show()
         
+        # Auto-start worker for convenience
+        window.worker_manager.start_worker()
+        
         # 4. Wait for window close
         while window.isVisible():
             await asyncio.sleep(0.1)
+            
+        # Clean up worker
+        window.worker_manager.stop_worker()
         
     await system.stop()
     await WindowsLoopManager.drain_loop()

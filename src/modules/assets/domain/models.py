@@ -11,7 +11,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any, Optional
 
 from src.modules.agm.metadata import Rel, RelMetadata, Stored, Unique, Indexed, VectorIndex, OnComplete
-from src.modules.agm.ui_metadata import Column, DisplayName, Hidden, IsThumbnail
+from src.modules.agm.ui_metadata import Column, DisplayName, Hidden, IsThumbnail, Searchable
 
 if TYPE_CHECKING:
     pass
@@ -42,10 +42,10 @@ class Asset:
     """
 
     id: Annotated[str, Unique(), Hidden()]
-    uri: Annotated[str, Indexed(), DisplayName("Source URI"), Column(width=300)]
-    name: Annotated[str, DisplayName("Name"), Column(width=200)] = ""
-    mime_type: Annotated[str, DisplayName("MIME Type"), Column(width=100)] = ""
-    description: Annotated[str, DisplayName("Description"), Column(width=250)] = ""
+    uri: Annotated[str, Indexed(), DisplayName("Source URI"), Column(width=300), Searchable(priority=5)]
+    name: Annotated[str, DisplayName("Name"), Column(width=200), Searchable(priority=1)] = ""
+    mime_type: Annotated[str, DisplayName("MIME Type"), Column(width=100), Searchable(priority=2)] = ""
+    description: Annotated[str, DisplayName("Description"), Column(width=250), Searchable(priority=10)] = ""
     content_hash: Annotated[
         str,
         Indexed(),
@@ -53,7 +53,7 @@ class Asset:
         Column(width=150),
         Stored(source_field="uri", handler="ContentHashHandler", use_taskiq=True, priority=1),
     ] = ""
-    size: Annotated[int, DisplayName("Size (Bytes)"), Column(width=100)] = 0
+    size: Annotated[int, DisplayName("Size (Bytes)"), Column(width=100), Searchable(priority=3, widget="range")] = 0
     thumbnails_ready: Annotated[
         bool,
         Stored(source_fields=["uri", "content_hash"], handler="ThumbnailHandler", use_taskiq=True, priority=5),
@@ -163,12 +163,12 @@ class ImageAsset(Asset):
     phash: Annotated[str, Indexed()] = ""
     
     # EXIF/Metadata fields
-    f_number: Annotated[float, DisplayName("F-Number"), Stored(source_field="uri", handler="Pyexiv2Smart")] = 0.0
-    exposure_time: Annotated[float, DisplayName("Exposure"), Stored(source_field="uri", handler="Pyexiv2Smart")] = 0.0
-    iso: Annotated[int, DisplayName("ISO"), Stored(source_field="uri", handler="Pyexiv2Smart")] = 0
-    camera_make: Annotated[str, DisplayName("Camera Make"), Stored(source_field="uri", handler="Pyexiv2Smart")] = ""
-    camera_model: Annotated[str, DisplayName("Camera Model"), Stored(source_field="uri", handler="Pyexiv2Smart")] = ""
-    captured_at: Annotated[float, DisplayName("Captured At"), Stored(source_field="uri", handler="Pyexiv2Smart")] = 0.0
+    f_number: Annotated[float, DisplayName("F-Number"), Stored(source_field="uri", handler="Pyexiv2Smart"), Searchable(priority=20, widget="range")] = 0.0
+    exposure_time: Annotated[float, DisplayName("Exposure"), Stored(source_field="uri", handler="Pyexiv2Smart"), Searchable(priority=21, widget="range")] = 0.0
+    iso: Annotated[int, DisplayName("ISO"), Stored(source_field="uri", handler="Pyexiv2Smart"), Searchable(priority=22, widget="range")] = 0
+    camera_make: Annotated[str, DisplayName("Camera Make"), Stored(source_field="uri", handler="Pyexiv2Smart"), Searchable(priority=23)] = ""
+    camera_model: Annotated[str, DisplayName("Camera Model"), Stored(source_field="uri", handler="Pyexiv2Smart"), Searchable(priority=24)] = ""
+    captured_at: Annotated[float, DisplayName("Captured At"), Stored(source_field="uri", handler="Pyexiv2Smart"), Searchable(priority=25, widget="date")] = 0.0
     
     # Embeddings
     clip_embedding: Annotated[
