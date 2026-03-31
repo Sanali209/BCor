@@ -36,11 +36,14 @@ class BaseModule:
         self.event_handlers = {k: list(v) for k, v in self.__class__.event_handlers.items()}
         self.settings: BaseSettings | None = None
 
-    def setup(self) -> None:
-        """Lifecycle hook called during system bootstrap.
+    async def setup(self) -> None:
+        """Lifecycle hook called during system bootstrap (pre-DI)."""
+        pass
 
-        Modules can override this to perform one-time initialization
-        logic, such as registering custom providers or setting up
-        external resources.
-        """
+    async def startup(self) -> None:
+        """Lifecycle hook called after the DI container is ready."""
+        pass
+
+    async def stop(self) -> None:
+        """Lifecycle hook called during system shutdown."""
         pass

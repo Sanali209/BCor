@@ -12,7 +12,7 @@ class AssetExplorerModule(BaseModule):
         # Settings class could be defined here if we had app-specific config
         # self.settings_class = AssetExplorerSettings
 
-    def setup(self) -> None:
+    async def setup(self) -> None:
         """Wiring for Asset Explorer specific commands/events if any."""
         # For now, this is a pure UI dashboard, 
         # but could host handlers for Clear DB / Mass Add.

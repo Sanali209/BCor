@@ -28,12 +28,23 @@ class SimilarTo:
 
 @dataclass
 class Asset:
-    """Base class for all assets — digital and physical.
+    """Base class for all assets — digital, virtual, and physical.
+
+    Rationale:
+        The Asset hierarchy unified different "views" of content. A file on 
+        disk (file://), a YouTube video (yt://), and a physical sensor 
+        (device://) all inherit from this base to allow uniform 
+        tagging, searching, and relationship mapping.
+
+    Scheme Support (VFS):
+        - file://       Local or network filesystem (via OSFS).
+        - zip://        Archive contents (via ZipFS).
+        - s3://         Cloud storage (via S3FS).
+        - ghost://      Virtual nodes (metadata-only).
 
     Fields:
         id:           Unique identifier (UUID or generated).
         uri:          Universal Resource Identifier — primary key in the graph.
-                      Schemes: file://, https://, yt://, physical://...
         name:         Human-readable name.
         mime_type:    MIME type (auto-detected or provided).
         description:  Free-form description.
@@ -45,7 +56,13 @@ class Asset:
     uri: Annotated[str, Indexed(), DisplayName("Source URI"), Column(width=300), Searchable(priority=5)]
     name: Annotated[str, DisplayName("Name"), Column(width=200), Searchable(priority=1)] = ""
     mime_type: Annotated[str, DisplayName("MIME Type"), Column(width=100), Searchable(priority=2)] = ""
-    description: Annotated[str, DisplayName("Description"), Column(width=250), Searchable(priority=10)] = ""
+    description: Annotated[
+        str,
+        DisplayName("Description"),
+        Column(width=250),
+        Searchable(priority=10),
+        Stored(source_field="uri", handler="BLIP", use_taskiq=True, priority=15)
+    ] = ""
     content_hash: Annotated[
         str,
         Indexed(),
@@ -56,12 +73,13 @@ class Asset:
     size: Annotated[int, DisplayName("Size (Bytes)"), Column(width=100), Searchable(priority=3, widget="range")] = 0
     thumbnails_ready: Annotated[
         bool,
-        Stored(source_fields=["uri", "content_hash"], handler="ThumbnailHandler", use_taskiq=True, priority=5),
+        Stored(source_fields=["uri", "content_hash"], handler="ThumbnailHandler", use_taskiq=True),
     ] = False
     embedding: Annotated[
         list[float],
-        Stored(source_field="description", mime_scope="*/*", use_taskiq=True, priority=10),
-        VectorIndex(dims=384)
+        DisplayName("Embedding"),
+        Stored(source_field="description", handler="OllamaHandler", use_taskiq=True),
+        VectorIndex(dims=768)
     ] = field(default_factory=list)
     tags: Annotated[
         list["Tag"],
@@ -85,6 +103,7 @@ class Asset:
         Rel(type="HAS_INFERENCE"),
         Hidden()
     ] = field(default_factory=list)
+    thumbnail_bytes: bytes = b""
 
 
 @dataclass
@@ -123,6 +142,7 @@ class CaptionAnnotation(Annotation):
     """Generated text caption for an asset (CLIP/BLIP/Ollama)."""
     text: str
     model_name: str | None = None
+    language: str = "en"
 
 
 @dataclass
@@ -159,6 +179,11 @@ class ImageAsset(Asset):
     """Asset representing a digital image."""
     width: int = 0
     height: int = 0
+    description: Annotated[
+        str,
+        DisplayName("Description"),
+        Stored(source_field="uri", handler="OllamaHandler", use_taskiq=True, priority=15)
+    ] = ""
     format: str = ""
     phash: Annotated[str, Indexed()] = ""
     
@@ -181,6 +206,7 @@ class ImageAsset(Asset):
         Stored(source_fields=["uri"], mime_scope="image/*", handler="BLIP", use_taskiq=True, priority=15),
         VectorIndex(dims=768)
     ] = field(default_factory=list)
+    
     wd_tags: Annotated[
         list[Tag],
         Rel(type="HAS_WD_TAG"),
@@ -209,6 +235,18 @@ class TextAsset(Asset):
     """Asset representing a text-based document."""
     language: str = "en"
     word_count: int = 0
+
+
+@dataclass
+class DocumentAsset(TextAsset):
+    """Asset representing a structured document (PDF, Word, etc.).
+    
+    Design Intent:
+        Serves as the entry point for RAG (Retrieval Augmented Generation) 
+        pipelines. Will support page-level indexing, OCR extraction, 
+        and cross-reference linking.
+    """
+    page_count: int = 0
 
 
 @dataclass
@@ -247,6 +285,32 @@ class Project:
     id: Annotated[str, Unique()]
     name: Annotated[str, Indexed()]
     products: Annotated[list[Product], Rel(type="INCLUDES_PRODUCT")] = field(default_factory=list)
+
+
+@dataclass
+class Album:
+    """A static collection of assets.
+
+    Design Intent:
+        Users manually add specific URI references to an album. 
+        Relationships are stored as (Album)-[:HAS_ASSET]->(Asset).
+    """
+    id: Annotated[str, Unique()]
+    name: Annotated[str, Indexed()]
+    parent: Annotated[Optional["Album"], Rel(type="CHILD_OF")] = None
+    assets: Annotated[list[Asset], Rel(type="HAS_ASSET")] = field(default_factory=list)
+
+
+@dataclass
+class SmartAlbum(Album):
+    """A dynamic collection based on Cypher filter criteria.
+
+    Design Intent:
+        Membership is calculated at runtime. The `filter_criteria` 
+        stores a JSON-patch or Cypher snippet that the AGMMapper 
+        uses to hydrate the `assets` list dynamically.
+    """
+    filter_criteria: str = "{}"
 
 
 class RelationType(str, Enum):

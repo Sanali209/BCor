@@ -1,8 +1,23 @@
-# Roadmap: TDD-Разработка недостающих компонентов архитектурного ядра (BCor)
+# Roadmap: Bcor Monorepo Modernization & Framework Evolution
 
-## Методология формирования и исполнения Roadmap
+## Current Status (System Audit & Stabilization)
 
-Данный Roadmap строится и исполняется в соответствии с инженерными практиками, обеспечивающими высокое качество и предсказуемость результата. 
+### ✅ Phase 1: Stabilization (Completed 2026-03-31)
+- [x] **Mypy Unblocked**: Renamed invalid package directories (e.g., `py_rpg`).
+- [x] **Typing Baseline**: Added missing type hints to `src/core/loop_policies.py`.
+- [x] **Tool Configuration**: Excluded legacy technical debt from `mypy` and `ruff` analysis in `pyproject.toml`.
+
+### ✅ Phase 2: Isolation & Quarantine (Completed 2026-03-31)
+- [x] **Legacy Quarantine**: Moved `src/apps/experemental/sanali` and `src/modules/sanali` to the top-level `legacy/` directory.
+- [x] **Strangler Fig Foundation**: Established the `legacy/` root as the starting point for incremental porting.
+
+### 🔄 Phase 3: Documentation Sync (In Progress)
+- [/] **Bilingual Overhaul**: Synchronizing `Ddocks/` with code reality using a bilingual (RU/EN) approach.
+- [ ] **Module Reference**: Creating target documentation for the `Assets` module.
+
+---
+
+## Foundation Methodology
 
 ### 1. Формирование Roadmap
 *   **Изучение текущей кодовой базы (As-Is):** Перед планированием проводится аудит существующего кода и `tests/`, чтобы исключить дублирование работы (например, если `FakeRepository` уже написан).

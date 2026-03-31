@@ -1,5 +1,0 @@
-/.venv
-/dedup_app.db
-/test_dedup.db
-*.pyc
-/chroma_db

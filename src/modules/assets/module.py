@@ -1,5 +1,6 @@
 """Assets module definition for BCor."""
 from __future__ import annotations
+from loguru import logger
 
 from src.core.module import BaseModule
 from src.modules.assets.infrastructure.providers import AssetsInfrastructureProvider
@@ -18,20 +19,21 @@ class AssetsModule(BaseModule):
         self.provider = AssetsInfrastructureProvider()
 
     async def setup(self) -> None:
-        """Register domain models with AGMMapper for automated schema management."""
+        """Called during bootstrap."""
+        pass
+
+    async def startup(self) -> None:
+        """Register domain models with AGMMapper after the container is ready."""
         from src.modules.agm.mapper import AGMMapper
         from src.modules.assets.domain.models import (
             Asset, ImageAsset, VideoAsset, AudioAsset, TextAsset, 
             PhysicalAsset, Tag, Product, Project, InferenceEvent
         )
         
-        # In BCor system lifecycle, modules are initialized with the container
-        if not hasattr(self, "container") or not self.container:
-            return
-
+        # Modules are guaranteed to have a container by the System before startup
         mapper = await self.container.get(AGMMapper)
         
-        # Register all core models to trigger schema sync (indexes, unique constraints)
+        # Register all core models to trigger schema sync and polymorphism
         models = [
             Asset, ImageAsset, VideoAsset, AudioAsset, TextAsset,
             PhysicalAsset, Tag, Product, Project, InferenceEvent
@@ -39,3 +41,5 @@ class AssetsModule(BaseModule):
         
         for model in models:
             await mapper.register_subclass(model.__name__, model)
+        
+        logger.info(f"AssetsModule: Registered {len(models)} domain models with AGMMapper.")

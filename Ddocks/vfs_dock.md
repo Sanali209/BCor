@@ -1,43 +1,34 @@
-# VFS Module Specification
+# Модуль VFS (Virtual File System)
 
-The VFS (Virtual File System) module provides a unified abstraction for file system operations in BCor, leveraging the `PyFilesystem2` library.
+## Обзор (Overview)
+Модуль **VFS** — это абстрактный слой над файловыми системами, построенный на базе библиотеки `PyFilesystem2`. Он позволяет системе работать с файлами (чтение, запись, листинг) независимо от физического хранилища (локальный диск, S3, FTP).
 
-## Architecture
+---
 
-The VFS module is implemented as a standard BCor module with a dedicated provider.
+## Конфигурация (Configuration)
+Настройки модуля определяются в `src/modules/vfs/settings.py` через `VFSSettings`:
+*   `base_dir`: Основной путь к хранилищу активов.
+*   `protocol`: Поддерживаемый протокол (`osfs`, `s3`, `ftp` и т.д.).
 
-### Core Components
+---
 
-- **`VfsSettings`**: Pydantic settings for configuring the VFS (e.g., `connection_string`).
-- **`VfsProvider`**: Dishka provider that manages the `FS` instance lifecycle. It uses a generator-based provider to ensure `vfs.close()` is called when the scope ends.
-- **`VfsModule`**: The module entry point that exposes the provider and settings.
+## Техническая спецификация (Technical Reference)
 
-### DI Integration
-
-The VFS module is fully integrated with the BCor DI container. The `FS` instance is provided at the `Scope.APP` level by default, but can be overridden as needed.
-
-The `MessageBus` has been enhanced to automatically inject `FS` (and other container-provided dependencies) into command handlers based on their type hints.
-
-## Configuration
-
-The VFS module is configured via `app.toml`:
-
-```toml
-[vfs]
-connection_string = "osfs://./storage"
-```
-
-Supported protocols include `osfs`, `mem`, `s3`, `ftp`, `tar`, `zip`, etc., as per `PyFilesystem2` documentation.
-
-## Test Mode
-
-The VFS module automatically detects when it is running in a test environment (e.g., when no `connection_string` is provided or during execution of `test_vfs_module.py`) and defaults to `mem://` for fast, isolated, in-memory storage.
-
-## Handlers
-
-Command handlers can request the `FS` dependency directly:
+### Integration & Providers
+The VFS is managed by the `VfsProvider` in `src/modules/vfs/module.py`. 
+When injected via DI, it provides an `FS` instance (e.g., `OSFS` for local disks).
 
 ```python
-async def handle_write(cmd: WriteCommand, vfs: FS):
-    vfs.writetext(cmd.path, cmd.content)
+@provide
+def provide_fs(self, settings: VFSSettings) -> FS:
+    return open_fs(settings.base_dir)
 ```
+
+### Known Technical Debt (TD-0004)
+Currently, some legacy and experimental services (including `AssetIngestionService`) still use native `os` and `pathlib` calls for directory walking. 
+
+> [!WARNING]
+> **Refactoring Required**: All modules SHOULD be refactored to use the injected `VFS` instance instead of native `os.walk` to ensure future cloud compatibility (S3/Azure).
+
+---
+*Note: Code reference: [src/modules/vfs/](file:///d:/github/BCor/src/modules/vfs/)*

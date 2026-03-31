@@ -2,7 +2,7 @@ import asyncio
 import json
 from typing import Annotated, Any, Dict, List, Optional, TypeVar, get_args, get_origin, get_type_hints
 
-from adaptix import Retort
+from adaptix import Retort, dumper, loader, name_mapping
 from dishka import AsyncContainer
 from loguru import logger
 
@@ -16,7 +16,25 @@ T = TypeVar("T")
 
 
 class AGMMapper:
-    """Graph-Object Mapper (GOM) for Neo4j."""
+    """Graph-Object Mapper (GOM) for Neo4j.
+
+    The AGMMapper facilitates the declarative mapping between Python 
+    dataclasses and Neo4j nodes/relationships.
+
+    Mapping Cheat Sheet:
+    - @Stored: Persistent property synchronized via a background Handler (Sync).
+    - @Live:   Non-persistent dependency injected via DI at runtime (Hydration).
+    - @Rel:    Permanent Graph relationship (OUTGOING/INCOMING direction).
+    - @OnComplete: (Future) Reaction to be triggered after node sync.
+
+    Architecture Rationale:
+    1. Identity Map: We maintain a local cache (id+type) to ensure only 
+       one instance of a node exists in memory per mapper session.
+    2. UNWIND Batching: Property updates are batched using Neo4j's UNWIND 
+       clause for maximum efficiency during massive ingestion.
+    3. Tracing: Automatically triggers `NodeSyncRequested` events when 
+       Stored fields change.
+    """
 
     def __init__(
         self,
@@ -30,7 +48,12 @@ class AGMMapper:
         
         from datetime import datetime
         from uuid import UUID
-        from adaptix import dumper, loader
+        from adaptix import dumper, loader, name_mapping
+        
+        # Flexibly handle float/int coercion for Neo4j numeric types
+        def to_float(v):
+            try: return float(v)
+            except (TypeError, ValueError): return 0.0
 
         self.retort = Retort(
             recipe=[
@@ -38,6 +61,7 @@ class AGMMapper:
                 dumper(UUID, str),
                 loader(datetime, datetime.fromisoformat),
                 loader(UUID, UUID),
+                loader(float, to_float),
             ]
         )
         self.polymorphic_registry: dict[str, type] = {}
@@ -86,7 +110,10 @@ class AGMMapper:
                 actual_class = self.polymorphic_registry[label]
                 break
 
-        clean_record = {k: v for k, v in processed_record.items() if v is not None}
+        # Manual filtering for version-agnostic "omit extra fields" behavior
+        hints = get_type_hints(actual_class)
+        clean_record = {k: v for k, v in processed_record.items() if k in hints and v is not None}
+        
         instance = self.retort.load(clean_record, actual_class)
         await self._hydrate_instance(instance, resolve_live)
         return instance
@@ -190,27 +217,83 @@ class AGMMapper:
                     
                     if session: await session.run(cypher, {"node_id": node_id, "tid": target_id})
 
-        # 2. Sync Triggers
-        fields_to_sync = []
+        # 2. Sync Triggers (Grouped by handler + sources)
         use_taskiq = False
+        groups: Dict[tuple, List[Dict[str, Any]]] = {}
+
         for field_name, field_type in hints.items():
             meta = getattr(field_type, "__metadata__", [])
             stored_meta = next((m for m in meta if isinstance(m, Stored)), None)
-            if stored_meta:
-                sources = stored_meta.effective_source_fields()
-                changed = any(getattr(model, s, None) != previous_state.get(s) for s in sources)
-                if changed:
-                    if stored_meta.use_taskiq: use_taskiq = True
-                    fields_to_sync.append(SyncFieldInfo(
-                        field_name=field_name,
-                        source_value=getattr(model, sources[0], None),
-                        handler=stored_meta.handler,
-                        priority=stored_meta.priority,
-                        context_metadata=stored_meta.context_metadata_dict
-                    ))
-        
+            if not stored_meta:
+                continue
+                
+            sources = stored_meta.effective_source_fields()
+            changed = any(getattr(model, s, None) != previous_state.get(s) for s in sources)
+            if not changed:
+                continue
+
+            if stored_meta.use_taskiq: use_taskiq = True
+            
+            # Determine relationship vs property
+            agm_type = "PROPERTY"
+            rel_type = "RELATED_TO"
+            rel_meta = next((m for m in getattr(hints[field_name], "__metadata__", []) if isinstance(m, Rel)), None)
+            if rel_meta:
+                agm_type = "RELATION"
+                rel_type = rel_meta.type
+            
+            # Grouping key: (handler_name, tuple_of_source_field_names)
+            group_key = (stored_meta.handler, tuple(sources))
+            
+            # Collect common data
+            if len(sources) > 1:
+                source_dict = {s: getattr(model, s, None) for s in sources}
+                main_val = source_dict.get("uri") or next(iter(source_dict.values()))
+            else:
+                main_val = getattr(model, sources[0], None)
+                source_dict = None
+
+            groups.setdefault(group_key, []).append({
+                "field_name": field_name,
+                "main_val": main_val,
+                "sources": source_dict,
+                "handler": stored_meta.handler,
+                "priority": stored_meta.priority,
+                "agm_type": agm_type,
+                "rel_type": rel_type,
+                "context": stored_meta.context_metadata_dict.copy()
+            })
+
+        fields_to_sync = []
+        for (handler, sources_tuple), members in groups.items():
+            lead = members[0]
+            
+            # Build unified context
+            ctx = lead["context"].copy()
+            ctx.update({
+                "agm_field_type": lead["agm_type"],
+                "rel_type": lead["rel_type"],
+                "target_label": "Tag",
+                "field_name": lead["field_name"],
+                "shared_fields": [m["field_name"] for m in members]
+            })
+            if lead["sources"]:
+                ctx["sources"] = lead["sources"]
+
+            fields_to_sync.append(SyncFieldInfo(
+                field_name=lead["field_name"],
+                source_value=lead["main_val"],
+                handler=handler,
+                priority=max(m["priority"] for m in members),
+                context_metadata=ctx
+            ))
+
         if fields_to_sync:
+            max_priority = max(f.priority for f in fields_to_sync)
             await self.message_bus.dispatch(NodeSyncRequested(
-                node_id=node_id, fields=fields_to_sync, 
-                mime_type=getattr(model, "mime_type", ""), use_taskiq=use_taskiq
+                node_id=node_id, 
+                fields=fields_to_sync, 
+                mime_type=getattr(model, "mime_type", "image/webp"), 
+                use_taskiq=use_taskiq,
+                priority=max_priority
             ))

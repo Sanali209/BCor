@@ -1,7 +1,9 @@
 import sys
 import os
+import json
 import asyncio
 import qasync
+from loguru import logger
 from typing import Any, List, Optional, Dict, Type
 from unittest.mock import MagicMock 
 
@@ -15,7 +17,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, QHeaderView, QFileDialog
 )
 from PySide6 import QtWidgets as QtW
-from PySide6.QtCore import Qt, Signal, Slot, QRect, QPoint, QSize, QProcess
+from PySide6.QtCore import Qt, Signal, Slot, QRect, QPoint, QSize, QProcess, QObject
 
 from src.core.system import System
 from src.core.loop_policies import WindowsLoopManager
@@ -290,11 +292,11 @@ class TaskMonitor(QTableWidget):
         
         if "time" in event:
             self.setItem(row, 3, QTableWidgetItem(f"{event['time']:.2f}s"))
-        if "details" in event:
-            self.setItem(row, 4, QTableWidgetItem(str(event["details"])))
+            if "details" in event:
+                self.setItem(row, 4, QTableWidgetItem(str(event["details"])))
 
-class WorkerManager(QWidget):
-    """Manages the lifecycle of the TaskIQ worker process."""
+class WorkerManager(QObject):
+    """Manages the lifecycle of the TaskIQ worker process (Background QObject)."""
     status_changed = Signal(str)
     task_event = Signal(dict)
     
@@ -345,21 +347,34 @@ class WorkerManager(QWidget):
     def _handle_stdout(self):
         data = self.process.readAllStandardOutput().data().decode()
         for line in data.splitlines():
+            # Skip progress bar noise to keep UI responsive
+            if "|" in line and "%" in line: continue
+            
             logger.info(f"[WORKER] {line}")
             if "[BCOR_TASK]" in line:
                 try:
-                    import json
                     event_info = line.split("[BCOR_TASK]")[1].strip()
                     event = json.loads(event_info)
                     self.task_event.emit(event)
                 except Exception as e:
                     logger.error(f"Failed to parse task event: {e}")
-            # logger.debug(f"Worker: {line}")
 
     def _handle_stderr(self):
         data = self.process.readAllStandardError().data().decode()
         for line in data.splitlines():
-            logger.warning(f"Worker Error: {line}")
+            # Skip progress bar noise (tqdm, model loading bars)
+            if "|" in line and "it/s" in line: continue
+            if "Loading weights:" in line: continue
+
+            if "[taskiq.worker][INFO]" in line or "[taskiq.receiver.receiver][INFO]" in line:
+                logger.info(f"[WORKER] {line}")
+                continue
+                
+            if "[taskiq." in line and "[ERROR]" in line:
+                logger.error(f"[WORKER ERROR] {line}")
+                continue
+
+            logger.info(f"[WORKER:STDERR] {line}")
 
     def _on_finished(self):
         self.status_changed.emit("Stopped")
@@ -696,6 +711,7 @@ class AssetExplorerDashboard(QMainWindow):
         self.task_monitor = TaskMonitor()
         infra_layout.addWidget(QLabel("Live TaskIQ Worker Feed (Sequential VLM Pipeline)"))
         infra_layout.addWidget(self.task_monitor)
+        infra_layout.addStretch() # Ensure widgets don't expand into the tab bar
         
         # Worker Manager Integration
         self.worker_manager = WorkerManager(self)

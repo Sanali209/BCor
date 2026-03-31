@@ -37,10 +37,32 @@ _patch_bubus()
 class MessageBus:
     """Central dispatcher for Commands and Events, powered by bubus.EventBus.
 
-    The MessageBus acts as the mediator between the application layer and
-    domain handlers. It supports strict 1-to-1 command routing and
-    1-to-N event broadcasting. It also facilitates domain event collection
-    from the Unit of Work.
+    The MessageBus acts as the mediator between the application layer and 
+    infrastructure, ensuring that Commands are executed by a single handler 
+    and Events are broadcast to all interested subscribers.
+
+    Architecture Diagram:
+    ```mermaid
+    graph LR
+        Msg[Message] --> Bus[MessageBus]
+        Bus -->|Command| H1[Single Handler]
+        Bus -->|Event| H2[Many Handlers]
+        H1 -.->|Emits| NewEvt[New Events]
+        H2 -.->|Triggers| SubTask[Sub-Tasks]
+    ```
+
+    Causal Tracing:
+        BCor implements "Recursive Context Tracing". Each emitted Event 
+        carries a `triggering_message_id`, allowing a full lineage 
+        of actions to be reconstructed in logs and Neo4j.
+
+    Rationale:
+        We use `bubus` for its lightweight asyncio core, but we patch it 
+        to disable its default 2-level loop prevention, as BCor 
+        provides its own depth-aware loop control via `max_trace_depth`.
+
+    It supports strict 1-to-1 command routing and 1-to-N event broadcasting.
+    It also facilitates domain event collection from the Unit of Work.
 
     Attributes:
         uow: The active Unit of Work instance.

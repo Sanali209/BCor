@@ -1,3 +1,4 @@
+from loguru import logger
 from dishka import AsyncContainer, Provider, Scope, provide
 from pydantic_settings import BaseSettings
 
@@ -73,3 +74,21 @@ class AGMModule(BaseModule):
             StoredFieldRecalculationRequested: [handle_stored_field_recalc],
             NodeSyncRequested: [handle_node_sync_requested]
         }
+
+    async def startup(self) -> None:
+        """Starts the TaskIQ broker in the current process."""
+        try:
+            from src.adapters.taskiq_broker import broker
+            await broker.startup()
+            logger.info("AGMModule: TaskIQ broker started.")
+        except Exception as e:
+            logger.error(f"AGMModule: Failed to start TaskIQ broker: {e}")
+
+    async def stop(self) -> None:
+        """Shuts down the TaskIQ broker."""
+        try:
+            from src.adapters.taskiq_broker import broker
+            await broker.shutdown()
+            logger.info("AGMModule: TaskIQ broker stopped.")
+        except Exception as e:
+            logger.error(f"AGMModule: Failed to stop TaskIQ broker: {e}")

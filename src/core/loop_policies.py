@@ -11,7 +11,7 @@ class WindowsLoopManager:
     """
     
     @staticmethod
-    def setup_loop():
+    def setup_loop() -> None:
         """Set up the appropriate event loop policy for Windows.
         
         On Windows, this applies the `WindowsSelectorEventLoopPolicy` which is
@@ -25,7 +25,7 @@ class WindowsLoopManager:
             logger.debug("Applied WindowsSelectorEventLoopPolicy")
 
     @staticmethod
-    async def drain_loop(delay: float = 0.5):
+    async def drain_loop(delay: float = 0.5) -> None:
         """Allow pending tasks to settle before shutdown.
         
         Args:

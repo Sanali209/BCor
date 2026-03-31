@@ -6,10 +6,12 @@ import os
 from dataclasses import asdict
 from typing import Any, Dict, List, Optional, get_type_hints, get_origin, get_args
 
-# BCor Imports
-from src.modules.agm.metadata import Stored, OnComplete, Rel
+from src.core.messagebus import MessageBus
+from src.modules.agm.metadata import Stored, OnComplete, Rel, get_field_metadata
 from src.modules.agm.infrastructure.repositories.neo4j_metadata import Neo4jMetadataRepository
 from src.adapters.taskiq_broker import broker
+
+import graphlib
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -63,39 +65,78 @@ async def sync_node_metadata(
     mime_type: str = "image/webp",
     model_name: str = "Asset"
 ) -> None:
-    """Batch Metadata Worker (Addressing Q3, Q4, Q7)."""
+    """Batch Metadata Worker with DAG-based Topological Ordering."""
     logger.info(f"Batch Sync started for {node_id} ({len(fields)} fields)")
     
+    # 1. Build Dependency Graph
+    field_map = {f["field_name"]: f for f in fields}
+    graph = {}
+    for f_name, f_data in field_map.items():
+        # In a real batch, depends_on is often in context_metadata if passed from service
+        deps = (f_data.get("context_metadata") or {}).get("depends_on", [])
+        graph[f_name] = set(deps)
+
+    # 2. Topological Sort
+    ts = graphlib.TopologicalSorter(graph)
+    try:
+        order = list(ts.static_order())
+    except graphlib.CycleError as e:
+        logger.error(f"Cyclic dependency detected in batch for {node_id}: {e}")
+        order = list(field_map.keys()) # Fallback to original order
+
     results = []
-    for f_info in fields:
-        field_name = f_info["field_name"]
+    accumulated_results = {} # field_name -> result (for DAG context sharing)
+    
+    # 3. Execute in DAG Order
+    for field_name in order:
+        if field_name not in field_map:
+            continue
+            
+        f_info = field_map[field_name]
         try:
+            # Inject accumulated results into the context for dependent handlers
+            ctx = (f_info.get("context_metadata") or {}).copy()
+            ctx.update(accumulated_results)
+            
             res = await _process_single_field(
                 node_id, 
                 field_name, 
                 f_info["source_value"], 
                 f_info.get("handler"), 
-                f_info.get("context_metadata"),
+                ctx,
                 mime_type=mime_type,
                 model_name=model_name
             )
-            results.append({
-                "field": field_name,
-                "status": "SUCCESS" if res not in (None, "", [], {}) else "EMPTY",
-                "result": res,
-                "handler": f_info.get("handler") or field_name,
-                "agm_field_type": (f_info.get("context_metadata") or {}).get("agm_field_type", "PROPERTY"),
-                "rel_type": (f_info.get("context_metadata") or {}).get("rel_type", "RELATED_TO"),
-                "target_label": (f_info.get("context_metadata") or {}).get("target_label", "Tag")
-            })
+            
+            accumulated_results[field_name] = res
+            
+            # Propagation logic: if this was a grouped/shared field, create results for ALL companions
+            shared_fields = ctx.get("shared_fields", [field_name])
+            for target_field in shared_fields:
+                event_id = str(uuid.uuid4())
+                results.append({
+                    "id": event_id,
+                    "field": target_field,
+                    "status": "SUCCESS" if res not in (None, "", [], {}) else "EMPTY",
+                    "result": res,
+                    "handler": f_info.get("handler") or field_name,
+                    "agm_field_type": ctx.get("agm_field_type", "PROPERTY"),
+                    "rel_type": ctx.get("rel_type", "RELATED_TO"),
+                    "target_label": ctx.get("target_label", "Tag")
+                })
         except Exception as e:
-            logger.error(f"Field {field_name} failed in batch: {e}")
-            results.append({"field": field_name, "status": "FAILED", "result": None})
+            logger.error(f"Field {field_name} failed in batch DAG: {e}")
+            results.append({
+                "id": str(uuid.uuid4()),
+                "field": field_name, 
+                "status": "FAILED", 
+                "result": None
+            })
 
     repo = _get_repo()
     try:
-        event_id = str(uuid.uuid4())
-        await repo.persist_metadata_batch(node_id, event_id, results, model_name=model_name)
+        # Pass the pre-generated unique IDs in result dictionaries
+        await repo.persist_metadata_batch(node_id, "", results, model_name=model_name)
     finally:
         await repo.close()
 

@@ -1,28 +1,43 @@
-# Документация модуля AGM (Aetheris Graph Mapper)
+# Модуль AGM (Aetheris Graph Mapper)
 
-## Текущее состояние (As-Is)
-Модуль **AGM** (Aetheris Graph Mapper) представляет собой кастомный объектно-графовый маппер (OGM) для графовой базы данных Neo4j, построенный поверх библиотек `adaptix` (для сериализации/десериализации) и `dishka` (для внедрения зависимостей). 
-
-В директории `src/modules/agm` реализованы следующие механизмы:
-1. **Метаданные (`metadata.py`):** Аннотации полей для управления поведением:
-   - `Stored(source_field)`: Поле, значение которого вычисляется асинхронно в фоне (TaskIQ) при изменении `source_field`.
-   - `Live(handler)`: Поле, не сохраняемое в БД, гидратируется налету через DI (через `dishka.AsyncContainer`).
-   - `Rel(type, direction)`: Графовая связь (Relationship) с указанием типа и направления.
-2. **Маппинг (`mapper.py`):** Класс `AGMMapper`.
-   - `load()`: Десериализует Pydantic/Dataclass объекты (Retort), разрешает полиморфизм (`polymorphic_registry`) и гидратирует `Live`-поля.
-   - `save()`: Генерирует и выполняет Cypher-запрос `MERGE` (сохранение узлов и связей `Rel`). Инициирует фоновые вычисления `Stored`-полей через TaskIQ.
-3. **Строитель запросов (`fluent.py`):** Класс `QueryBuilder`.
-   - Smart projection (генерация JSON-проекций Cypher с исключением `Live`/`Rel` полей).
-   - Встроенная поддержка Vector Search (`db.index.vector.queryNodes`).
-4. **Фоновые задачи (`tasks.py`):** `compute_stored_field` (интеграция с TaskIQ).
+## Обзор (Overview)
+**AGM** — это высокоуровневый объектно-графовый маппер (OGM) для Neo4j, разработанный для упрощения работы с графами знаний в агентских системах. Он объединяет декларативное описание схем с мощными механизмами реактивной обработки данных.
 
 ---
 
-## Интеграция с Архитектурным Ядром (Фаза 5)
+## Декларативные метаданные (Declarative Metadata)
+AGM использует `typing.Annotated` для расширения стандартных dataclasses/Pydantic моделей семантикой графа.
 
-В рамках Фазы 5 был проведен рефакторинг AGM для устранения технического долга и приведения модуля в соответствие со спецификацией EDA (Event-Driven Architecture):
-- **Слабая связность (Event Routing):** Жесткий вызов фоновых задач (TaskIQ) из `mapper.py` заменен на публикацию интеграционного события `StoredFieldRecalculationRequested` в центральную шину `MessageBus`.
-- **Обработчики:** Добавлен `handlers.py` с функцией `handle_stored_field_recalc`, которая слушает шину и прозрачно делегирует вычисления в TaskIQ.
-- **Регистрация в DI:** Создан `module.py` (`AGMModule`), который регистрирует провайдер маппера `AGMProvider` и подписки на события в композитном корне `System._bootstrap()`.
+### 1. Поля и Индексы (Fields & Indices)
+*   **`Unique`**: Помечает поле как уникальное (создает Neo4j Uniqueness Constraint).
+*   **`Indexed`**: Создает стандартный Range-индекс для быстрого поиска.
+*   **`VectorIndex(dims=N, metric="cosine")`**: Создает векторный индекс Neo4j для семантического поиска.
 
-Поскольку AGM является исключительно графовым маппером, он преднамеренно обходит паттерны `Repository` и `UnitOfWork`, работая со специфическими Cypher-транзакциями, но при этом интегрируясь в общую событийную шину микросервиса.
+### 2. Реактивность (Reactivity)
+*   **`Stored`**: Указывает, что поле вычисляется асинхронно при изменении исходников (`source_fields`).
+    *   `fusion_params`: Настройки комбинирования данных из нескольких источников.
+    *   `mime_scope`: Фильтрация обработчиков по MIME-типу актива.
+*   **`Live(handler)`**: Поле гидратируется динамически из DI-контейнера при каждой загрузке объекта (не сохраняется в БД).
+*   **`OnComplete(depends_on=(...), handler=...)`**: Декларативный хук, который срабатывает только тогда, когда все перечисленные поля заполнены.
+
+### 3. Связи (Relationships)
+*   **`Rel(type, direction, metadata=...)`**: Определяет связь в графе.
+    *   `metadata`: Класс, описывающий свойства самой связи (properties on edges).
+
+---
+
+## Техническая архитектура (Technical Architecture)
+
+### Core Components
+1.  **`AGMMapper`**: The main interface for `load()` and `save()`. It handles polymorphism, relationship traversal, and change detection.
+2.  **`QueryBuilder`**: A fluent API in `src/modules/agm/fluent.py` for generating complex Cypher queries with built-in support for vector search.
+3.  **`Reactive Processor`**: Monitors changes during `save()` and emits `NodeSyncRequested` events to the common `MessageBus`.
+
+### Event Flow (Modern EDA)
+AGM does not execute long-running tasks directly. Instead:
+1. `AGMMapper` detects changes to `Stored` fields.
+2. It publishes a **`NodeSyncRequested`** event to the `bubus` MessageBus.
+3. A background handler (see `src/modules/agm/handlers.py`) routes this to **TaskIQ** for asynchronous execution by workers.
+
+---
+*Note: Code reference: [src/modules/agm/](file:///d:/github/BCor/src/modules/agm/)*

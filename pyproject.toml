@@ -97,6 +97,7 @@ legacy-phase6 = [
 [tool.ruff]
 line-length = 120
 target-version = "py312"
+exclude = ["legacy"]
 
 [tool.ruff.lint]
 select = ["E", "F", "B", "I", "UP", "PT", "ANN"]
@@ -113,7 +114,7 @@ ignore_missing_imports = true
 namespace_packages = true
 explicit_package_bases = true
 plugins = ["pydantic.mypy"]
-exclude = ["src/legacy_to_port/.*"]
+exclude = ["src/legacy_to_port/.*", "legacy/.*"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

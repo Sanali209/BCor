@@ -8,17 +8,19 @@ from neo4j import AsyncGraphDatabase
 
 logger = logging.getLogger(__name__)
 
-def _serialize_val(val: Any) -> Any:
+def _serialize_val(val: Any, to_json: bool = False) -> Any:
     """Recursively convert objects to Neo4j-compatible primitives/dicts."""
     if dataclasses.is_dataclass(val):
-        return _serialize_val(dataclasses.asdict(val))
+        return _serialize_val(dataclasses.asdict(val), to_json)
     if isinstance(val, list):
-        return [_serialize_val(v) for v in val]
+        return [_serialize_val(v, to_json) for v in val]
     if isinstance(val, dict):
-        return {k: _serialize_val(v) for k, v in val.items()}
+        processed = {k: _serialize_val(v, to_json) for k, v in val.items()}
+        if to_json:
+             return json.dumps(processed)
+        return processed
     if hasattr(val, "__dict__") and not isinstance(val, (str, int, float, bool, type(None))):
-        # Handle custom objects that aren't dataclasses
-        return _serialize_val(val.__dict__)
+        return _serialize_val(val.__dict__, to_json)
     if isinstance(val, uuid.UUID):
         return str(val)
     return val
@@ -64,8 +66,9 @@ class Neo4jMetadataRepository:
         """, {"node_id": node_id, "event_id": event_id, "handler": handler, "field": field, "status": status})
 
     async def persist_metadata_batch(self, node_id: str, event_id: str, results: List[Dict[str, Any]], model_name: str = "Asset"):
-        """ATOMIC Batch Persistence addressing Q4 (One Event per Batch)."""
-        results = [_serialize_val(res) for res in results]
+        """ATOMIC Batch Persistence with safe serialization."""
+        # Note: 'to_json=False' here because we want a dict of results for Cypher parameters
+        results = [_serialize_val(res, to_json=False) for res in results]
         async with self.driver.session() as session:
             await session.execute_write(self._persist_batch_tx, node_id, event_id, results, model_name)
 
@@ -78,12 +81,12 @@ class Neo4jMetadataRepository:
             MATCH (n {id: $node_id})
             UNWIND $results AS res
             MERGE (n)-[:HAS_INFERENCE {field_name: res.field}]->(e:InferenceEvent)
-            SET e.id = $event_id,
+            SET e.id = res.id,
                 e.handler_name = res.handler,
                 e.status = res.status,
                 e.updated_at = timestamp(),
                 e.field_name = res.field
-        """, {"node_id": node_id, "event_id": event_id, "results": results})
+        """, {"node_id": node_id, "results": results})
 
         for res in results:
             field = res["field"]
@@ -97,10 +100,22 @@ class Neo4jMetadataRepository:
             if status == "SUCCESS" and val is not None:
                 # 2. Persist to Node Property
                 if agm_type == "PROPERTY":
-                    await tx.run(f"""
-                        MATCH (n {{id: $node_id}})
-                        SET n.{field} = $val, n.last_sync = timestamp()
-                    """, {"node_id": node_id, "val": val})
+                    # EXIF/Dict Unpacking Logic: 
+                    # If the result is a dictionary, we treat its keys as potential node properties.
+                    if isinstance(val, dict):
+                        for k, v in val.items():
+                             # Use a safe property update for each key in the dict
+                             await tx.run(f"""
+                                MATCH (n {{id: $node_id}})
+                                SET n.{k} = $val, n.last_sync = timestamp()
+                            """, {"node_id": node_id, "val": v})
+                    else:
+                        # Standard property update
+                        safe_val = _serialize_val(val, to_json=True) if isinstance(val, (dict, list)) and not isinstance(val, (str, int, float, bool)) else val
+                        await tx.run(f"""
+                            MATCH (n {{id: $node_id}})
+                            SET n.{field} = $val, n.last_sync = timestamp()
+                        """, {"node_id": node_id, "val": safe_val})
                 
                 # 3. Persist to Multiple Relations (Tags etc)
                 elif agm_type == "RELATION":

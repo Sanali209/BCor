@@ -81,11 +81,26 @@ class CoreProvider(Provider):
 class System:
     """System Composition Root.
 
-    The System class is responsible for the overall lifecycle of the application:
-    1. Module Discovery: Finding modules via manifest files.
-    2. Bootstrapping: Collecting handlers, settings, and providers from modules.
-    3. DI Initialization: Setting up the Dishka container.
-    4. Lifecycle Management: Running start/stop hooks.
+    The System class manages the application's entire lifecycle using the 
+    Composition Root pattern. It is responsible for orchestrating 
+    discovery, bootstrapping, DI initialization, and hook execution.
+
+    Lifecycle Diagram:
+    ```mermaid
+    graph TD
+        A[from_manifest] --> B[_bootstrap]
+        B --> C[Module.setup]
+        C --> D[Collect Settings/Providers]
+        D --> E[Init Dishka Container]
+        E --> F[start]
+        F --> G[Module.startup]
+        G --> H[Run @on_start hooks]
+    ```
+
+    Rationale:
+        By centralizing the wiring of all modules into a single System object, 
+        we ensure that dependencies are strictly managed and the order of 
+        initialization is deterministic.
     """
 
     @classmethod
@@ -126,7 +141,7 @@ class System:
         self._started = False
         self._initialized = False
 
-    def _bootstrap(self) -> None:
+    async def _bootstrap(self) -> None:
         """Bootstraps the system by merging module configurations and providers.
 
         This method:
@@ -139,7 +154,7 @@ class System:
             return
 
         for module in self.modules:
-            module.setup()
+            await module.setup()
             self.command_handlers.update(module.command_handlers)
             for event_type, handlers in module.event_handlers.items():
                 self.event_handlers.setdefault(event_type, []).extend(handlers)
@@ -163,6 +178,11 @@ class System:
 
         self.providers.append(core_provider)
         self.container = make_async_container(*self.providers)
+        
+        # Inject container into modules for post-init resolution
+        for module in self.modules:
+            module.container = self.container
+            
         self._initialized = True
 
     async def start(self) -> None:
@@ -174,9 +194,14 @@ class System:
             logger.warning("System already started")
             return
 
-        self._bootstrap()
+        await self._bootstrap()
 
         logger.info("System starting...")
+        
+        # Give modules a chance to activate using the container
+        for module in self.modules:
+            await module.startup()
+            
         await _run_hooks(get_start_hooks())
 
         self._started = True

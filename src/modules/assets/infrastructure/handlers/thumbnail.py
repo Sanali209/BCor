@@ -21,6 +21,9 @@ class ImageThumbnailProvider:
     """Standard PIL-based provider for images."""
     
     async def generate(self, path: pathlib.Path, content_hash: str, storage_root: str) -> bool:
+        if not path.is_file():
+            logger.warning(f"ImageThumbnailProvider: path '{path}' is not a file. Skipping.")
+            return False
         try:
             with path.open("rb") as f:
                 with Image.open(f) as img:
