@@ -12,6 +12,31 @@ This document outlines core principles including:
 
 ---
 
+## Developer Commands
+
+### Run Tests
+```bash
+# All unit tests (TDD)
+PYTHONPATH=. uv run pytest tests/unit/
+
+# Single test file
+PYTHONPATH=. uv run pytest tests/unit/path/to/test_file.py::test_function
+
+# Specific package/module
+PYTHONPATH=. uv run pytest tests/unit/ -k "pattern"
+```
+
+### Lint & Typecheck
+```bash
+uv run ruff check .      # Lint
+uv run ruff format .   # Format
+uv run mypy .          # Typecheck
+```
+
+**Order matters:** lint -> typecheck -> test
+
+---
+
 ## MCP Servers & Use Cases
 Use these MCP servers to extend your capabilities:
 
@@ -22,7 +47,24 @@ Use these MCP servers to extend your capabilities:
 | **`sequential-thinking`** | Dynamic problem-solving via structured, reflective thoughts. Use for complex architectural planning or debugging tasks that require backtracking. |
 | **`whimsical-desktop`** | Collaborative visual design and documentation. Use for creating flowcharts, mindmaps, wireframes, and documentation in the Whimsical app. |
 
+---
 
+## Framework-Specific Notes
+
+### BCor Framework
+Load the `bcor-expert` skill for:
+- Automated DI in handlers (don't manually get from container)
+- Idempotent command handler design with retry policies
+- Module configuration via `app.toml` + Pydantic settings
+- Windows event loop policies (already in conftest)
+
+### Windows Testing
+Tests include Windows-specific event loop fixtures in `tests/conftest.py`. These prevent hangs but add ~100ms delay per test.
+
+### App Structure
+- Entry points: `src/apps/<app_name>/main.py`
+- Modules: defined in respective app folders
+- Legacy code: `legacy/` directory
 
 ---
 
