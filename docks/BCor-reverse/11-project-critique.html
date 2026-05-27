@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BCor — Step 11: Project Critique</title>
+<style>
+  :root { --bg: #0d1117; --fg: #c9d1d9; --accent: #58a6ff; --green: #3fb950; --orange: #d29922; --red: #f85149; --violet: #bc8cff; --cyan: #56d4dd; --border: #30363d; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; padding: 40px 20px; }
+  .container { max-width: 1000px; margin: 0 auto; }
+  .badge { display: inline-block; background: #1f2937; color: var(--cyan); padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; margin-bottom: 8px; }
+  h1 { font-size: 2rem; background: linear-gradient(135deg, var(--cyan), var(--violet)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px; }
+  h2 { color: var(--cyan); margin: 28px 0 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  h3 { color: var(--violet); margin: 20px 0 8px; }
+  .cross-links { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin: 20px 0; font-size: 0.9rem; }
+  .cross-links a { color: var(--accent); }
+  .oq { background: #1a1a2e; border: 1px solid #4a4a8a; border-radius: 8px; padding: 16px; margin-bottom: 14px; }
+  .oq-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .oq-tag { background: #2a1a3a; color: var(--violet); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+  .criticism { background: #2e1a1a; border: 1px solid #8a3a3a; border-radius: 8px; padding: 16px; margin-bottom: 14px; }
+  .crit-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .crit-tag { background: #3a1a1a; color: var(--red); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); color: #8b949e; font-size: 0.85rem; text-align: center; }
+  .quality-gate { background: #0f2d1a; border: 1px solid #2ea043; border-radius: 8px; padding: 14px 18px; margin: 20px 0; }
+  .quality-gate h3 { color: var(--green); }
+  .quality-gate ul { margin: 8px 0 0 18px; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <span class="badge">ШАГ 11/14 — [WEB]</span>
+  <h1>Project Critique</h1>
+  <p class="subtitle">Open Questions · Blind Spots · Architectural Criticism</p>
+
+  <div class="meta" style="background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin-bottom: 24px;">
+    <strong>Created:</strong> 2026-05-26 · <strong>Cross-links:</strong> All previous steps
+  </div>
+
+  <div class="cross-links">
+    ← <a href="10-architecture.html">Step 10: Architecture</a> · <a href="index.html">Карта</a> · <a href="12-knowledge-gained.html">Step 12: Knowledge Gained →</a>
+  </div>
+
+  <h2>11.1 Open Questions</h2>
+
+  <div class="oq">
+    <div class="oq-header"><span class="oq-tag">OPEN QUESTION</span><h4>Почему выбран bubus, а не встроенный asyncio или RabbitMQ?</h4></div>
+    <p><strong>Контекст:</strong> bubus — малоизвестная библиотека, требует патча (отключение loop prevention).</p>
+    <p><strong>Гипотеза:</strong> bubus даёт декораторный routing из коробки и минимальный overhead. Но патч означает, что архитектура уже не вписывается в ограничения bubus.</p>
+  </div>
+
+  <div class="oq">
+    <div class="oq-header"><span class="oq-tag">OPEN QUESTION</span><h4>Зачем ECS-модуль в бизнес-фреймворке?</h4></div>
+    <p><strong>Контекст:</strong> ECS (Entity Component System) — гейм-дизайн паттерн, необычный для бизнес-приложений.</p>
+    <p><strong>Гипотеза:</strong> Возможно, используется для симуляции/игровых сценариев или как proof-of-concept универсальности фреймворка.</p>
+  </div>
+
+  <div class="oq">
+    <div class="oq-header"><span class="oq-tag">OPEN QUESTION</span><h4>Почему нет тестов для common/ библиотеки?</h4></div>
+    <p><strong>Контекст:</strong> common/ содержит 25+ файлов, но только 3 тестовых файла (test_asyncio_utils, test_paths, test_sqlite_utils).</p>
+    <p><strong>Гипотеза:</strong> common/ вырос органически, тесты не успевают за разработкой.</p>
+  </div>
+
+  <h2>11.2 Blind Spots</h2>
+
+  <div class="criticism">
+    <div class="crit-header"><span class="crit-tag">BLIND SPOT</span><h4>Security: SQL-инъекции в сырых запросах</h4></div>
+    <p><strong>Где:</strong> <code>src/apps/boruscraper/common/database.py</code></p>
+    <p><strong>Что не так:</strong> Использование сырых SQL-запросов с форматированием строк. Потенциальные SQL-инъекции.</p>
+  </div>
+
+  <div class="criticism">
+    <div class="crit-header"><span class="crit-tag">BLIND SPOT</span><h4>Error Handling: Исключения в event handler'ах</h4></div>
+    <p><strong>Где:</strong> <code>src/core/messagebus.py</code></p>
+    <p><strong>Что не так:</strong> Fail-safe для событий означает, что ошибки могут остаться незамеченными. Нет гарантированной доставки.</p>
+  </div>
+
+  <div class="criticism">
+    <div class="crit-header"><span class="crit-tag">BLIND SPOT</span><h4>Thread Safety: asyncio + Qt + QProcess</h4></div>
+    <p><strong>Где:</strong> <code>src/apps/asset_explorer/main.py</code></p>
+    <p><strong>Что не так:</strong> Смешение asyncio, QProcess сигналов и потоков может привести к race conditions.</p>
+  </div>
+
+  <h2>11.3 Architectural Criticism</h2>
+
+  <div class="criticism">
+    <div class="crit-header"><span class="crit-tag">CRITICISM</span><h4>Избыточность ECS и Orders модулей</h4></div>
+    <p><strong>Где:</strong> <code>src/modules/ecs/</code>, <code>src/modules/orders/</code></p>
+    <p><strong>Что не так:</strong> Orders — игрушечный пример (никакой реальной бизнес-логики). ECS — вообще не бизнес-домен. Они загромождают код и создают впечатление незавершённости.</p>
+    <p><strong>Альтернатива:</strong> Вынести в examples/ или удалить. Сосредоточиться на реальных модулях (AGM, Assets).</p>
+  </div>
+
+  <div class="criticism">
+    <div class="crit-header"><span class="crit-tag">CRITICISM</span><h4>Дублирование конфигурации</h4></div>
+    <p><strong>Где:</strong> <code>app.toml</code> + <code>pyproject.toml</code> + pydantic-settings + переменные окружения</p>
+    <p><strong>Что не так:</strong> Слишком много источников конфигурации. Новый разработчик не поймёт, где что переопределяется.</p>
+  </div>
+
+  <div class="criticism">
+    <div class="crit-header"><span class="crit-tag">CRITICISM</span><h4>Недостаток тестов для common/ и apps/</h4></div>
+    <p><strong>Что не так:</strong> 66% кода — legacy (без тестов). Common/ — ключевая библиотека — почти без тестов. Apps/ — GUI — без тестов.</p>
+  </div>
+
+  <div class="quality-gate">
+    <h3>✅ Quality Gate — Step 11</h3>
+    <ul>
+      <li>✅ Open questions — 3 formulated (bubus choice, ECS purpose, common test gap)</li>
+      <li>✅ Blind spots — 3 identified (SQL injection, error handling, thread safety)</li>
+      <li>✅ Architectural criticism — 3 issues (redundant modules, config duplication, test coverage)</li>
+      <li>✅ Cross-links — all steps</li>
+    </ul>
+  </div>
+
+  <div class="cross-links">
+    ← <a href="10-architecture.html">Step 10: Architecture</a> · <a href="index.html">Карта</a> · <a href="12-knowledge-gained.html">Step 12: Knowledge Gained →</a>
+  </div>
+
+  <div class="footer">
+    BCor Reverse Engineering · Step 11/14 · 2026-05-26
+  </div>
+</div>
+</body>
+</html>

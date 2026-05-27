@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BCor — Step 8: Documentation Audit</title>
+<style>
+  :root { --bg: #0d1117; --fg: #c9d1d9; --accent: #58a6ff; --green: #3fb950; --orange: #d29922; --red: #f85149; --violet: #bc8cff; --cyan: #56d4dd; --border: #30363d; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; padding: 40px 20px; }
+  .container { max-width: 1000px; margin: 0 auto; }
+  .badge { display: inline-block; background: #1f2937; color: var(--cyan); padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; margin-bottom: 8px; }
+  h1 { font-size: 2rem; background: linear-gradient(135deg, var(--cyan), var(--violet)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px; }
+  .subtitle { color: #8b949e; font-size: 1rem; margin-bottom: 24px; }
+  .meta { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; }
+  h2 { color: var(--cyan); margin: 28px 0 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  h3 { color: var(--violet); margin: 20px 0 8px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.9rem; }
+  th, td { padding: 8px 12px; border-bottom: 1px solid #21262d; text-align: left; }
+  th { color: #8b949e; font-size: 0.8rem; text-transform: uppercase; }
+  tr:hover td { background: #161b22; }
+  pre { background: #161b22; border: 1px solid var(--border); border-radius: 6px; padding: 14px; font-size: 0.85rem; margin-bottom: 16px; }
+  .cross-links { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin: 20px 0; font-size: 0.9rem; }
+  .cross-links a { color: var(--accent); }
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); color: #8b949e; font-size: 0.85rem; text-align: center; }
+  .quality-gate { background: #0f2d1a; border: 1px solid #2ea043; border-radius: 8px; padding: 14px 18px; margin: 20px 0; }
+  .quality-gate h3 { color: var(--green); margin-top: 0; }
+  .quality-gate ul { margin: 8px 0 0 18px; font-size: 0.9rem; }
+  .rating-A { color: var(--green); } .rating-B { color: var(--orange); } .rating-C { color: var(--red); }
+</style>
+</head>
+<body>
+<div class="container">
+  <span class="badge">ШАГ 8/14</span>
+  <h1>Documentation Audit</h1>
+  <p class="subtitle">Documentation Inventory · Code-Doc Alignment · Quality Assessment</p>
+
+  <div class="meta">
+    <strong>Created:</strong> 2026-05-26 · <strong>Cross-links:</strong> <a href="01-surface-scan.html">Step 1</a>, <a href="07-feature-analysis.html">Step 7</a>
+  </div>
+
+  <div class="cross-links">
+    ← <a href="07-feature-analysis.html">Step 7: Feature Analysis</a> · <a href="index.html">Карта</a> · <a href="09-web-research.html">Step 9: Web Research →</a>
+  </div>
+
+  <h2>8.1 Documentation Inventory</h2>
+
+  <h3>Root Documentation</h3>
+  <table>
+    <thead><tr><th>File</th><th>Format</th><th>Quality</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>README.md</code></td><td>Markdown</td><td><span class="rating-A">A</span></td><td>Excellent — comprehensive project overview, stack, structure, links</td></tr>
+      <tr><td><code>ARCHITECTURE.md</code></td><td>Markdown</td><td><span class="rating-A">A</span></td><td>Detailed architecture documentation with diagrams</td></tr>
+      <tr><td><code>ARCHITECTURE_ru.md</code></td><td>Markdown</td><td><span class="rating-A">A</span></td><td>Russian translation of architecture</td></tr>
+      <tr><td><code>DEVELOPER_GUIDE.md</code></td><td>Markdown</td><td><span class="rating-A">A</span></td><td>Full developer guide</td></tr>
+      <tr><td><code>DEVELOPER_GUIDE_ru.md</code></td><td>Markdown</td><td><span class="rating-A">A</span></td><td>Russian translation</td></tr>
+      <tr><td><code>AGENTS.md</code></td><td>Markdown</td><td><span class="rating-A">A</span></td><td>AI agent instructions with commands</td></tr>
+      <tr><td><code>firststeps.md</code></td><td>Markdown</td><td><span class="rating-B">B</span></td><td>Getting started guide</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Ddocks/ (Design Documentation)</h3>
+  <table>
+    <thead><tr><th>File</th><th>Quality</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>Ddocks/Design_docks/Specification.md</code></td><td><span class="rating-A">A</span></td><td>Detailed system spec</td></tr>
+      <tr><td><code>Ddocks/Design_docks/Dizdok.md</code></td><td><span class="rating-B">B</span></td><td>Design document (bilingual)</td></tr>
+      <tr><td><code>Ddocks/Design_docks/Conceptdock.md</code></td><td><span class="rating-B">B</span></td><td>Conceptual overview</td></tr>
+      <tr><td><code>Ddocks/Design_docks/Roadmap.md</code></td><td><span class="rating-A">A</span></td><td>Project roadmap</td></tr>
+      <tr><td><code>Ddocks/Design_docks/constitution.md</code></td><td><span class="rating-A">A</span></td><td>Project constitution (ADR first, TDD, uv)</td></tr>
+      <tr><td><code>Ddocks/TECH_DEBT_REGISTRY.md</code></td><td><span class="rating-A">A</span></td><td>Tech debt tracking</td></tr>
+      <tr><td>Module docs (orders_dock, agm_dock, etc.)</td><td><span class="rating-B">B</span></td><td>Module-specific design docs</td></tr>
+    </tbody>
+  </table>
+
+  <h3>ADRs</h3>
+  <p>7 ADRs found: 0001 (Strangler Fig) through 0010 (Code as Doc). Covers: domain core, adapters, layering, uv, Python 3.12, shared common, async-native, heavy deps.</p>
+
+  <h3>Diátaxis Documentation (docs/)</h3>
+  <table>
+    <thead><tr><th>Type</th><th>Files</th><th>Quality</th></tr></thead>
+    <tbody>
+      <tr><td>Tutorials</td><td><code>docs/tutorials/quickstart.md</code></td><td><span class="rating-B">B</span></td></tr>
+      <tr><td>How-to</td><td><code>docs/how-to/add-adapter.md</code>, <code>create-module.md</code>, <code>write-tests.md</code></td><td><span class="rating-B">B</span></td></tr>
+      <tr><td>Reference</td><td><code>docs/reference/adapters.md</code>, <code>core-api.md</code>, <code>module-api.md</code></td><td><span class="rating-B">B</span></td></tr>
+      <tr><td>Explanation</td><td><code>docs/explanation/architecture.md</code>, <code>event-sourcing.md</code>, <code>agm.md</code></td><td><span class="rating-A">A</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>8.2 Code-Doc Alignment</h2>
+
+  <table>
+    <thead><tr><th>Component</th><th>Doc Coverage</th><th>Accuracy</th></tr></thead>
+    <tbody>
+      <tr><td>Core (MessageBus, UoW, Repository)</td><td><span class="rating-A">High</span></td><td><span class="rating-A">Up to date</span></td></tr>
+      <tr><td>Modules (Orders, AGM, ECS)</td><td><span class="rating-B">Medium</span></td><td><span class="rating-B">Mostly accurate</span></td></tr>
+      <tr><td>Adapters (Playwright, SQLAlchemy)</td><td><span class="rating-B">Medium</span></td><td><span class="rating-B">Partial</span></td></tr>
+      <tr><td>Common library</td><td><span class="rating-C">Low</span></td><td><span class="rating-C">Minimal</span></td></tr>
+      <tr><td>BoruScraper app</td><td><span class="rating-C">Low</span></td><td><span class="rating-C">Not documented</span></td></tr>
+      <tr><td>Asset Explorer app</td><td><span class="rating-C">Low</span></td><td><span class="rating-C">Not documented</span></td></tr>
+      <tr><td>Legacy code</td><td><span class="rating-C">Low</span></td><td><span class="rating-C">Legacy docs only</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>8.3 Self-Documenting Code Assessment</h2>
+  <table>
+    <thead><tr><th>Aspect</th><th>Rating</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Type hints</td><td><span class="rating-A">A</span></td><td>Near-complete type hints throughout (mypy strict)</td></tr>
+      <tr><td>Docstrings</td><td><span class="rating-A">A</span></td><td>Detailed Google-style docstrings in core, modules, adapters</td></tr>
+      <tr><td>Class/method naming</td><td><span class="rating-A">A</span></td><td>Clear, descriptive names</td></tr>
+      <tr><td>Inline comments</td><td><span class="rating-B">B</span></td><td>Architecture rationales documented, some areas sparse</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8.4 Key Findings</h2>
+  <ul>
+    <li><strong>Strength:</strong> Excellent documentation culture — ARCHITECTURE.md, ADRs, Ddocks, Diátaxis docs, AGENTS.md, constitution</li>
+    <li><strong>Strength:</strong> Code is well-documented (type hints, docstrings, mypy strict)</li>
+    <li><strong>Weakness:</strong> Application-level docs (boruscraper, asset_explorer) are missing</li>
+    <li><strong>Weakness:</strong> Common library has minimal external documentation</li>
+    <li><strong>Weakness:</strong> No API reference generated (no Sphinx/pydoc)</li>
+  </ul>
+
+  <div class="quality-gate">
+    <h3>✅ Quality Gate — Step 8</h3>
+    <ul>
+      <li>✅ Documentation inventory — 20+ doc files catalogued</li>
+      <li>✅ Code-doc alignment — core (high), modules (medium), apps (low)</li>
+      <li>✅ Quality assessment — excellent architecture docs, weak app docs</li>
+      <li>✅ Self-documenting code — type hints A, docstrings A</li>
+      <li>✅ Cross-links — Steps 1, 7</li>
+    </ul>
+  </div>
+
+  <div class="cross-links">
+    ← <a href="07-feature-analysis.html">Step 7: Feature Analysis</a> · <a href="index.html">Карта</a> · <a href="09-web-research.html">Step 9: Web Research →</a>
+  </div>
+
+  <div class="footer">
+    BCor Reverse Engineering · Step 8/14 · 2026-05-26
+  </div>
+</div>
+</body>
+</html>

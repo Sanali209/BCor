@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BCor — Step 14: Final Map</title>
+<style>
+  :root { --bg: #0d1117; --fg: #c9d1d9; --accent: #58a6ff; --green: #3fb950; --violet: #bc8cff; --cyan: #56d4dd; --border: #30363d; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; padding: 40px 20px; }
+  .container { max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 2.2rem; background: linear-gradient(135deg, var(--cyan), var(--violet)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px; }
+  .subtitle { color: #8b949e; font-size: 1rem; margin-bottom: 24px; }
+  .meta { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin-bottom: 24px; font-size: 0.9rem; }
+  .meta strong { color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid #21262d; }
+  th { color: #8b949e; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; }
+  tr:hover td { background: #161b22; }
+  .status-done { color: var(--green); font-weight: bold; }
+  .status-skipped { color: #8b949e; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .summary-item { background: #161b22; border: 1px solid var(--border); border-radius: 6px; padding: 12px; text-align: center; }
+  .summary-item .num { font-size: 1.6rem; font-weight: 700; color: var(--cyan); }
+  .summary-item .label { font-size: 0.8rem; color: #8b949e; }
+  .findings { margin-bottom: 24px; }
+  .findings h3 { color: var(--cyan); margin-bottom: 8px; }
+  .findings ul { margin-left: 20px; }
+  .findings li { margin-bottom: 4px; }
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #21262d; color: #8b949e; font-size: 0.85rem; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>BCor Reverse Engineering Map</h1>
+  <p class="subtitle">Event-Driven Modular Monolith — Final Analysis</p>
+
+  <div class="meta">
+    <strong>Project:</strong> BCor · <strong>Python:</strong> 3.12 · <strong>Python files:</strong> 758 · <strong>Total files:</strong> 1,319<br>
+    <strong>Stack:</strong> bubus · dishka · returns · TaskIQ+NATS · PySide6 · Neo4j · Playwright<br>
+    <strong>Analysis date:</strong> 2026-05-26 · <strong>Status:</strong> ✅ Complete
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-item"><div class="num">14</div><div class="label">Steps Completed</div></div>
+    <div class="summary-item"><div class="num">758</div><div class="label">Python Files</div></div>
+    <div class="summary-item"><div class="num">96K</div><div class="label">Lines of Code</div></div>
+    <div class="summary-item"><div class="num">66%</div><div class="label">Legacy Code</div></div>
+    <div class="summary-item"><div class="num">8</div><div class="label">Core Modules</div></div>
+    <div class="summary-item"><div class="num">7</div><div class="label">ADRs</div></div>
+  </div>
+
+  <div class="findings">
+    <h3>🔑 Key Findings</h3>
+    <ul>
+      <li><strong>Async-native Clean Architecture</strong> — строгое разделение слоёв, CQRS, Event-Driven Modular Monolith</li>
+      <li><strong>AGM (Graph-Object Mapping)</strong> — мощный Neo4j OGM с Identity Map, UNWIND batching, Fluent Cypher</li>
+      <li><strong>66% legacy</strong> — 500+ файлов в legacy/, миграция через Strangler Fig паттерн</li>
+      <li><strong>Desktop GUI</strong> — PySide6 + qasync, MVVM, metadata-driven UI</li>
+      <li><strong>Weak spots</strong> — нет CI/CD, raw SQL в boruscraper, слабая тестовая покрышка</li>
+    </ul>
+  </div>
+
+  <table>
+    <thead><tr><th>#</th><th>Artifact</th><th>Status</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><a href="01-surface-scan.html">Surface Scan</a></td><td><span class="status-done">✅ Done</span></td><td>Perimeter, configs, dependencies (30+ libs), 11 concepts</td></tr>
+      <tr><td>2</td><td><a href="02-entity-model.html">Entity System</a></td><td><span class="status-done">✅ Done</span></td><td>Domain models, messages, SQLite, serializers</td></tr>
+      <tr><td>3</td><td><a href="03-api-surface.html">API Surface</a></td><td><span class="status-done">✅ Done</span></td><td>4 entry points (2 CLI, 2 GUI), no REST API</td></tr>
+      <tr><td>4</td><td><a href="04-frontend-flow.html">Frontend Flow</a></td><td><span class="status-skipped">⏭️ Skipped</span></td><td>No web frontend — desktop/CLI only</td></tr>
+      <tr><td>5</td><td><a href="05-uiux-desktop-gui.html">UI/UX + Desktop GUI</a></td><td><span class="status-done">✅ Done</span></td><td>PySide6, qasync, MVVM, 2 apps, 15+ widgets</td></tr>
+      <tr><td>6</td><td><a href="06-data-pipeline.html">Data Pipeline</a></td><td><span class="status-done">✅ Done</span></td><td>Scraping, media processing, hash dedup, ETL</td></tr>
+      <tr><td>7</td><td><a href="07-feature-analysis.html">Feature Analysis</a></td><td><span class="status-done">✅ Done</span></td><td>41 features catalogued, 9 gaps identified</td></tr>
+      <tr><td>8</td><td><a href="08-documentation-audit.html">Documentation Audit</a></td><td><span class="status-done">✅ Done</span></td><td>20+ doc files, excellent arch docs, weak app docs</td></tr>
+      <tr><td>9</td><td><a href="09-web-research.html">Web Research</a></td><td><span class="status-done">✅ Done</span></td><td>12 libs analyzed, alternatives compared</td></tr>
+      <tr><td>10</td><td><a href="10-architecture.html">Architecture</a></td><td><span class="status-done">✅ Done</span></td><td>4 layers, 7 patterns, dependency graph</td></tr>
+      <tr><td>11</td><td><a href="11-project-critique.html">Project Critique</a></td><td><span class="status-done">✅ Done</span></td><td>3 open questions, 3 blind spots, 3 criticisms</td></tr>
+      <tr><td>12</td><td><a href="12-knowledge-gained.html">Knowledge Gained</a></td><td><span class="status-done">✅ Done</span></td><td>3 lessons, 3 patterns, 2 anti-patterns, 7 tools</td></tr>
+      <tr><td>13</td><td><a href="13-swot-debt-roadmap.html">SWOT + Tech Debt</a></td><td><span class="status-done">✅ Done</span></td><td>SWOT, 7 debt items, 3-tier recommendations</td></tr>
+      <tr><td>14</td><td><a href="14-final-map.html">Final Map</a></td><td><span class="status-done">✅ Done</span></td><td>Complete summary with all cross-links</td></tr>
+    </tbody>
+  </table>
+
+  <h3 style="color: var(--violet);">📊 Key Metrics</h3>
+  <table>
+    <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Python files (src/)</td><td>~258</td></tr>
+      <tr><td>Python files (total)</td><td>758</td></tr>
+      <tr><td>Total files</td><td>1,319</td></tr>
+      <tr><td>Lines of Python code</td><td>~96,384</td></tr>
+      <tr><td>External dependencies</td><td>30+</td></tr>
+      <tr><td>Business modules</td><td>8 (orders, agm, ecs, assets, vfs, llm, files, analytics)</td></tr>
+      <tr><td>Applications</td><td>4 (boruscraper, asset_explorer, hello_app, VFSSample)</td></tr>
+      <tr><td>ADRs</td><td>7</td></tr>
+      <tr><td>Legacy code fraction</td><td>~66%</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    BCor Reverse Engineering · Complete · 2026-05-26<br>
+    Generated by iterative-reverse-engineering skill v2.1 · All 14 steps completed
+  </div>
+</div>
+</body>
+</html>

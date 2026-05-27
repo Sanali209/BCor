@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BCor — Step 6: Data Pipeline</title>
+<style>
+  :root { --bg: #0d1117; --fg: #c9d1d9; --accent: #58a6ff; --green: #3fb950; --violet: #bc8cff; --cyan: #56d4dd; --border: #30363d; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; padding: 40px 20px; }
+  .container { max-width: 1000px; margin: 0 auto; }
+  .badge { display: inline-block; background: #1f2937; color: var(--cyan); padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; margin-bottom: 8px; }
+  h1 { font-size: 2rem; background: linear-gradient(135deg, var(--cyan), var(--violet)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px; }
+  .subtitle { color: #8b949e; font-size: 1rem; margin-bottom: 24px; }
+  .meta { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; }
+  h2 { color: var(--cyan); margin: 28px 0 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  h3 { color: var(--violet); margin: 20px 0 8px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.9rem; }
+  th, td { padding: 8px 12px; border-bottom: 1px solid #21262d; text-align: left; }
+  th { color: #8b949e; font-size: 0.8rem; text-transform: uppercase; }
+  tr:hover td { background: #161b22; }
+  pre { background: #161b22; border: 1px solid var(--border); border-radius: 6px; padding: 14px; overflow-x: auto; font-size: 0.85rem; margin-bottom: 16px; }
+  .cross-links { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin: 20px 0; font-size: 0.9rem; }
+  .cross-links a { color: var(--accent); }
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); color: #8b949e; font-size: 0.85rem; text-align: center; }
+  .quality-gate { background: #0f2d1a; border: 1px solid #2ea043; border-radius: 8px; padding: 14px 18px; margin: 20px 0; }
+  .quality-gate h3 { color: var(--green); margin-top: 0; }
+  .quality-gate ul { margin: 8px 0 0 18px; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <span class="badge">ШАГ 6/14</span>
+  <h1>Data Pipeline Map</h1>
+  <p class="subtitle">Web Scraping · Media Processing · ETL · Hash Deduplication</p>
+
+  <div class="meta">
+    <strong>Created:</strong> 2026-05-26 · <strong>Cross-links:</strong> <a href="01-surface-scan.html">Step 1</a>, <a href="02-entity-model.html">Step 2</a>, <a href="05-uiux-desktop-gui.html">Step 5</a>
+  </div>
+
+  <div class="cross-links">
+    ← <a href="05-uiux-desktop-gui.html">Step 5: UI/UX + Desktop GUI</a> · <a href="index.html">Карта</a> · <a href="07-feature-analysis.html">Step 7: Feature Analysis →</a>
+  </div>
+
+  <h2>6.1 Pipeline Stage Map</h2>
+
+  <h3>BoruScraper Pipeline</h3>
+  <pre>
+URL List → Pagination Loop → Topic Extraction → Resource Download → SQLite Storage
+  │            │                    │                   │
+  │            │                    │                   └── Dedup (MD5/phash)
+  │            │                    └── Field extraction (text, resource_url)
+  │            └── Next page via pagination selector
+  └── Start URLs from config/templates
+  </pre>
+
+  <h3>Asset Ingestion Pipeline</h3>
+  <pre>
+File/Directory → AssetIngestionService → AGMMapper → Neo4j
+  │                  │                      │
+  │                  ├── MIME detection      ├── Identity Map
+  │                  ├── Hash computation    ├── UNWIND batching
+  │                  └── Metadata extraction └── Schema sync
+  └── QFileDialog → VFS (PyFilesystem)
+  </pre>
+
+  <h3>Media Processing Pipeline (VLM)</h3>
+  <pre>
+Asset Node Change → StoredFieldRecalculationRequested → TaskIQ Worker → 
+Handler (SmilingWolf, CLIP, Piexif) → Writeback → Neo4j Node Updated
+  </pre>
+
+  <h2>6.2 Key Pipeline Components</h2>
+
+  <table>
+    <thead><tr><th>Component</th><th>Location</th><th>Input</th><th>Output</th></tr></thead>
+    <tbody>
+      <tr><td>ScraperEngine</td><td><code>adapters/web/scraper_engine.py</code></td><td>ScraperConfig (URLs, selectors)</td><td>list[TopicData]</td></tr>
+      <tr><td>PlaywrightAdapter</td><td><code>adapters/web/playwright_adapter.py</code></td><td>URL</td><td>HTML content</td></tr>
+      <tr><td>BS4Extractor</td><td><code>adapters/web/bs4_extractor.py</code></td><td>HTML</td><td>Parsed fields</td></tr>
+      <tr><td>ResourceDownloader</td><td><code>adapters/web/resource_downloader.py</code></td><td>Resource URLs</td><td>Downloaded files</td></tr>
+      <tr><td>DeduplicationManager</td><td><code>boruscraper/common/deduplication.py</code></td><td>New file hash</td><td>Dedup decision</td></tr>
+      <tr><td>MetadataService</td><td><code>common/media/metadata_service.py</code></td><td>File path (VFS)</td><td>EXIF/XMP/IPTC dict</td></tr>
+      <tr><td>AssetIngestionService</td><td><code>modules/assets/domain/services.py</code></td><td>File path</td><td>Asset node in Neo4j</td></tr>
+      <tr><td>AGMMapper</td><td><code>modules/agm/mapper.py</code></td><td>Python dataclass</td><td>Neo4j node/rel</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6.3 Media Processing Pattern</h2>
+
+  <h3>Download → Hash → Dedup → Store</h3>
+  <pre>
+1. ResourceDownloader fetches file from URL
+2. MD5 hash computed (populate_md5_cache.py)
+3. Perceptual hash (imagehash.phash) for image dedup
+4. DeduplicationManager checks: existing MD5 or phash?
+5. If duplicate → DupeDialog (user decision: keep/skip/replace)
+6. If new → store to disk, record in SQLite
+  </pre>
+
+  <h3>Metadata Pipeline (ExifTool)</h3>
+  <pre>
+1. MetadataService.read_metadata(fs, path)
+2. Spawns exiftool.exe subprocess (thread via asyncio)
+3. Returns JSON dict of all EXIF/XMP/IPTC tags
+4. Stored as JSON blob in media_files.metadata
+  </pre>
+
+  <h2>6.4 Error Handling & Resilience</h2>
+  <table>
+    <thead><tr><th>Mechanism</th><th>Usage</th></tr></thead>
+    <tbody>
+      <tr><td>tenacity (retry)</td><td>MessageBus handler execution with exponential backoff</td></tr>
+      <tr><td>BusinessResult monad</td><td>Business errors returned as Failure, exceptions for infrastructure</td></tr>
+      <tr><td>Fail-fast</td><td>Configuration errors at startup</td></tr>
+      <tr><td>Fail-safe</td><td>Event handler errors don't crash the bus</td></tr>
+      <tr><td>asyncio.wait_for</td><td>Timeout for worker shutdown (2s)</td></tr>
+      <tr><td>try/catch in goto()</td><td>Browser navigation errors return False, not crash</td></tr>
+    </tbody>
+  </table>
+
+  <div class="quality-gate">
+    <h3>✅ Quality Gate — Step 6</h3>
+    <ul>
+      <li>✅ Pipeline stages mapped — BoruScraper, Asset Ingestion, VLM pipelines</li>
+      <li>✅ Data flow diagram — input → process → output for each stage</li>
+      <li>✅ Media processing — download → hash → dedup → store</li>
+      <li>✅ Browser automation — Playwright async, BS4 extraction</li>
+      <li>✅ Error handling — tenacity, monads, fail-fast/safe</li>
+      <li>✅ Cross-links — Steps 1, 2, 5</li>
+    </ul>
+  </div>
+
+  <div class="cross-links">
+    ← <a href="05-uiux-desktop-gui.html">Step 5: UI/UX + Desktop GUI</a> · <a href="index.html">Карта</a> · <a href="07-feature-analysis.html">Step 7: Feature Analysis →</a>
+  </div>
+
+  <div class="footer">
+    BCor Reverse Engineering · Step 6/14 · 2026-05-26
+  </div>
+</div>
+</body>
+</html>

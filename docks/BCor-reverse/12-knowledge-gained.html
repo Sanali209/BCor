@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BCor — Step 12: Knowledge Gained</title>
+<style>
+  :root { --bg: #0d1117; --fg: #c9d1d9; --accent: #58a6ff; --green: #3fb950; --violet: #bc8cff; --cyan: #56d4dd; --border: #30363d; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; padding: 40px 20px; }
+  .container { max-width: 1000px; margin: 0 auto; }
+  .badge { display: inline-block; background: #1f2937; color: var(--cyan); padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; margin-bottom: 8px; }
+  h1 { font-size: 2rem; background: linear-gradient(135deg, var(--cyan), var(--violet)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px; }
+  h2 { color: var(--cyan); border-bottom: 1px solid var(--border); padding-bottom: 6px; margin: 28px 0 12px; }
+  h3 { color: var(--violet); margin: 20px 0 8px; }
+  .cross-links { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin: 20px 0; font-size: 0.9rem; }
+  .cross-links a { color: var(--accent); }
+  .knowledge { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 14px; }
+  .knowledge-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .knowledge-tag { background: #1a2d3a; color: var(--green); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); color: #8b949e; font-size: 0.85rem; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+  <span class="badge">ШАГ 12/14</span>
+  <h1>Knowledge Gained</h1>
+  <p class="subtitle">Lessons · Patterns · Anti-Patterns · Domain Knowledge · Tool Discoveries</p>
+
+  <div class="cross-links">
+    ← <a href="11-project-critique.html">Step 11: Project Critique</a> · <a href="index.html">Карта</a> · <a href="13-swot-debt-roadmap.html">Step 13: SWOT →</a>
+  </div>
+
+  <h2>12.1 Lessons Learned</h2>
+
+  <div class="knowledge">
+    <div class="knowledge-header"><span class="knowledge-tag">LESSON</span><h4>Async-native Clean Architecture работает</h4></div>
+    <p><strong>Где:</strong> Весь проект</p>
+    <p><strong>Суть:</strong> BCor показывает, что Clean Architecture + DDD + CQRS можно построить на чистом async/await без синхронных прослоек. dishka + bubus + returns образуют когерентный стек.</p>
+    <p><strong>Применимость:</strong> Для новых Python-проектов, требующих testability и модульности.</p>
+  </div>
+
+  <div class="knowledge">
+    <div class="knowledge-header"><span class="knowledge-tag">LESSON</span><h4>AGM — интересная альтернатива ORM для графов</h4></div>
+    <p><strong>Где:</strong> <code>src/modules/agm/</code></p>
+    <p><strong>Суть:</strong> AGMMapper предоставляет декларативное GOM (Graph-Object Mapping) с аннотациями @Stored, @Live, @Rel. Identity Map + UNWIND batching + fluent Cypher query builder.</p>
+    <p><strong>Применимость:</strong> Для проектов на Neo4j — лучшая альтернатива neomodel.</p>
+  </div>
+
+  <div class="knowledge">
+    <div class="knowledge-header"><span class="knowledge-tag">LESSON</span><h4>qasync — работает, но хрупко</h4></div>
+    <p><strong>Где:</strong> <code>src/apps/asset_explorer/main.py</code></p>
+    <p><strong>Суть:</strong> Интеграция asyncio с Qt через qasync возможна, но требует WindowsLoopManager и осторожности с сигналами/слотами и QProcess.</p>
+  </div>
+
+  <h2>12.2 Patterns Worth Adopting</h2>
+
+  <div class="knowledge">
+    <div class="knowledge-header"><span class="knowledge-tag">PATTERN</span><h4>Metadata-driven UI Generation</h4></div>
+    <p><strong>Где:</strong> <code>AutoMetadataPanel</code>, <code>SearchConstructor</code></p>
+    <p><strong>Суть:</strong> AGM-аннотации полей (@Column, @Searchable, @DisplayName) используются для автоматической генерации GUI. Никакого ручного вязания формы к модели.</p>
+  </div>
+
+  <div class="knowledge">
+    <div class="knowledge-header"><span class="knowledge-tag">PATTERN</span><h4>Stored Field Recalculation</h4></div>
+    <p><strong>Где:</strong> <code>Stored</code> metadata + TaskIQ workers</p>
+    <p><strong>Суть:</strong> Поля, помеченные @Stored, автоматически пересчитываются в фоне при изменении source-поля. Декларативная конфигурация, асинхронное выполнение.</p>
+  </div>
+
+  <div class="knowledge">
+    <div class="knowledge-header"><span class="knowledge-tag">PATTERN</span><h4>Dishka Provider Scopes</h4></div>
+    <p><strong>Суть:</strong> Scope.APP для singleton'ов (Settings, MessageBus), Scope.REQUEST для per-operation (UoW). Автоматическая DI в обработчиках через параметры.</p>
+  </div>
+
+  <h2>12.3 Anti-Patterns to Avoid</h2>
+
+  <div class="knowledge">
+    <div class="knowledge-header"><span class="knowledge-tag">ANTI-PATTERN</span><h4>Raw SQL в приложении Clean Architecture</h4></div>
+    <p><strong>Где:</strong> <code>boruscraper/common/database.py</code></p>
+    <p><strong>Суть:</strong> Сырые SQL-запросы нарушают принцип Clean Architecture. Нет миграций, нет type safety.</p>
+  </div>
+
+  <div class="knowledge">
+    <div class="knowledge-header"><span class="knowledge-tag">ANTI-PATTERN</span><h4>Toy modules alongside real modules</h4></div>
+    <p><strong>Где:</strong> <code>orders/</code>, <code>ecs/</code></p>
+    <p><strong>Суть:</strong> Примеры и реальный код в одной директории создают путаницу. Лучше выносить примеры в отдельную папку.</p>
+  </div>
+
+  <h2>12.4 Tool & Library Discoveries</h2>
+  <table>
+    <thead><tr><th>Library</th><th>Rating</th><th>Use Case</th></tr></thead>
+    <tbody>
+      <tr><td><strong>dishka</strong></td><td>⭐⭐⭐⭐⭐</td><td>Лучший async DI для Python. Стоит использовать в других проектах.</td></tr>
+      <tr><td><strong>returns</strong></td><td>⭐⭐⭐⭐</td><td>Полноценные функциональные типы. Result monad обязателен для бизнес-логики.</td></tr>
+      <tr><td><strong>bubus</strong></td><td>⭐⭐⭐</td><td>Лёгкий event bus, но требует патча. Для серьёзных проектов — под вопросом.</td></tr>
+      <tr><td><strong>adaptix</strong></td><td>⭐⭐⭐⭐</td><td>Гибкая сериализация dataclass ↔ dict. Альтернатива pydantic для не-Pydantic моделей.</td></tr>
+      <tr><td><strong>diskcache</strong></td><td>⭐⭐⭐⭐</td><td>Простое дисковое кэширование с SQLite бэкендом.</td></tr>
+      <tr><td><strong>qasync</strong></td><td>⭐⭐⭐</td><td>Работает, но хрупко. Альтернатива — asyncqt.</td></tr>
+      <tr><td><strong>taskiq</strong></td><td>⭐⭐⭐⭐</td><td>Лёгкая asyncio-замена Celery. NATS интеграция — бонус.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="cross-links">
+    ← <a href="11-project-critique.html">Step 11: Project Critique</a> · <a href="index.html">Карта</a> · <a href="13-swot-debt-roadmap.html">Step 13: SWOT →</a>
+  </div>
+
+  <div class="footer">
+    BCor Reverse Engineering · Step 12/14 · 2026-05-26
+  </div>
+</div>
+</body>
+</html>

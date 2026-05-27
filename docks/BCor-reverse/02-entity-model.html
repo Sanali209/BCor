@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BCor — Step 2: Entity System</title>
+<style>
+  :root { --bg: #0d1117; --fg: #c9d1d9; --accent: #58a6ff; --green: #3fb950; --orange: #d29922; --red: #f85149; --violet: #bc8cff; --cyan: #56d4dd; --border: #30363d; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; padding: 40px 20px; }
+  .container { max-width: 1000px; margin: 0 auto; }
+  .badge { display: inline-block; background: #1f2937; color: var(--cyan); padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; margin-bottom: 8px; }
+  h1 { font-size: 2rem; background: linear-gradient(135deg, var(--cyan), var(--violet)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px; }
+  .subtitle { color: #8b949e; font-size: 1rem; margin-bottom: 24px; }
+  .meta { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; font-size: 0.9rem; }
+  .meta strong { color: var(--accent); }
+  h2 { color: var(--cyan); margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  h3 { color: var(--violet); margin: 20px 0 8px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #21262d; }
+  th { color: #8b949e; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  tr:hover td { background: #161b22; }
+  pre { background: #161b22; border: 1px solid var(--border); border-radius: 6px; padding: 14px; overflow-x: auto; font-size: 0.85rem; margin-bottom: 16px; }
+  code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+  .concept { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 14px; }
+  .concept-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .concept-tag { background: #1a2d3a; color: var(--cyan); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+  .concept-body p { margin-bottom: 4px; font-size: 0.9rem; }
+  .cross-links { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin: 20px 0; font-size: 0.9rem; }
+  .cross-links a { color: var(--accent); text-decoration: none; }
+  .cross-links a:hover { text-decoration: underline; }
+  .quality-gate { background: #0f2d1a; border: 1px solid #2ea043; border-radius: 8px; padding: 14px 18px; margin: 20px 0; }
+  .quality-gate h3 { color: var(--green); margin-top: 0; }
+  .quality-gate ul { margin: 8px 0 0 18px; font-size: 0.9rem; }
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); color: #8b949e; font-size: 0.85rem; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+  <span class="badge">ШАГ 2/14</span>
+  <h1>Entity System</h1>
+  <p class="subtitle">Domain Models · Messages · SQLite Schema · Serializers · Types</p>
+
+  <div class="meta">
+    <strong>Created:</strong> 2026-05-26 · <strong>Files read:</strong> 15+ · <strong>Cross-links:</strong> <a href="01-surface-scan.html">Step 1: Surface Scan</a>
+  </div>
+
+  <div class="cross-links">
+    ← <a href="01-surface-scan.html">Step 1: Surface Scan</a> · <a href="index.html">Карта</a> · <a href="03-api-surface.html">Step 3: API Surface →</a>
+  </div>
+
+  <h2>2.1 Core Domain Model</h2>
+
+  <h3>Base Aggregate</h3>
+  <p><code>src/core/domain.py</code> — базовый класс <code>Aggregate</code>:</p>
+  <pre>
+class Aggregate:
+    events: list[Event]  # Domain events for later publishing
+    add_event(event)      # Record a new domain event
+  </pre>
+
+  <h3>Message Hierarchy</h3>
+  <p><code>src/core/messages.py</code>:</p>
+  <pre>
+Message (BaseEvent from bubus)
+├── correlation_id: str    # UUID for causal tracing
+├── trace_stack: list[str] # Recursive context tracing
+│
+├── Command                # Intention to change state (1 handler)
+│   └── (module-specific commands)
+└── Event                  # Fact about past occurrence (N subscribers)
+      └── (module-specific events)
+  </pre>
+
+  <h2>2.2 Module Entity Inventory</h2>
+
+  <h3>Orders Module (<code>src/modules/orders/</code>)</h3>
+  <table>
+    <thead><tr><th>Class</th><th>Type</th><th>Fields</th></tr></thead>
+    <tbody>
+      <tr><td>Order</td><td>Aggregate</td><td>ref, customer_name, total_amount, status (PENDING/SHIPPED)</td></tr>
+      <tr><td>OrderState</td><td>Enum</td><td>PENDING, SHIPPED</td></tr>
+      <tr><td>CreateOrderCommand</td><td>Command</td><td>order_id, customer_name, total_amount</td></tr>
+      <tr><td>ShipOrderCommand</td><td>Command</td><td>order_id</td></tr>
+      <tr><td>OrderCreated</td><td>Event</td><td>order_id, customer_name, total_amount</td></tr>
+      <tr><td>OrderShipped</td><td>Event</td><td>order_id</td></tr>
+      <tr><td>DomainError</td><td>Exception</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <h3>ECS Module (<code>src/modules/ecs/</code>)</h3>
+  <table>
+    <thead><tr><th>Class</th><th>Type</th><th>Fields</th></tr></thead>
+    <tbody>
+      <tr><td>EcsWorld</td><td>Aggregate</td><td>world_id, _components[type][entity_id]</td></tr>
+      <tr><td>PositionComponent</td><td>@dataclass</td><td>x: float, y: float</td></tr>
+      <tr><td>VelocityComponent</td><td>@dataclass</td><td>dx: float, dy: float</td></tr>
+      <tr><td>MoveEntityCommand</td><td>Command</td><td>entity_id, target_x, target_y</td></tr>
+      <tr><td>TickEvent</td><td>Event</td><td>delta_time, current_tick</td></tr>
+      <tr><td>ComponentAddedEvent</td><td>Event</td><td>entity_id, component_type</td></tr>
+      <tr><td>CollisionDetectedEvent</td><td>Event</td><td>entity_a, entity_b</td></tr>
+    </tbody>
+  </table>
+
+  <h3>AGM Module (<code>src/modules/agm/</code>)</h3>
+  <table>
+    <thead><tr><th>Class</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>AGMMapper</td><td>Service</td><td>Graph-Object Mapper for Neo4j. Identity Map, polymorphic loading, UNWIND batching</td></tr>
+      <tr><td>AGMSchemaManager</td><td>Service</td><td>Neo4j index/constraint synchronization</td></tr>
+      <tr><td>Stored</td><td>@dataclass</td><td>Metadata: field → background recalculation</td></tr>
+      <tr><td>Live</td><td>@dataclass</td><td>Metadata: field → DI-hydrated at runtime</td></tr>
+      <tr><td>Rel</td><td>@dataclass</td><td>Metadata: graph relationship</td></tr>
+      <tr><td>StoredFieldRecalculationRequested</td><td>Event</td><td>Trigger recalculation of a stored field</td></tr>
+      <tr><td>NodeSyncRequested</td><td>Event</td><td>Batch sync of multiple node fields</td></tr>
+      <tr><td>SyncFieldInfo</td><td>@dataclass</td><td>Single field descriptor for batch sync</td></tr>
+      <tr><td>CypherQuery[T]</td><td>Service</td><td>Fluent Cypher query builder</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Assets Module (<code>src/modules/assets/</code>)</h3>
+  <table>
+    <thead><tr><th>Class</th><th>Type</th><th>Key Fields</th></tr></thead>
+    <tbody>
+      <tr><td>Asset</td><td>@dataclass</td><td>id, uri, name, mime_type, content_hash, size, description</td></tr>
+      <tr><td>SimilarTo</td><td>@dataclass</td><td>score, engine (relationship metadata)</td></tr>
+      <tr><td>Asset subclasses</td><td>@dataclass</td><td>FileAsset, ImageAsset, VideoAsset, etc.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>LLM Module (<code>src/modules/llm/</code>)</h3>
+  <table>
+    <thead><tr><th>Class</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>NlpPipeline</td><td>Service</td><td>NLP processing pipeline</td></tr>
+      <tr><td>LLMMessages</td><td>Command/Event</td><td>LLM-specific message types</td></tr>
+    </tbody>
+  </table>
+
+  <h3>VFS Module (<code>src/modules/vfs/</code>)</h3>
+  <table>
+    <thead><tr><th>Class</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>VFS</td><td>Aggregate/Service</td><td>Virtual File System abstraction (PyFilesystem fs)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2.3 Boruscraper Domain Models</h2>
+
+  <h3>SQLite Schema</h3>
+  <p><code>src/apps/boruscraper/common/database.py</code>:</p>
+  <pre>
+-- Core tables
+media_files (id TEXT PK, url, file_path, md5_hash, phash, width, height, 
+             file_size, mime_type, metadata JSON, topic_url, downloaded_at, status)
+scraping_jobs (id TEXT PK, start_url, status, started_at, completed_at, 
+               total_topics, total_media, error)
+
+-- Domain models (src/apps/boruscraper/domain/models.py)
+ScrapedTopic(url, title, html_content, text_content, metadata, media_urls, downloaded_at)
+ScrapedMedia(url, file_path, md5_hash, phash, width, height, file_size, mime_type, metadata, topic_url, status)
+
+-- Events (src/apps/boruscraper/domain/events.py)
+MediaDownloaded(url, file_path, md5_hash, phash)
+ScrapingCompleted(job_id, total_topics, total_media)
+  </pre>
+
+  <h2>2.4 Serializer/DTO Mapping</h2>
+  <table>
+    <thead><tr><th>Library/Tool</th><th>Usage</th><th>Location</th></tr></thead>
+    <tbody>
+      <tr><td><strong>adaptix</strong> (Retort)</td><td>Dataclass ↔ dict/JSON serialization. Custom dumpers/loaders for datetime, UUID, float</td><td><code>src/modules/agm/mapper.py:58</code></td></tr>
+      <tr><td><strong>pydantic</strong></td><td>Command/Event models (inheriting BaseEvent from bubus). Validation + serialization</td><td><code>src/core/messages.py</code></td></tr>
+      <tr><td><strong>json</strong></td><td>Manual JSON handling for metadata blobs</td><td><code>src/apps/boruscraper/common/database.py</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2>2.5 Extracted Concepts</h2>
+
+  <div class="concept">
+    <div class="concept-header"><span class="concept-tag">PATTERN</span><h4>Rich Domain Model (DDD Aggregate)</h4></div>
+    <div class="concept-body">
+      <p><strong>Где:</strong> <code>src/modules/orders/domain.py:Order</code>, <code>src/modules/ecs/domain.py:EcsWorld</code></p>
+      <p><strong>Что:</strong> Агрегаты содержат бизнес-логику и инварианты (Order.ship() проверяет статус). События порождаются внутри агрегата через add_event().</p>
+      <p><strong>Зачем:</strong> Бизнес-правила инкапсулированы в домене, а не размазаны по сервисам.</p>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="concept-header"><span class="concept-tag">PATTERN</span><h4>AGM Metadata Annotations</h4></div>
+    <div class="concept-body">
+      <p><strong>Где:</strong> <code>src/modules/agm/metadata.py</code></p>
+      <p><strong>Что:</strong> Декларативные аннотации (<code>@Stored</code>, <code>@Live</code>, <code>@Rel</code>) на полях dataclass определяют поведение: какие поля сохраняются в Neo4j, какие вычисляются на лету, какие связи создавать. UI-метаданные (<code>@Column</code>, <code>@Searchable</code>) управляют отображением.</p>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="concept-header"><span class="concept-tag">PATTERN</span><h4>Polymorphic Node Hierarchy (Asset)</h4></div>
+    <div class="concept-body">
+      <p><strong>Где:</strong> <code>src/modules/assets/domain/models.py</code></p>
+      <p><strong>Что:</strong> Иерархия Asset → FileAsset, ImageAsset, VideoAsset. Загрузка через <code>register_subclass</code> в AGM Mapper. Поддержка схем (file://, zip://, s3://, ghost://).</p>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="concept-header"><span class="concept-tag">PATTERN</span><h4>ECS Data-Oriented Design</h4></div>
+    <div class="concept-body">
+      <p><strong>Где:</strong> <code>src/modules/ecs/domain.py</code></p>
+      <p><strong>Что:</strong> Компоненты — плоские dataclass'ы (<code>PositionComponent</code>, <code>VelocityComponent</code>). EcsWorld — агрегат-контейнер со словарём <code>_components[type][entity_id]</code>. События: TickEvent, CollisionDetectedEvent.</p>
+    </div>
+  </div>
+
+  <div class="quality-gate">
+    <h3>✅ Quality Gate — Step 2</h3>
+    <ul>
+      <li>✅ All aggregates described — Order, EcsWorld, Asset hierarchy</li>
+      <li>✅ All messages catalogued — commands and events across 6 modules + 2 apps</li>
+      <li>✅ SQLite schemas — media_files, scraping_jobs tables</li>
+      <li>✅ Serializer mapping — adaptix, pydantic, json</li>
+      <li>✅ Concepts extracted — 4 patterns (DDD Aggregate, AGM Metadata, Polymorphic Assets, ECS)</li>
+      <li>✅ Cross-links — Step 1, Step 3</li>
+    </ul>
+  </div>
+
+  <div class="cross-links">
+    ← <a href="01-surface-scan.html">Step 1: Surface Scan</a> · <a href="index.html">Карта</a> · <a href="03-api-surface.html">Step 3: API Surface →</a>
+  </div>
+
+  <div class="footer">
+    BCor Reverse Engineering · Step 2/14 · 2026-05-26
+  </div>
+</div>
+</body>
+</html>

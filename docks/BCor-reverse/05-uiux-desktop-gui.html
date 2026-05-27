@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BCor — Step 5: UI/UX + Desktop GUI</title>
+<style>
+  :root { --bg: #0d1117; --fg: #c9d1d9; --accent: #58a6ff; --green: #3fb950; --orange: #d29922; --violet: #bc8cff; --cyan: #56d4dd; --border: #30363d; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; padding: 40px 20px; }
+  .container { max-width: 1000px; margin: 0 auto; }
+  .badge { display: inline-block; background: #1f2937; color: var(--cyan); padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; margin-bottom: 8px; }
+  h1 { font-size: 2rem; background: linear-gradient(135deg, var(--cyan), var(--violet)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px; }
+  .subtitle { color: #8b949e; font-size: 1rem; margin-bottom: 24px; }
+  .meta { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; }
+  h2 { color: var(--cyan); margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  h3 { color: var(--violet); margin: 20px 0 8px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.9rem; }
+  th, td { padding: 8px 12px; border-bottom: 1px solid #21262d; text-align: left; }
+  th { color: #8b949e; font-size: 0.8rem; text-transform: uppercase; }
+  tr:hover td { background: #161b22; }
+  pre { background: #161b22; border: 1px solid var(--border); border-radius: 6px; padding: 14px; overflow-x: auto; font-size: 0.85rem; margin-bottom: 16px; }
+  .cross-links { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin: 20px 0; font-size: 0.9rem; }
+  .cross-links a { color: var(--accent); text-decoration: none; }
+  .concept { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 14px; }
+  .concept-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .concept-tag { background: #1a2d3a; color: var(--cyan); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); color: #8b949e; font-size: 0.85rem; text-align: center; }
+  .quality-gate { background: #0f2d1a; border: 1px solid #2ea043; border-radius: 8px; padding: 14px 18px; margin: 20px 0; }
+  .quality-gate h3 { color: var(--green); margin-top: 0; }
+  .quality-gate ul { margin: 8px 0 0 18px; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <span class="badge">ШАГ 5/14</span>
+  <h1>UI/UX + Desktop GUI</h1>
+  <p class="subtitle">PySide6 Screens · QThread · User Flows · ViewModel Pattern</p>
+
+  <div class="meta">
+    <strong>Created:</strong> 2026-05-26 · <strong>Cross-links:</strong> <a href="01-surface-scan.html">Step 1</a>, <a href="04-frontend-flow.html">Step 4</a>
+  </div>
+
+  <div class="cross-links">
+    ← <a href="04-frontend-flow.html">Step 4: Frontend Flow</a> · <a href="index.html">Карта</a> · <a href="06-data-pipeline.html">Step 6: Data Pipeline →</a>
+  </div>
+
+  <h2>5.1 GUI Applications</h2>
+
+  <table>
+    <thead><tr><th>App</th><th>Framework</th><th>File</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><strong>BoruScraper</strong></td><td>PySide6 + qasync</td><td><code>src/apps/boruscraper/main.py</code></td><td>Web scraping GUI: project queue, logs, stats, dupe handling</td></tr>
+      <tr><td><strong>Asset Explorer</strong></td><td>PySide6 + qasync</td><td><code>src/apps/asset_explorer/main.py</code></td><td>Neo4j asset browser: search, metadata editor, VLM pipeline monitor</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5.2 Asset Explorer Dashboard (<code>AssetExplorerDashboard</code>)</h2>
+
+  <h3>Tabs</h3>
+  <table>
+    <thead><tr><th>Tab</th><th>Panels</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Asset Explorer</strong></td><td>SearchPanel + ResultsList + AutoMetadataPanel</td><td>Browse, search, edit asset metadata</td></tr>
+      <tr><td><strong>Infrastructure Monitor</strong></td><td>WorkerManager + TaskMonitor</td><td>TaskIQ worker lifecycle, live task feed</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Key GUI Components</h3>
+  <table>
+    <thead><tr><th>Widget</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>FlowLayout</td><td>Custom wrapping layout for tags</td></tr>
+      <tr><td>UrlWidget</td><td>URI editor with "Open in Browser/Shell" button</td></tr>
+      <tr><td>TagCloudWidget</td><td>Tag chips with add/remove, flow layout</td></tr>
+      <tr><td>NumericWidget</td><td>Spin box (float/int) for numeric fields</td></tr>
+      <tr><td>TimestampWidget</td><td>DateTime editor with calendar popup</td></tr>
+      <tr><td>MultiLineTextWidget</td><td>QTextEdit for long text fields</td></tr>
+      <tr><td>TaskMonitor</td><td>QTableWidget with live TaskIQ task feed</td></tr>
+      <tr><td>WorkerManager</td><td>QProcess wrapper: start/stop TaskIQ worker</td></tr>
+      <tr><td>SearchConstructor</td><td>Dynamic form builder from metadata schema</td></tr>
+      <tr><td>StatusHUD</td><td>Floating progress overlay for ingestion</td></tr>
+      <tr><td>PaginationBar</td><td>500-item batch navigation</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5.3 BoruScraper GUI (<code>MainWindow</code>)</h2>
+
+  <h3>Screens</h3>
+  <table>
+    <thead><tr><th>Dialog/View</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>Main Window</td><td>Project queue (left) + Logs/Stats (right)</td></tr>
+      <tr><td>StartUrlsDialog</td><td>Configure scraping URLs and templates</td></tr>
+      <tr><td>SettingsDialog</td><td>App settings (save path, dedup threshold)</td></tr>
+      <tr><td>DupeDialog</td><td>Handle duplicate media files (keep/delete)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Signal/Slot Wiring</h3>
+  <p>BoruScraper uses <code>GuiEventAdapter</code> to bridge BCor events → Qt signals:</p>
+  <pre>
+adapter.log_signal → log_message()
+adapter.worker_finished_signal → worker_finished()
+adapter.duplicate_found_signal → handle_duplicate()
+adapter.captcha_detected_signal → on_captcha_detected()
+adapter.stats_signal → update_stats()
+  </pre>
+
+  <h2>5.4 Async Event Loop Architecture (qasync)</h2>
+  <p>Оба GUI используют <code>qasync</code> для интеграции asyncio с Qt event loop:</p>
+  <pre>
+WindowsLoopManager.setup_loop()  # Windows-specific event loop policy
+app = QApplication(sys.argv)
+loop = qasync.QEventLoop(app)
+asyncio.set_event_loop(loop)
+with loop:
+    loop.run_until_complete(amain(app))
+  </pre>
+
+  <p>Это позволяет coroutine'ам (bus.dispatch, AGM mapper) работать внутри Qt-приложения без блокировки UI.</p>
+
+  <h2>5.5 ViewModel Pattern (MVVM)</h2>
+  <table>
+    <thead><tr><th>ViewModel</th><th>File</th><th>Signals</th></tr></thead>
+    <tbody>
+      <tr><td>AssetExplorerViewModel</td><td><code>presentation/viewmodels/explorer.py</code></td><td>results_updated, asset_selected, pagination_updated, progress_updated</td></tr>
+      <tr><td>MetadataViewModel</td><td><code>presentation/viewmodels/metadata.py</code></td><td>property_changed, save_requested</td></tr>
+    </tbody>
+  </table>
+
+  <div class="concept">
+    <div class="concept-header"><span class="concept-tag">PATTERN</span><h4>Async Qt via qasync</h4></div>
+    <div class="concept-body">
+      <p><strong>Где:</strong> <code>src/apps/asset_explorer/main.py:57</code>, boruscraper/main.py</p>
+      <p><strong>Что:</strong> QEventLoop от qasync заменяет стандартный asyncio loop. Позволяет асинхронным корутинам работать внутри Qt-приложения.</p>
+      <p><strong>Зачем:</strong> BCor построен на async/await. Без qasync пришлось бы дублировать синхронные версии всех операций.</p>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="concept-header"><span class="concept-tag">PATTERN</span><h4>Dynamic Metadata-Driven GUI</h4></div>
+    <div class="concept-body">
+      <p><strong>Где:</strong> <code>AutoMetadataPanel</code>, <code>SearchConstructor</code></p>
+      <p><strong>Что:</strong> UI строится динамически на основе AGM-метаданных полей. SearchConstructor читает схему модели и создаёт соответствующие виджеты (range, date, text, vector).</p>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="concept-header"><span class="concept-tag">PATTERN</span><h4>QProcess Worker Management</h4></div>
+    <div class="concept-body">
+      <p><strong>Где:</strong> <code>WorkerManager</code> в asset_explorer/main.py:298</p>
+      <p><strong>Что:</strong> TaskIQ worker запускается как отдельный процесс через QProcess. stdout парсится для [BCOR_TASK] событий. GUI остаётся отзывчивым.</p>
+    </div>
+  </div>
+
+  <div class="quality-gate">
+    <h3>✅ Quality Gate — Step 5</h3>
+    <ul>
+      <li>✅ All screens documented — Asset Explorer (2 tabs, 11+ widgets), BoruScraper (4 dialogs)</li>
+      <li>✅ Desktop GUI analyzed — PySide6 + qasync integration</li>
+      <li>✅ User flows described — search → select → edit; scraping queue → monitor</li>
+      <li>✅ Signal/Slot wiring documented</li>
+      <li>✅ Async event loop — qasync QEventLoop</li>
+      <li>✅ MVVM pattern — ViewModels with Qt Signals</li>
+      <li>✅ Cross-links — Steps 1, 4</li>
+    </ul>
+  </div>
+
+  <div class="cross-links">
+    ← <a href="04-frontend-flow.html">Step 4: Frontend Flow</a> · <a href="index.html">Карта</a> · <a href="06-data-pipeline.html">Step 6: Data Pipeline →</a>
+  </div>
+
+  <div class="footer">
+    BCor Reverse Engineering · Step 5/14 · 2026-05-26
+  </div>
+</div>
+</body>
+</html>

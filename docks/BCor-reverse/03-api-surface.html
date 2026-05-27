@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BCor — Step 3: API Surface</title>
+<style>
+  :root { --bg: #0d1117; --fg: #c9d1d9; --accent: #58a6ff; --green: #3fb950; --orange: #d29922; --red: #f85149; --violet: #bc8cff; --cyan: #56d4dd; --border: #30363d; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; padding: 40px 20px; }
+  .container { max-width: 1000px; margin: 0 auto; }
+  .badge { display: inline-block; background: #1f2937; color: var(--cyan); padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; margin-bottom: 8px; }
+  h1 { font-size: 2rem; background: linear-gradient(135deg, var(--cyan), var(--violet)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px; }
+  .subtitle { color: #8b949e; font-size: 1rem; margin-bottom: 24px; }
+  .meta { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; font-size: 0.9rem; }
+  .meta strong { color: var(--accent); }
+  h2 { color: var(--cyan); margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  h3 { color: var(--violet); margin: 20px 0 8px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #21262d; }
+  th { color: #8b949e; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  tr:hover td { background: #161b22; }
+  pre { background: #161b22; border: 1px solid var(--border); border-radius: 6px; padding: 14px; overflow-x: auto; font-size: 0.85rem; margin-bottom: 16px; }
+  .cross-links { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin: 20px 0; font-size: 0.9rem; }
+  .cross-links a { color: var(--accent); text-decoration: none; }
+  .cross-links a:hover { text-decoration: underline; }
+  .quality-gate { background: #0f2d1a; border: 1px solid #2ea043; border-radius: 8px; padding: 14px 18px; margin: 20px 0; }
+  .quality-gate h3 { color: var(--green); margin-top: 0; }
+  .quality-gate ul { margin: 8px 0 0 18px; font-size: 0.9rem; }
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); color: #8b949e; font-size: 0.85rem; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+  <span class="badge">ШАГ 3/14</span>
+  <h1>API Surface</h1>
+  <p class="subtitle">Entry Points · CLI Applications · GUI Applications</p>
+
+  <div class="meta">
+    <strong>Created:</strong> 2026-05-26 · <strong>Cross-links:</strong> <a href="02-entity-model.html">Step 2</a>, <a href="05-uiux-desktop-gui.html">Step 5</a>
+  </div>
+
+  <div class="cross-links">
+    ← <a href="02-entity-model.html">Step 2: Entity System</a> · <a href="index.html">Карта</a> · <a href="04-frontend-flow.html">Step 4: Frontend Flow →</a>
+  </div>
+
+  <h2>3.1 No REST/HTTP API</h2>
+  <p><strong>BCor не использует FastAPI или REST endpoints.</strong> В проекте нет FastAPI-приложений. Коммуникация — через асинхронную шину событий (MessageBus/bubus).</p>
+  <p>Единственная асинхронная HTTP-точка — <code>uvicorn</code> как зависимость для TaskIQ dashboard.</p>
+
+  <h2>3.2 Entry Points Inventory</h2>
+
+  <table>
+    <thead><tr><th>App</th><th>Type</th><th>File</th><th>Mechanism</th></tr></thead>
+    <tbody>
+      <tr><td>hello_app</td><td>CLI Console</td><td><code>src/apps/hello_app/main.py</code></td><td>asyncio.run(main()) — interactive CLI via input()</td></tr>
+      <tr><td>VFSSample</td><td>CLI Demo</td><td><code>src/apps/VFSSample/main.py</code></td><td>asyncio.run(run_vfs_sample()) — prepackaged demo sequence</td></tr>
+      <tr><td>boruscraper</td><td>Desktop GUI</td><td><code>src/apps/boruscraper/main.py</code></td><td>qasync + PySide6 QApplication</td></tr>
+      <tr><td>asset_explorer</td><td>Desktop GUI</td><td><code>src/apps/asset_explorer/main.py</code></td><td>qasync + PySide6 QApplication</td></tr>
+    </tbody>
+  </table>
+
+  <h3>hello_app CLI</h3>
+  <pre>
+$ python src/apps/hello_app/main.py
+==================================================
+Welcome to Hello BCor Console Playground!
+==================================================
+Enter a name (or 'quit' to exit): > Alice
+# Dispatches SayHelloCommand -> handler prints greeting
+  </pre>
+
+  <h3>VFSSample CLI</h3>
+  <pre>
+$ python src/apps/VFSSample/main.py
+# Automated demo: write -> list -> read VFS files
+> Writing 'hello_vfs.txt'...
+> Listing root directory:
+> Reading 'hello_vfs.txt'...
+  </pre>
+
+  <h2>3.3 Command Dispatch Flow</h2>
+  <p>Все entry points следуют одному паттерну:</p>
+  <pre>
+1. System.from_manifest() — bootstrap из app.toml
+2. system.start() — инициализация DI контейнера (dishka)
+3. system.container() as scope — получение request scope
+4. scope.get(MessageBus) — получение шины событий
+5. bus.dispatch(Command) — отправка команды
+6. Обработчик выполняется → возвращает BusinessResult
+7. system.stop() — корректное завершение
+  </pre>
+
+  <h2>3.4 Background Tasks (TaskIQ)</h2>
+  <table>
+    <thead><tr><th>Task</th><th>Broker</th><th>Location</th></tr></thead>
+    <tbody>
+      <tr><td>AGM: StoredField recalculation</td><td>TaskIQ + NATS</td><td><code>src/modules/agm/tasks.py</code></td></tr>
+      <tr><td>Worker process management</td><td>QProcess (PySide6)</td><td><code>src/apps/asset_explorer/main.py:WorkerManager</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2>3.5 Auth & Permissions</h2>
+  <p><strong>No authentication/authorization system</strong> — BCor is a local-first framework. All apps are single-user desktop/CLI.</p>
+
+  <h2>3.6 CLI Scraping Scripts</h2>
+  <table>
+    <thead><tr><th>Script</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>scraper/ws4_s1.py</code></td><td>Playwright-based web scraper (standalone script)</td></tr>
+      <tr><td><code>scraper/populate_md5_cache.py</code></td><td>Populate MD5 hash cache for media files</td></tr>
+    </tbody>
+  </table>
+
+  <div class="quality-gate">
+    <h3>✅ Quality Gate — Step 3</h3>
+    <ul>
+      <li>✅ All entry points described — 4 apps (2 CLI, 2 GUI)</li>
+      <li>✅ No REST API — event-driven architecture instead</li>
+      <li>✅ CLI commands documented — hello_app, VFSSample</li>
+      <li>✅ Background tasks — TaskIQ + NATS, QProcess worker</li>
+      <li>✅ Auth — not applicable (local-first)</li>
+      <li>✅ Cross-links — Steps 2, 5</li>
+    </ul>
+  </div>
+
+  <div class="cross-links">
+    ← <a href="02-entity-model.html">Step 2: Entity System</a> · <a href="index.html">Карта</a> · <a href="04-frontend-flow.html">Step 4: Frontend Flow →</a>
+  </div>
+
+  <div class="footer">
+    BCor Reverse Engineering · Step 3/14 · 2026-05-26
+  </div>
+</div>
+</body>
+</html>

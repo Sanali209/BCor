@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BCor — Step 1: Surface Scan</title>
+<style>
+  :root { --bg: #0d1117; --fg: #c9d1d9; --accent: #58a6ff; --green: #3fb950; --orange: #d29922; --red: #f85149; --violet: #bc8cff; --cyan: #56d4dd; --border: #30363d; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; padding: 40px 20px; }
+  .container { max-width: 1000px; margin: 0 auto; }
+  .badge { display: inline-block; background: #1f2937; color: var(--cyan); padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; margin-bottom: 8px; }
+  h1 { font-size: 2rem; background: linear-gradient(135deg, var(--cyan), var(--violet)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px; }
+  .subtitle { color: #8b949e; font-size: 1rem; margin-bottom: 24px; }
+  .meta { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; font-size: 0.9rem; }
+  .meta strong { color: var(--accent); }
+  h2 { color: var(--cyan); margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  h3 { color: var(--violet); margin: 20px 0 8px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #21262d; }
+  th { color: #8b949e; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  tr:hover td { background: #161b22; }
+  pre { background: #161b22; border: 1px solid var(--border); border-radius: 6px; padding: 14px; overflow-x: auto; font-size: 0.85rem; margin-bottom: 16px; }
+  code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+  .concept { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 14px; }
+  .concept-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .concept-tag { background: #1a2d3a; color: var(--cyan); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+  .concept-body p { margin-bottom: 4px; font-size: 0.9rem; }
+  .cross-links { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin: 20px 0; font-size: 0.9rem; }
+  .cross-links a { color: var(--accent); text-decoration: none; }
+  .cross-links a:hover { text-decoration: underline; }
+  .quality-gate { background: #0f2d1a; border: 1px solid #2ea043; border-radius: 8px; padding: 14px 18px; margin: 20px 0; }
+  .quality-gate h3 { color: var(--green); margin-top: 0; }
+  .quality-gate ul { margin: 8px 0 0 18px; font-size: 0.9rem; }
+  .quality-gate li { margin-bottom: 3px; }
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); color: #8b949e; font-size: 0.85rem; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+  <span class="badge">ШАГ 1/14</span>
+  <h1>Surface Scan</h1>
+  <p class="subtitle">Perimeter · External Dependencies · File Configs · SQLite Schema · Concepts</p>
+
+  <div class="meta">
+    <strong>Created:</strong> 2026-05-26 · <strong>Files read:</strong> 25+ · <strong>Project:</strong> BCor
+  </div>
+
+  <div class="cross-links">
+    ← <a href="index.html">Карта</a> · <a href="02-entity-model.html">Шаг 2: Entity System →</a>
+  </div>
+
+  <h2>1.1 Perimeter Scan</h2>
+
+  <h3>File Type Distribution</h3>
+  <table>
+    <thead><tr><th>Type</th><th>Count</th></tr></thead>
+    <tbody>
+      <tr><td>Python (.py)</td><td><strong>758</strong></td></tr>
+      <tr><td>Markdown (.md)</td><td>93</td></tr>
+      <tr><td>PNG (thumbs/images)</td><td>94</td></tr>
+      <tr><td>Text/logs (.txt)</td><td>59</td></tr>
+      <tr><td>XML</td><td>9</td></tr>
+      <tr><td>TOML configs</td><td>8</td></tr>
+      <tr><td>HTML</td><td>4</td></tr>
+      <tr><td>YAML</td><td>2</td></tr>
+      <tr><td>Others</td><td>~10</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Lines of Code</h3>
+  <p>Python: <strong>96,384</strong> lines across 758 files (~127 loc/file avg)</p>
+
+  <h3>Directory Structure</h3>
+  <pre>
+BCor/
+├── src/                          # Основной код
+│   ├── core/                     # Ядро фреймворка (MessageBus, UoW, Repository, System)
+│   ├── modules/                  # Бизнес-модули
+│   │   ├── orders/               # Эталонный модуль заказов
+│   │   ├── agm/                  # Agentic Grid Management (Neo4j GOM)
+│   │   ├── ecs/                  # Entity Component System (game-like)
+│   │   ├── vfs/                  # Virtual File System
+│   │   ├── analytics/            # Аналитика
+│   │   ├── assets/               # Asset management
+│   │   ├── llm/                  # LLM/NLP интеграции
+│   │   └── files/                # Файловые операции
+│   ├── apps/                     # Приложения (entry points)
+│   │   ├── boruscraper/          # Web scraper + PySide6 GUI
+│   │   ├── asset_explorer/       # Asset Explorer (PySide6)
+│   │   ├── VFSSample/            # VFS example app
+│   │   ├── hello_app/            # Hello World reference
+│   │   └── default_app/          # Default app config
+│   ├── adapters/                 # Infrastructure adapters
+│   │   ├── web/                  # Playwright, BS4, scraper engine
+│   │   ├── persistence/          # JSON repository
+│   │   ├── mongodb/              # Motor adapter
+│   │   ├── orm.py                # SQLAlchemy ORM setup
+│   │   ├── repository.py         # SqlAlchemyRepository
+│   │   ├── unit_of_work.py       # SqlAlchemyUnitOfWork
+│   │   └── taskiq_broker.py      # TaskIQ + NATS broker
+│   ├── common/                   # Shared utilities
+│   │   ├── ai/                   # Embeddings (sentence-transformers)
+│   │   ├── media/                # Metadata service, hashing
+│   │   ├── database/             # SQLite utils
+│   │   ├── files/                # Batch pipeline
+│   │   ├── io/                   # Path tools
+│   │   ├── ui/                   # Selection, theming
+│   │   ├── web/                  # ScraperConfig, TopicData
+│   │   └── scheduling/           # Timers
+│   └── porting/                  # Legacy porting layer
+├── legacy/                       # Legacy projects
+│   ├── imgededupe/               # Image Deduplication app (staged for migration)
+│   └── sanali/                   # Old SLM framework (NLP, Graph, LangChain)
+├── Ddocks/                       # Design docs, ADRs, specs
+├── docs/                         # Diátaxis documentation
+├── data/                         # Thumbnails / media
+├── tests/                        # Unit tests (TDD)
+└── .agents/                      # AI agent skills
+  </pre>
+
+  <h2>1.2 Config Scan</h2>
+
+  <h3>Python Version</h3>
+  <p><code>.python-version</code>: <strong>3.12</strong> · <code>pyproject.toml</code>: <code>requires-python = ">=3.11"</code></p>
+
+  <h3>pyproject.toml Key Settings</h3>
+  <table>
+    <thead><tr><th>Section</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Ruff line-length</td><td>120</td></tr>
+      <tr><td>Ruff target-version</td><td>py312</td></tr>
+      <tr><td>Ruff lint</td><td>E, F, B, I, UP, PT, ANN (ignore ANN101/102)</td></tr>
+      <tr><td>Ruff format</td><td>double quotes, space indent</td></tr>
+      <tr><td>Mypy</td><td>strict, pydantic plugin, py312</td></tr>
+      <tr><td>Pytest</td><td>asyncio_mode=auto, function scope</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Application Manifests (app.toml)</h3>
+  <p>Each app has an <code>app.toml</code> manifest:</p>
+  <pre>
+# default_app/app.toml
+[app]
+name = "default-app"
+description = "Default application for testing module discovery"
+[modules]
+enabled = ["orders", "agm"]
+
+# boruscraper/app.toml
+[app]
+app_name = "boruscraper"
+log_level = "INFO"
+[modules]
+enabled = ["boruscraper"]
+paths = ["src.apps.experemental"]
+[boruscraper]
+save_path = "downloads"
+deduplication_threshold = 10
+db_path = "data.db"
+  </pre>
+
+  <h2>1.3 Technology Radar</h2>
+
+  <table>
+    <thead><tr><th>Library</th><th>Version</th><th>Purpose</th><th>Category</th></tr></thead>
+    <tbody>
+      <tr><td><strong>bubus</strong></td><td>≥1.5.6</td><td>In-memory event bus (core message dispatch)</td><td>Architecture</td></tr>
+      <tr><td><strong>dishka</strong></td><td>≥1.9.1</td><td>Dependency Injection container</td><td>Architecture</td></tr>
+      <tr><td><strong>returns</strong></td><td>≥0.26.0</td><td>Result monad for error handling</td><td>Architecture</td></tr>
+      <tr><td><strong>taskiq</strong> + <strong>taskiq-nats</strong></td><td>≥0.12.1</td><td>Background task processing via NATS</td><td>Infrastructure</td></tr>
+      <tr><td><strong>pydantic</strong> + <strong>pydantic-settings</strong></td><td>≥2.12.5</td><td>Data validation, settings management</td><td>Core</td></tr>
+      <tr><td><strong>SQLAlchemy</strong></td><td>≥2.0.48</td><td>ORM for relational data</td><td>Data</td></tr>
+      <tr><td><strong>Neo4j</strong> (driver)</td><td>≥6.1.0</td><td>Graph database (AGM module)</td><td>Data</td></tr>
+      <tr><td><strong>MongoDB</strong> (motor + pymongo)</td><td>≥3.3.2</td><td>Document database adapter</td><td>Data</td></tr>
+      <tr><td><strong>PySide6</strong></td><td>≥6.10.2</td><td>Desktop GUI framework</td><td>UI</td></tr>
+      <tr><td><strong>Playwright</strong></td><td>≥1.58.0</td><td>Browser automation (scraping)</td><td>Web</td></tr>
+      <tr><td><strong>BeautifulSoup4</strong> + <strong>lxml</strong></td><td>—</td><td>HTML parsing</td><td>Web</td></tr>
+      <tr><td><strong>loguru</strong></td><td>≥0.7.3</td><td>Structured logging</td><td>Observability</td></tr>
+      <tr><td><strong>OpenTelemetry</strong></td><td>≥1.40.0</td><td>Distributed tracing</td><td>Observability</td></tr>
+      <tr><td><strong>Prometheus</strong></td><td>≥0.24.1</td><td>Worker metrics</td><td>Observability</td></tr>
+      <tr><td><strong>diskcache</strong></td><td>≥5.6.3</td><td>Disk-based caching</td><td>Infrastructure</td></tr>
+      <tr><td><strong>tenacity</strong></td><td>≥9.1.4</td><td>Retry logic for resilience</td><td>Infrastructure</td></tr>
+      <tr><td><strong>imagehash</strong></td><td>≥4.3.2</td><td>Perceptual image hashing</td><td>Media</td></tr>
+      <tr><td><strong>Pillow</strong> + <strong>piexif</strong></td><td>≥12.1.1</td><td>Image processing, EXIF metadata</td><td>Media</td></tr>
+      <tr><td><strong>sentence-transformers</strong> + <strong>transformers</strong></td><td>≥5.3.0</td><td>NLP embeddings, AI models</td><td>AI/ML</td></tr>
+      <tr><td><strong>PyTorch</strong> + <strong>torchvision</strong> + <strong>timm</strong></td><td>≥2.10.0</td><td>Deep learning, vision models</td><td>AI/ML</td></tr>
+      <tr><td><strong>qasync</strong></td><td>≥0.28.0</td><td>Async event loop for Qt</td><td>UI</td></tr>
+      <tr><td><strong>rich</strong></td><td>≥14.3.3</td><td>Terminal formatting</td><td>UI</td></tr>
+      <tr><td><strong>adaptix</strong></td><td>≥3.0.0b11</td><td>Data mapping/serialization</td><td>Data</td></tr>
+      <tr><td><strong>fs</strong> (PyFilesystem)</td><td>≥2.4.16</td><td>Virtual filesystem abstraction</td><td>Infrastructure</td></tr>
+      <tr><td><strong>pandas</strong></td><td>≥3.0.1</td><td>Data analysis</td><td>Data</td></tr>
+      <tr><td><strong>uvicorn</strong></td><td>≥0.42.0</td><td>ASGI server (FastAPI)</td><td>Web</td></tr>
+    </tbody>
+  </table>
+
+  <h2>1.4 Configuration Pattern</h2>
+  <p><strong>Config-driven module system.</strong> Each application has an <code>app.toml</code> manifest that declares which modules to enable and their settings. The <code>System.from_manifest()</code> method in <code>src/core/system.py</code> reads the manifest, discovers modules via <code>ModuleDiscovery</code>, instantiates them, and builds the DI container with <code>dishka</code>.</p>
+
+  <p>Settings are validated via <code>pydantic-settings</code>. Environment variables override TOML values at runtime.</p>
+
+  <h2>1.5 SQLite Schema</h2>
+  <p>The boruscraper app uses SQLite. Schema discovered in <code>src/apps/boruscraper/common/database.py</code>:</p>
+  <pre>
+-- media_files
+CREATE TABLE media_files (
+    id TEXT PRIMARY KEY,
+    url TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    md5_hash TEXT,
+    phash TEXT,
+    width INTEGER,
+    height INTEGER,
+    file_size INTEGER,
+    mime_type TEXT,
+    metadata TEXT,        -- JSON blob
+    topic_url TEXT,
+    downloaded_at TEXT,
+    status TEXT DEFAULT 'pending'
+);
+
+-- scraping_jobs
+CREATE TABLE scraping_jobs (
+    id TEXT PRIMARY KEY,
+    start_url TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    started_at TEXT,
+    completed_at TEXT,
+    total_topics INTEGER DEFAULT 0,
+    total_media INTEGER DEFAULT 0,
+    error TEXT
+);
+  </pre>
+
+  <h2>1.6 Extracted Concepts</h2>
+
+  <div class="concept">
+    <div class="concept-header"><span class="concept-tag">PATTERN</span><h4>Event-Driven Modular Monolith</h4></div>
+    <div class="concept-body">
+      <p><strong>Где:</strong> <code>src/core/messagebus.py</code>, <code>src/core/module.py</code>, <code>src/core/system.py</code></p>
+      <p><strong>Что:</strong> Модули (orders, agm, ecs и др.) изолированы и общаются ТОЛЬКО через события. Никаких прямых вызовов между модулями. Каждый модуль — независимый бизнес-домен.</p>
+      <p><strong>Зачем:</strong> Слабая связанность (loose coupling), возможность независимой эволюции модулей, лёгкое тестирование.</p>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="concept-header"><span class="concept-tag">PATTERN</span><h4>Clean Architecture Layers</h4></div>
+    <div class="concept-body">
+      <p><strong>Где:</strong> <code>src/core/</code> (domain), <code>src/adapters/</code> (infrastructure), <code>src/apps/</code> (entrypoints)</p>
+      <p><strong>Что:</strong> 4 слоя: Domain → Application → Infrastructure → Presentation. Внутренние слои НИКОГДА не зависят от внешних. Domain слой — чистый Python без внешних зависимостей.</p>
+      <p><strong>Зачем:</strong> Тестируемость, независимость от фреймворков, возможность замены инфраструктуры.</p>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="concept-header"><span class="concept-tag">PATTERN</span><h4>CQRS (Command Query Responsibility Segregation)</h4></div>
+    <div class="concept-body">
+      <p><strong>Где:</strong> <code>src/core/messages.py</code> — <code>Command</code> и <code>Event</code> базовые классы</p>
+      <p><strong>Что:</strong> Команды (изменение состояния) направляются строго одному обработчику. События (факты) транслируются всем подписчикам. Команды и события — наследники <code>Message</code>.</p>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="concept-header"><span class="concept-tag">PATTERN</span><h4>Unit of Work + Repository</h4></div>
+    <div class="concept-body">
+      <p><strong>Где:</strong> <code>src/core/unit_of_work.py</code>, <code>src/core/repository.py</code></p>
+      <p><strong>Что:</strong> UoW координирует транзакции и собирает доменные события из агрегатов. Repository абстрагирует хранение. <code>AbstractRepository[T]</code> generic с трекингом <code>seen</code> агрегатов.</p>
+      <p><strong>Зачем:</strong> Атомарность операций, сбор событий для публикации, тестирование через FakeRepository.</p>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="concept-header"><span class="concept-tag">PATTERN</span><h4>DI Container (dishka)</h4></div>
+    <div class="concept-body">
+      <p><strong>Где:</strong> <code>src/core/system.py</code> — <code>CoreProvider</code>, модульные Provider'ы</p>
+      <p><strong>Что:</strong> Автоматическое внедрение зависимостей в обработчики команд/событий. Контейнер строится при bootstrap'е системы.</p>
+      <p><strong>Зачем:</strong> Никакого ручного получения зависимостей. Handler'ы просто объявляют параметры — dishka внедряет.</p>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="concept-header"><span class="concept-tag">PATTERN</span><h4>Result Monad (returns)</h4></div>
+    <div class="concept-body">
+      <p><strong>Где:</strong> <code>src/common/monads.py</code> — <code>BusinessResult = Result[T, E]</code></p>
+      <p><strong>Что:</strong> Бизнес-ошибки возвращаются как <code>Failure</code>, успех — как <code>Success</code>. Исключения — только для инфраструктурных ошибок. Fail-fast для конфигов, fail-safe для event handler'ов.</p>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="concept-header"><span class="concept-tag">PATTERN</span><h4>Config-Driven Module Discovery</h4></div>
+    <div class="concept-body">
+      <p><strong>Где:</strong> <code>src/core/discovery.py</code>, файлы <code>app.toml</code></p>
+      <p><strong>Что:</strong> Модули загружаются динамически из TOML-манифеста. <code>ModuleDiscovery</code> ищет подклассы <code>BaseModule</code> в указанных пакетах.</p>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="concept-header"><span class="concept-tag">PATTERN</span><h4>Lifecycle Hooks (@on_start / @on_stop)</h4></div>
+    <div class="concept-body">
+      <p><strong>Где:</strong> <code>src/core/decorators.py</code></p>
+      <p><strong>Что:</strong> Декораторы для регистрации функций, вызываемых при старте/остановке системы. Поддержка sync и async.</p>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="concept-header"><span class="concept-tag">PATTERN</span><h4>Strangler Fig (Legacy Migration)</h4></div>
+    <div class="concept-body">
+      <p><strong>Где:</strong> <code>src/core/bridge.py</code> — <code>LegacyAllocatorBridge</code>, <code>BridgeAppAction</code></p>
+      <p><strong>Что:</strong> Постепенная миграция из legacy (SLM/Sanali) в BCor. Bridge пытается получить зависимость из dishka, затем из legacy Allocator.</p>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="concept-header"><span class="concept-tag">CONCEPT</span><h4>Recursive Context Tracing</h4></div>
+    <div class="concept-body">
+      <p><strong>Где:</strong> <code>src/core/messagebus.py:55</code></p>
+      <p><strong>Что:</strong> Каждое событие носит <code>triggering_message_id</code>, позволяя восстановить полную цепочку вызовов. Реализовано через <code>trace_stack</code> в базовом <code>Message</code>. Патч bubus для отключения его 2-уровневого loop prevention.</p>
+    </div>
+  </div>
+
+  <div class="concept">
+    <div class="concept-header"><span class="concept-tag">CONCEPT</span><h4>Scraper Engine (Playwright + BS4)</h4></div>
+    <div class="concept-body">
+      <p><strong>Где:</strong> <code>src/adapters/web/scraper_engine.py</code></p>
+      <p><strong>Что:</strong> Модуль веб-скрапинга: <code>IBrowser</code> (Playwright) → <code>IExtractor</code> (BS4) → <code>ResourceDownloader</code>. Поддержка пагинации, загрузки ресурсов, дедупликации.</p>
+    </div>
+  </div>
+
+  <div class="quality-gate">
+    <h3>✅ Quality Gate — Step 1</h3>
+    <ul>
+      <li>✅ Perimeter scan — 758 .py, 93 .md, 1319 total files</li>
+      <li>✅ Configs documented — pyproject.toml, 8 app.toml files, .python-version</li>
+      <li>✅ Dependencies — 30+ libraries catalogued with versions and purpose</li>
+      <li>✅ SQLite schema — media_files + scraping_jobs tables discovered</li>
+      <li>✅ Concepts — 11 concepts extracted (Event-Driven Modular Monolith, Clean Architecture, CQRS, UoW+Repo, DI, Monads, etc.)</li>
+      <li>✅ Cross-links — index.html, next artifact: Entity System</li>
+    </ul>
+  </div>
+
+  <div class="cross-links">
+    ← <a href="index.html">Карта проекта</a> · <a href="02-entity-model.html">Шаг 2: Entity System →</a>
+  </div>
+
+  <div class="footer">
+    BCor Reverse Engineering · Step 1/14 · 2026-05-26
+  </div>
+</div>
+</body>
+</html>

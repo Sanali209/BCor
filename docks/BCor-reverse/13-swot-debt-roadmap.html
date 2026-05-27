@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BCor — Step 13: SWOT + Tech Debt + Roadmap</title>
+<style>
+  :root { --bg: #0d1117; --fg: #c9d1d9; --accent: #58a6ff; --green: #3fb950; --orange: #d29922; --red: #f85149; --violet: #bc8cff; --cyan: #56d4dd; --border: #30363d; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; padding: 40px 20px; }
+  .container { max-width: 1000px; margin: 0 auto; }
+  .badge { display: inline-block; background: #1f2937; color: var(--cyan); padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; margin-bottom: 8px; }
+  h1 { font-size: 2rem; background: linear-gradient(135deg, var(--cyan), var(--violet)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px; }
+  h2 { color: var(--cyan); border-bottom: 1px solid var(--border); padding-bottom: 6px; margin: 28px 0 12px; }
+  h3 { color: var(--violet); margin: 20px 0 8px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.9rem; }
+  th, td { padding: 8px 12px; border-bottom: 1px solid #21262d; text-align: left; }
+  th { color: #8b949e; font-size: 0.8rem; text-transform: uppercase; }
+  tr:hover td { background: #161b22; }
+  .cross-links { background: #161b22; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin: 20px 0; font-size: 0.9rem; }
+  .cross-links a { color: var(--accent); }
+  .swot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .swot-item { border-radius: 8px; padding: 16px; }
+  .swot-s { background: #0f2d1a; border: 1px solid #2ea043; }
+  .swot-w { background: #2e1a1a; border: 1px solid #8a3a3a; }
+  .swot-o { background: #1a2d3a; border: 1px solid #2a6a8a; }
+  .swot-t { background: #2e2a1a; border: 1px solid #8a7a3a; }
+  .swot-item h4 { margin-bottom: 8px; }
+  .swot-item ul { margin-left: 16px; font-size: 0.9rem; }
+  .critical { color: var(--red); font-weight: bold; }
+  .high { color: var(--orange); font-weight: bold; }
+  .medium { color: var(--accent); }
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); color: #8b949e; font-size: 0.85rem; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+  <span class="badge">ШАГ 13/14</span>
+  <h1>SWOT + Tech Debt + Roadmap</h1>
+
+  <div class="cross-links">
+    ← <a href="12-knowledge-gained.html">Step 12: Knowledge Gained</a> · <a href="index.html">Карта</a> · <a href="14-final-map.html">Step 14: Final Map →</a>
+  </div>
+
+  <h2>13.1 SWOT Analysis</h2>
+
+  <div class="swot-grid">
+    <div class="swot-item swot-s">
+      <h4 style="color: var(--green);">Strengths</h4>
+      <ul>
+        <li>Чистая архитектура — строгое разделение слоёв</li>
+        <li>Async-native — современный Python 3.12 стек</li>
+        <li>Мощный GOM для Neo4j (AGM)</li>
+        <li>Отличная документация (ADRs, ARCHITECTURE.md, Ddocks)</li>
+        <li>Полный DI-контейнер с dishka</li>
+        <li>Result monad для бизнес-логики</li>
+      </ul>
+    </div>
+    <div class="swot-item swot-w">
+      <h4 style="color: var(--red);">Weaknesses</h4>
+      <ul>
+        <li>66% кода — legacy без тестов</li>
+        <li>Недостаток тестов для common/ и apps/</li>
+        <li>Игрушечные модули (orders, ecs) в основной директории</li>
+        <li>Нет CI/CD</li>
+        <li>Raw SQL в бойлерплейте</li>
+        <li>Избыточная сложность конфигурации</li>
+      </ul>
+    </div>
+    <div class="swot-item swot-o">
+      <h4 style="color: var(--accent);">Opportunities</h4>
+      <ul>
+        <li>Извлечь AGM в отдельную библиотеку</li>
+        <li>Добавить REST API (FastAPI) для внешней интеграции</li>
+        <li>Завершить миграцию legacy → BCor</li>
+        <li>CI/CD через GitHub Actions</li>
+        <li>Автоматическая генерация документации (pydoc)</li>
+      </ul>
+    </div>
+    <div class="swot-item swot-t">
+      <h4 style="color: var(--orange);">Threats</h4>
+      <ul>
+        <li>bubus может перестать поддерживаться</li>
+        <li>NATS требует инфраструктуры</li>
+        <li>Привязка к PySide6 (только десктоп)</li>
+        <li>Отсутствие TypeScript/web версии ограничивает аудиторию</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>13.2 Tech Debt Inventory</h2>
+  <table>
+    <thead><tr><th>Issue</th><th>Priority</th><th>Location</th></tr></thead>
+    <tbody>
+      <tr><td>Legacy code без тестов (500+ файлов)</td><td><span class="critical">Critical</span></td><td><code>legacy/</code></td></tr>
+      <tr><td>Raw SQL вместо ORM/миграций</td><td><span class="high">High</span></td><td><code>boruscraper/common/database.py</code></td></tr>
+      <tr><td>Нет тестов для common/ библиотеки</td><td><span class="high">High</span></td><td><code>src/common/</code></td></tr>
+      <tr><td>Игрушечные модули (orders, ecs) путают</td><td><span class="medium">Medium</span></td><td><code>src/modules/orders/, ecs/</code></td></tr>
+      <tr><td>Множественные источники конфигурации</td><td><span class="medium">Medium</span></td><td>pyproject.toml + app.toml + env</td></tr>
+      <tr><td>Нет CI/CD</td><td><span class="high">High</span></td><td>—</td></tr>
+      <tr><td>Нет lock-файла зависимостей</td><td><span class="medium">Medium</span></td><td><code>pyproject.toml</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2>13.3 Roadmap Analysis</h2>
+  <p><code>Ddocks/Design_docks/Roadmap.md</code> описывает план развития. Ключевые пункты:</p>
+  <table>
+    <thead><tr><th>Milestone</th><th>Status</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Core framework стабилен</td><td><span class="green">✅ Done</span></td><td>MessageBus, UoW, Repository, System, DI</td></tr>
+      <tr><td>AGM Graph Mapping</td><td><span class="green">✅ Done</span></td><td>Mapper, Identity Map, Fluent Cypher, Schema Sync</td></tr>
+      <tr><td>Asset Management</td><td><span class="green">✅ Done</span></td><td>Polymorphic assets, VLM handlers, search</td></tr>
+      <tr><td>Legacy Migration (Phase 1)</td><td><span class="orange">⚠️ In Progress</span></td><td>imgededupe ported partially</td></tr>
+      <tr><td>CI/CD Pipeline</td><td><span class="red">❌ Missing</span></td><td>Not implemented</td></tr>
+      <tr><td>REST API</td><td><span class="red">❌ Missing</span></td><td>Not planned yet</td></tr>
+      <tr><td>Documentation Generation</td><td><span class="red">❌ Missing</span></td><td>Not implemented</td></tr>
+    </tbody>
+  </table>
+
+  <h2>13.4 Recommendations</h2>
+
+  <h3>Critical (немедленно)</h3>
+  <ul>
+    <li>Заменить raw SQL на SQLAlchemy/Alembic в boruscraper</li>
+    <li>Настроить CI/CD (GitHub Actions): ruff → mypy → pytest → coverage</li>
+    <li>Добавить тесты для src/common/ (минимум 80% coverage)</li>
+  </ul>
+
+  <h3>High (следующий спринт)</h3>
+  <ul>
+    <li>Переместить orders/ и ecs/ в examples/</li>
+    <li>Сгенерировать uv lock-файл</li>
+    <li>Добавить type checking в CI</li>
+    <li>Завершить миграцию imgededupe</li>
+  </ul>
+
+  <h3>Medium (backlog)</h3>
+  <ul>
+    <li>Извлечь AGM в отдельный пакет (pip install bcor-agm)</li>
+    <li>Добавить FastAPI для внешних интеграций</li>
+    <li>Автоматическая генерация docs через pydoc</li>
+    <li>Publish библиотек на PyPI</li>
+  </ul>
+
+  <div class="cross-links">
+    ← <a href="12-knowledge-gained.html">Step 12: Knowledge Gained</a> · <a href="index.html">Карта</a> · <a href="14-final-map.html">Step 14: Final Map →</a>
+  </div>
+
+  <div class="footer">
+    BCor Reverse Engineering · Step 13/14 · 2026-05-26
+  </div>
+</div>
+</body>
+</html>
